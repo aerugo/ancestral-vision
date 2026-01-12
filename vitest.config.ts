@@ -5,10 +5,10 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: "node",
+    environment: 'jsdom',
     globals: true,
     setupFiles: ["./src/lib/test-setup.ts"],
-    include: ["src/**/*.test.{ts,tsx}"],
+    include: ["src/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}", "prisma/**/*.test.ts"],
     exclude: ["node_modules", "reference_prototypes", ".next"],
     coverage: {
       provider: "v8",

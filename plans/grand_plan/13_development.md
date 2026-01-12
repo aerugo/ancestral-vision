@@ -371,130 +371,62 @@ test:
 
 Every feature starts with a specification before any code is written.
 
+> **Full Protocol**: See [docs/plans/CLAUDE.md](../../docs/plans/CLAUDE.md) for complete planning guide with templates
+
 **Plan Structure**:
 ```
 docs/plans/
-├── CLAUDE.md               # Plan template and workflow
+├── CLAUDE.md                    # Complete planning protocol
 ├── active/
 │   └── feature-name/
-│       ├── spec.md         # Feature specification
-│       ├── development.md  # Implementation plan
-│       └── progress.md     # Progress tracking
+│       ├── spec.md              # Feature specification
+│       ├── development-plan.md  # Phased implementation plan
+│       ├── work-notes.md        # Progress tracking & session logs
+│       └── phases/
+│           ├── phase-1.md       # Detailed phase plans
+│           └── ...
 ├── completed/
 │   └── feature-name/
 │       └── ...
 └── templates/
     ├── spec-template.md
-    └── development-template.md
+    ├── development-plan-template.md
+    ├── phase-template.md
+    └── work-notes-template.md
 ```
 
-**Plan Template (docs/plans/CLAUDE.md)**:
-```markdown
-# Development Plan Protocol
-
-## Creating a New Feature Plan
+**Quick Reference - Creating a New Feature Plan**:
 
 1. Create directory: `docs/plans/active/{feature-name}/`
 2. Copy templates from `docs/plans/templates/`
-3. Fill in spec.md with requirements
-4. Fill in development.md with implementation phases
-5. Begin implementation following TDD
+3. Fill in `spec.md` with requirements and acceptance criteria
+4. Fill in `development-plan.md` with:
+   - Critical invariants to respect (by INV-xxx ID)
+   - Current state analysis
+   - Solution design with phases
+   - Testing strategy
+5. Create `work-notes.md` to track session progress
+6. Create phase plans in `phases/` as you start each phase
+7. Follow strict TDD: RED → GREEN → REFACTOR
 
-## Spec Template Structure
+**Key Documents in Each Feature Plan**:
 
-### Feature: {Name}
+| Document | Purpose |
+|----------|---------|
+| `spec.md` | Requirements, acceptance criteria, scope boundaries |
+| `development-plan.md` | Phases, invariants, design decisions, file lists |
+| `work-notes.md` | Session logs, decisions made, issues encountered |
+| `phases/phase-X.md` | Detailed TDD steps for each phase |
 
-**Goal**: One sentence describing the outcome.
+**Agent Handoff Commands**:
 
-**User Stories**: Which US-x.x stories does this address?
-
-**Acceptance Criteria**:
-- [ ] Criterion 1
-- [ ] Criterion 2
-- [ ] Criterion 3
-
-**Technical Requirements**:
-- Database changes
-- API changes
-- UI changes
-
-**Dependencies**:
-- What must exist before this can be built?
-
-**Out of Scope**:
-- What this feature explicitly does NOT include
-
-## Development Plan Structure
-
-### Phase 1: {Name}
-
-**Goal**: What this phase accomplishes.
-
-**Tasks**:
-1. Task with test requirement
-2. Task with test requirement
-
-**Tests to Write First**:
-- Test 1 description
-- Test 2 description
-
-**Definition of Done**:
-- [ ] All tests pass
-- [ ] Code reviewed
-- [ ] Documentation updated
-
-### Phase 2: {Name}
-...
-
-## During Implementation
-
-When agent stops, ask:
-"Did you follow the plan so far, or did you diverge? If you diverged, how and why?"
-
-If divergence is acceptable, continue.
-If divergence cut corners, create new phase to address it.
-
-## Resuming Work
-
-"Keep implementing the plan in docs/plans/active/{feature}/development.md
-adhering to strict TDD principles and following the protocol defined in
-docs/plans/CLAUDE.md"
-
-## Feature Requests from Agents
-
-If an agent identifies needed infrastructure or fixes:
-
-1. Agent writes request to `docs/requests/{request-name}.md`
-2. Another agent instance handles the request
-3. After merge, original agent continues:
-   "Good news! A maintainer implemented your request. Merge main to your
-   working branch and revise the plan to use this update."
-```
-
-**Feature Request Template**:
-```markdown
-# Feature Request: {Title}
-
-**Requested by**: Agent working on {feature}
-**Date**: YYYY-MM-DD
-**Priority**: Critical | High | Medium | Low
-
-## Problem
-Description of the issue or missing capability.
-
-## Proposed Solution
-How to solve it.
-
-## Impact
-What feature work is blocked by this.
-
-## Acceptance Criteria
-- [ ] Criterion 1
-- [ ] Criterion 2
-
-## Notes
-Any additional context.
-```
+| Situation | Command |
+|-----------|---------|
+| Start feature | "Plan this feature according to docs/plans/CLAUDE.md and implement with strict TDD" |
+| Check progress | "Did you follow the plan so far, or did you diverge? If diverged, how and why?" |
+| Resume work | "Keep implementing docs/plans/active/{feature}/development-plan.md with strict TDD" |
+| Handle blocker | "Write a feature request to docs/requests/{name}.md" |
+| After fix merged | "Merge main, then revise the plan to use the update" |
 
 ---
 
@@ -620,10 +552,14 @@ ancestral-vision/
 │   │   ├── api-contracts.md
 │   │   └── ui-ux.md
 │   ├── plans/
-│   │   ├── CLAUDE.md
-│   │   ├── active/
-│   │   ├── completed/
+│   │   ├── CLAUDE.md              # Complete planning protocol
+│   │   ├── active/                # Plans in progress
+│   │   ├── completed/             # Finished plans
 │   │   └── templates/
+│   │       ├── spec-template.md
+│   │       ├── development-plan-template.md
+│   │       ├── phase-template.md
+│   │       └── work-notes-template.md
 │   └── requests/
 │       ├── CLAUDE.md
 │       └── {request-name}.md
@@ -763,6 +699,7 @@ jobs:
 
 ## References
 
+- [docs/plans/CLAUDE.md](../../docs/plans/CLAUDE.md) - Complete planning protocol with templates
 - [07_technology_decisions.md](07_technology_decisions.md) - Tech stack
 - [11_deployment_operations.md](11_deployment_operations.md) - CI/CD pipeline
 - [12_roadmap.md](12_roadmap.md) - Development phases

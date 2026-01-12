@@ -1,8 +1,13 @@
 # Ancestral Vision: Risks & Mitigations
 
-> **Status**: SCAFFOLD - Risks identified, mitigation details pending
+> **Status**: COMPLETE - Risk register with mitigations defined
 
 This document catalogs risks to the Ancestral Vision project and their mitigations.
+
+**Cross-References**:
+- Development workflow risks mitigated by [13_development.md](13_development.md)
+- Security risks addressed in [10_security_privacy.md](10_security_privacy.md)
+- Infrastructure risks addressed in [11_deployment_operations.md](11_deployment_operations.md)
 
 ---
 
@@ -461,4 +466,4 @@ This document catalogs risks to the Ancestral Vision project and their mitigatio
 
 ---
 
-*Status: Scaffold - Awaiting Mitigation Assignments*
+*Status: Complete - Risk register established 2026-01-12*

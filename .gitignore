@@ -1,0 +1,313 @@
+# =============================================================================
+# Ancestral Vision - Comprehensive .gitignore
+# =============================================================================
+# Covers: Next.js, TypeScript, Python, Prisma, Docker, Firebase, Playwright,
+#         Three.js/WebGPU, Google Cloud, and local development
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Dependencies
+# -----------------------------------------------------------------------------
+node_modules/
+.pnp/
+.pnp.js
+.yarn/install-state.gz
+
+# Python virtual environments (reference prototypes)
+.venv/
+venv/
+env/
+ENV/
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# -----------------------------------------------------------------------------
+# Build Outputs
+# -----------------------------------------------------------------------------
+# Next.js
+.next/
+out/
+
+# Vite (from prototypes)
+dist/
+
+# TypeScript
+*.tsbuildinfo
+
+# Python
+build/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# -----------------------------------------------------------------------------
+# Environment & Secrets
+# -----------------------------------------------------------------------------
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# Google Cloud service account keys
+*-service-account.json
+service-account*.json
+credentials.json
+*.pem
+*.key
+
+# Firebase
+firebase-debug.log
+firebase-debug.*.log
+.firebase/
+firebaserc.local
+
+# -----------------------------------------------------------------------------
+# Database
+# -----------------------------------------------------------------------------
+# SQLite (development/testing)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Prisma
+prisma/*.db
+prisma/*.db-journal
+
+# PostgreSQL data (if stored locally outside Docker)
+postgres-data/
+
+# -----------------------------------------------------------------------------
+# Testing & Coverage
+# -----------------------------------------------------------------------------
+# Vitest / Jest
+coverage/
+.coverage/
+htmlcov/
+
+# Playwright
+playwright-report/
+playwright/.cache/
+test-results/
+blob-report/
+.playwright/
+
+# Python testing
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# -----------------------------------------------------------------------------
+# IDE & Editors
+# -----------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*~
+.project
+.classpath
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# JetBrains
+*.iml
+.idea/
+
+# -----------------------------------------------------------------------------
+# Operating System
+# -----------------------------------------------------------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+
+# -----------------------------------------------------------------------------
+# Logs & Debug
+# -----------------------------------------------------------------------------
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Sentry
+.sentryclirc
+
+# -----------------------------------------------------------------------------
+# Python Tooling
+# -----------------------------------------------------------------------------
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff
+.ruff_cache/
+
+# pyright
+pyrightconfig.json
+
+# Translations
+*.mo
+*.pot
+
+# PyInstaller
+*.manifest
+*.spec
+
+# -----------------------------------------------------------------------------
+# Local Development
+# -----------------------------------------------------------------------------
+# Local file uploads (development storage)
+uploads/
+.uploads/
+local-storage/
+
+# Docker volumes (if mounted locally)
+docker-data/
+
+# Turbo
+.turbo/
+
+# Vercel
+.vercel/
+
+# -----------------------------------------------------------------------------
+# Generated Files
+# -----------------------------------------------------------------------------
+# GraphQL codegen
+src/generated/
+generated/
+__generated__/
+
+# Prisma client (regenerated on build)
+# Note: prisma/client is auto-generated, but we typically commit schema.prisma
+
+# API types
+*.generated.ts
+*.generated.tsx
+
+# -----------------------------------------------------------------------------
+# Media & Assets (user uploads, not source assets)
+# -----------------------------------------------------------------------------
+# Large media files (use Git LFS or cloud storage)
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.mp3
+*.wav
+*.flac
+
+# Exception: keep example/sample files
+!examples/**/*.mp3
+!examples/**/*.wav
+
+# -----------------------------------------------------------------------------
+# Caching
+# -----------------------------------------------------------------------------
+# ESLint
+.eslintcache
+
+# Stylelint
+.stylelintcache
+
+# Prettier
+.prettiercache
+
+# Parcel
+.parcel-cache/
+
+# Next.js cache
+.next/cache/
+
+# Storybook
+storybook-static/
+
+# -----------------------------------------------------------------------------
+# Temporary Files
+# -----------------------------------------------------------------------------
+*.tmp
+*.temp
+*.bak
+*.backup
+tmp/
+temp/
+
+# -----------------------------------------------------------------------------
+# Package Manager Locks (choose one, ignore others if needed)
+# -----------------------------------------------------------------------------
+# Uncomment if you want to ignore specific lock files:
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# -----------------------------------------------------------------------------
+# Miscellaneous
+# -----------------------------------------------------------------------------
+# Genkit traces and logs
+.genkit/
+
+# Optional npm cache directory
+.npm/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Wrangler (Cloudflare, if ever used)
+.wrangler/
+
+# macOS icon files
+Icon?
+
+# WebGPU/WebGL shader cache (if generated)
+.shader-cache/

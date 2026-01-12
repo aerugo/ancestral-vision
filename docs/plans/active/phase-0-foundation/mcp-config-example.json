@@ -1,0 +1,63 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/schemas/mcp-settings.json",
+  "mcpServers": {
+    "gcp-cloud-run": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-gcp"],
+      "env": {
+        "GOOGLE_APPLICATION_CREDENTIALS": "${HOME}/.config/gcloud/ai-agent-key.json",
+        "CLOUDSDK_CORE_PROJECT": "ancestral-vision-dev",
+        "GCP_SERVICES": "run,logging"
+      },
+      "description": "Cloud Run deployment and log access"
+    },
+    "gcp-sql": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-cloudsql"],
+      "env": {
+        "GOOGLE_APPLICATION_CREDENTIALS": "${HOME}/.config/gcloud/ai-agent-key.json",
+        "CLOUDSQL_INSTANCE": "ancestral-vision-dev:us-central1:ancestral-vision-db",
+        "CLOUDSQL_DATABASE": "ancestral_vision",
+        "CLOUDSQL_USER": "ancestral"
+      },
+      "description": "Cloud SQL database operations"
+    },
+    "gcp-storage": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-gcs"],
+      "env": {
+        "GOOGLE_APPLICATION_CREDENTIALS": "${HOME}/.config/gcloud/ai-agent-key.json",
+        "GCS_BUCKETS": "ancestral-vision-dev-media,ancestral-vision-dev-temp"
+      },
+      "description": "Cloud Storage bucket access"
+    },
+    "gcp-secrets": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-secretmanager"],
+      "env": {
+        "GOOGLE_APPLICATION_CREDENTIALS": "${HOME}/.config/gcloud/ai-agent-key.json",
+        "CLOUDSDK_CORE_PROJECT": "ancestral-vision-dev"
+      },
+      "description": "Secret Manager read access"
+    },
+    "gcp-build": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-cloudbuild"],
+      "env": {
+        "GOOGLE_APPLICATION_CREDENTIALS": "${HOME}/.config/gcloud/ai-agent-key.json",
+        "CLOUDSDK_CORE_PROJECT": "ancestral-vision-dev"
+      },
+      "description": "Cloud Build trigger and monitoring"
+    },
+    "firebase-auth": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-firebase"],
+      "env": {
+        "FIREBASE_PROJECT_ID": "ancestral-vision-dev",
+        "FIREBASE_USE_EMULATOR": "true",
+        "FIREBASE_AUTH_EMULATOR_HOST": "localhost:9099"
+      },
+      "description": "Firebase Auth management (emulator in dev)"
+    }
+  }
+}

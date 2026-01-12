@@ -1,0 +1,483 @@
+// Ancestral Vision - Prisma Schema
+// Based on docs/plans/grand_plan/08_data_model.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// USER & AUTH
+// =============================================================================
+
+model User {
+  id                   String               @id // Firebase UID
+  email                String               @unique
+  displayName          String
+  avatarUrl            String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  lastLoginAt          DateTime?
+  deletionRequestedAt  DateTime?
+  deletionScheduledFor DateTime?
+  preferences          Json                 @default("{\"theme\":\"dark\",\"defaultPrivacy\":\"private\",\"defaultView\":\"3d\",\"speculationEnabled\":true,\"emailNotifications\":true,\"emailDigestFrequency\":\"daily\",\"notifyConnectionRequests\":true,\"notifyMatchSuggestions\":true,\"notifySharedContentUpdates\":true,\"notifyBillingAlerts\":true}")
+  subscription         Json                 @default("{\"plan\":\"free\",\"status\":\"active\"}")
+  constellation        Constellation?
+  usage                UsageTracking?
+  onboarding           OnboardingProgress?
+  connectionsInitiated Connection[]         @relation("ConnectionInitiator")
+  connectionsReceived  Connection[]         @relation("ConnectionReceiver")
+}
+
+model UsageTracking {
+  id                String   @id @default(uuid())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String   @unique
+  periodStart       DateTime
+  periodEnd         DateTime
+  aiOperationsUsed  Int      @default(0)
+  aiOperationsLimit Int      @default(15)
+  storageUsedBytes  BigInt   @default(0)
+  storageLimitBytes BigInt   @default(262144000) // 250MB
+  lastUpdatedAt     DateTime @updatedAt
+}
+
+model OnboardingProgress {
+  id               String           @id @default(uuid())
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String           @unique
+  status           OnboardingStatus @default(NOT_STARTED)
+  currentStep      OnboardingStep   @default(TOUR)
+  completedSteps   OnboardingStep[]
+  savedData        Json?
+  hasCompletedTour Boolean          @default(false)
+  tourSkipped      Boolean          @default(false)
+  startedAt        DateTime         @default(now())
+  lastUpdatedAt    DateTime         @updatedAt
+  completedAt      DateTime?
+}
+
+enum OnboardingStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+enum OnboardingStep {
+  TOUR
+  ADD_SELF
+  ADD_PARENTS
+  ADD_GRANDPARENTS
+  AHA_MOMENT
+}
+
+// =============================================================================
+// CONSTELLATION & FAMILY TREE
+// =============================================================================
+
+model Constellation {
+  id               String                    @id @default(uuid())
+  owner            User                      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId          String                    @unique
+  title            String
+  description      String?
+  centeredPersonId String?
+  personCount      Int                       @default(0)
+  generationSpan   Int                       @default(0)
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  people           Person[]
+  events           Event[]
+  media            Media[]
+  sources          Source[]
+  notes            Note[]
+  shareLinks       ShareLink[]
+  parentChildRels  ParentChildRelationship[]
+  spouseRels       SpouseRelationship[]
+}
+
+model Person {
+  id              String        @id @default(uuid())
+  constellation   Constellation @relation(fields: [constellationId], references: [id], onDelete: Cascade)
+  constellationId String
+
+  // Identity (international name support)
+  givenName   String
+  surname     String?
+  maidenName  String?
+  patronymic  String?
+  matronymic  String?
+  nickname    String?
+  suffix      String?
+  nameOrder   NameOrder @default(WESTERN)
+  displayName String
+
+  // Demographics
+  gender Gender?
+
+  // Dates (stored as JSON for FuzzyDate)
+  birthDate Json?
+  deathDate Json?
+
+  // Places (stored as JSON for Place)
+  birthPlace Json?
+  deathPlace Json?
+
+  // Content
+  biography String? @db.Text
+
+  // Speculative flag
+  speculative Boolean @default(false)
+
+  // Soft delete
+  deletedAt DateTime?
+  deletedBy String?
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String
+
+  // Relationships
+  parentRelationships  ParentChildRelationship[] @relation("ChildParents")
+  childRelationships   ParentChildRelationship[] @relation("ParentChildren")
+  spouseRelationships1 SpouseRelationship[]      @relation("Spouse1")
+  spouseRelationships2 SpouseRelationship[]      @relation("Spouse2")
+  events               EventParticipant[]
+  primaryEvents        Event[]                   @relation("PrimaryPerson")
+  notes                Note[]
+  media                MediaPerson[]
+
+  @@index([constellationId])
+  @@index([constellationId, deletedAt])
+}
+
+enum NameOrder {
+  WESTERN
+  EASTERN
+  PATRONYMIC
+  PATRONYMIC_SUFFIX
+  MATRONYMIC
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  UNKNOWN
+}
+
+// =============================================================================
+// RELATIONSHIPS
+// =============================================================================
+
+model ParentChildRelationship {
+  id               String        @id @default(uuid())
+  parent           Person        @relation("ParentChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId         String
+  child            Person        @relation("ChildParents", fields: [childId], references: [id], onDelete: Cascade)
+  childId          String
+  constellation    Constellation @relation(fields: [constellationId], references: [id], onDelete: Cascade)
+  constellationId  String
+  relationshipType ParentType    @default(BIOLOGICAL)
+  isPreferred      Boolean       @default(true)
+  startDate        Json?
+  endDate          Json?
+  createdAt        DateTime      @default(now())
+  createdBy        String
+
+  @@unique([parentId, childId])
+  @@index([childId])
+  @@index([childId, isPreferred])
+}
+
+model SpouseRelationship {
+  id              String        @id @default(uuid())
+  person1         Person        @relation("Spouse1", fields: [person1Id], references: [id], onDelete: Cascade)
+  person1Id       String
+  person2         Person        @relation("Spouse2", fields: [person2Id], references: [id], onDelete: Cascade)
+  person2Id       String
+  constellation   Constellation @relation(fields: [constellationId], references: [id], onDelete: Cascade)
+  constellationId String
+  marriageDate    Json?
+  marriagePlace   Json?
+  divorceDate     Json?
+  description     String?
+  displayOrder    Int?
+  createdAt       DateTime      @default(now())
+  createdBy       String
+
+  @@unique([person1Id, person2Id])
+  @@index([person1Id])
+  @@index([person2Id])
+}
+
+enum ParentType {
+  BIOLOGICAL
+  ADOPTIVE
+  FOSTER
+  STEP
+  GUARDIAN
+  UNKNOWN
+}
+
+// =============================================================================
+// EVENTS
+// =============================================================================
+
+model Event {
+  id              String             @id @default(uuid())
+  constellation   Constellation      @relation(fields: [constellationId], references: [id], onDelete: Cascade)
+  constellationId String
+  title           String
+  description     String?            @db.Text
+  icon            String?
+  date            Json?
+  location        Json?
+  primaryPerson   Person             @relation("PrimaryPerson", fields: [primaryPersonId], references: [id], onDelete: Cascade)
+  primaryPersonId String
+  privacy         PrivacyLevel       @default(PRIVATE)
+  deletedAt       DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  createdBy       String
+  source          Source?            @relation(fields: [sourceId], references: [id])
+  sourceId        String?
+  participants    EventParticipant[]
+
+  @@index([primaryPersonId])
+  @@index([constellationId])
+}
+
+model EventParticipant {
+  id       String @id @default(uuid())
+  event    Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId  String
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  personId String
+
+  @@unique([eventId, personId])
+}
+
+enum PrivacyLevel {
+  PRIVATE
+  CONNECTIONS
+  PUBLIC
+}
+
+// =============================================================================
+// NOTES
+// =============================================================================
+
+model Note {
+  id                  String        @id @default(uuid())
+  person              Person        @relation(fields: [personId], references: [id], onDelete: Cascade)
+  personId            String
+  constellation       Constellation @relation(fields: [constellationId], references: [id], onDelete: Cascade)
+  constellationId     String
+  title               String?
+  content             String        @db.Text
+  referencedPersonIds String[]
+  privacy             PrivacyLevel  @default(PRIVATE)
+  version             Int           @default(1)
+  previousVersions    Json?
+  deletedAt           DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  createdBy           String
+  source              Source?       @relation(fields: [sourceId], references: [id])
+  sourceId            String?
+
+  @@index([personId])
+}
+
+// =============================================================================
+// MEDIA
+// =============================================================================
+
+model Media {
+  id                   String              @id @default(uuid())
+  constellation        Constellation       @relation(fields: [constellationId], references: [id], onDelete: Cascade)
+  constellationId      String
+  type                 MediaType
+  filename             String
+  mimeType             String
+  fileSize             Int
+  storagePath          String
+  storageUrl           String
+  thumbnails           Json?
+  title                String?
+  description          String?
+  dateTaken            Json?
+  duration             Int?
+  transcription        String?             @db.Text
+  transcriptionJson    String?             @db.Text
+  transcriptionStatus  TranscriptionStatus @default(NONE)
+  speakerLabels        Json?
+  exifData             Json?
+  hash                 String?
+  privacy              PrivacyLevel        @default(PRIVATE)
+  deletedAt            DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  createdBy            String
+  people               MediaPerson[]
+
+  @@index([constellationId])
+}
+
+model MediaPerson {
+  id       String @id @default(uuid())
+  media    Media  @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  mediaId  String
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  personId String
+
+  @@unique([mediaId, personId])
+}
+
+enum MediaType {
+  PHOTO
+  DOCUMENT
+  AUDIO
+}
+
+enum TranscriptionStatus {
+  NONE
+  PENDING
+  PROCESSING
+  COMPLETE
+  FAILED
+}
+
+// =============================================================================
+// SOURCES
+// =============================================================================
+
+model Source {
+  id              String        @id @default(uuid())
+  constellation   Constellation @relation(fields: [constellationId], references: [id], onDelete: Cascade)
+  constellationId String
+  sourceType      SourceType
+  title           String
+  description     String?
+  author          String?
+  publicationDate Json?
+  url             String?
+  citation        String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  createdBy       String
+  events          Event[]
+  notes           Note[]
+}
+
+enum SourceType {
+  DOCUMENT
+  BOOK
+  WEBSITE
+  INTERVIEW
+  PHOTOGRAPH
+  NEWSPAPER
+  CENSUS
+  FAMILY_BIBLE
+  ORAL_HISTORY
+  OTHER
+}
+
+// =============================================================================
+// SHARING
+// =============================================================================
+
+model ShareLink {
+  id              String        @id @default(uuid())
+  constellation   Constellation @relation(fields: [constellationId], references: [id], onDelete: Cascade)
+  constellationId String
+  createdBy       String
+  token           String        @unique
+  title           String?
+  expiresAt       DateTime?
+  isActive        Boolean       @default(true)
+  viewCount       Int           @default(0)
+  lastViewedAt    DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([constellationId, isActive])
+}
+
+// =============================================================================
+// CONNECTIONS & MATCHES
+// =============================================================================
+
+model Connection {
+  id              String           @id @default(uuid())
+  user1           User             @relation("ConnectionInitiator", fields: [user1Id], references: [id], onDelete: Cascade)
+  user1Id         String
+  user2           User             @relation("ConnectionReceiver", fields: [user2Id], references: [id], onDelete: Cascade)
+  user2Id         String
+  status          ConnectionStatus @default(PENDING)
+  permissionLevel ConnectionPermission @default(RESEARCHER)
+  requestedAt     DateTime         @default(now())
+  requestedBy     String
+  acceptedAt      DateTime?
+  blockedAt       DateTime?
+
+  @@unique([user1Id, user2Id])
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  BLOCKED
+}
+
+enum ConnectionPermission {
+  FAMILY
+  RESEARCHER
+}
+
+model Match {
+  id                  String      @id @default(uuid())
+  person1Id           String
+  constellation1Id    String
+  user1Id             String
+  person2Id           String
+  constellation2Id    String
+  user2Id             String
+  confidence          Int
+  confidenceBreakdown Json?
+  matchedBy           MatchMethod
+  status              MatchStatus @default(SUGGESTED)
+  user1Status         String      @default("pending")
+  user2Status         String      @default("pending")
+  suggestedAt         DateTime    @default(now())
+  user1RespondedAt    DateTime?
+  user2RespondedAt    DateTime?
+  brokenAt            DateTime?
+  brokenBy            String?
+  cooldownUntil       DateTime?
+
+  @@index([user1Id, user2Id])
+  @@index([status])
+}
+
+enum MatchMethod {
+  AUTOMATIC
+  MANUAL
+  PROPAGATED
+}
+
+enum MatchStatus {
+  SUGGESTED
+  PENDING
+  ACCEPTED
+  REJECTED
+  BROKEN
+}

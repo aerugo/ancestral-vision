@@ -4,17 +4,16 @@
  * Tests for GraphQL constellation queries and mutations.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+
+// Mock Prisma - MUST be before any imports that use prisma
+vi.mock("@/lib/prisma");
+
 import {
   createTestServer,
   createTestContext,
   seedTestUser,
   mockPrisma,
 } from "@/lib/graphql-test-utils";
-
-// Mock Prisma module
-vi.mock("@/lib/prisma", () => ({
-  prisma: mockPrisma,
-}));
 
 describe("Constellation Resolvers", () => {
   let server: ReturnType<typeof createTestServer>;
@@ -24,17 +23,19 @@ describe("Constellation Resolvers", () => {
     vi.clearAllMocks();
   });
 
-  afterEach(async () => {
-    await server.stop();
+  afterEach(() => {
+    server.stop();
   });
 
   describe("Query: constellation", () => {
     it("should return user constellation", async () => {
-      const { user, constellation } = await seedTestUser();
-      const context = await createTestContext({
+      const { user, constellation } = seedTestUser();
+      const context = createTestContext({
         authenticated: true,
         userId: user.id,
       });
+
+      mockPrisma.constellation.findUnique.mockResolvedValueOnce(constellation);
 
       const result = await server.executeOperation(
         {
@@ -52,7 +53,7 @@ describe("Constellation Resolvers", () => {
       );
 
       expect(result.errors).toBeUndefined();
-      expect(result.data?.constellation).toEqual({
+      expect(result.data?.["constellation"]).toEqual({
         id: constellation.id,
         title: constellation.title,
         personCount: constellation.personCount,
@@ -60,7 +61,7 @@ describe("Constellation Resolvers", () => {
     });
 
     it("should return null if user has no constellation", async () => {
-      const context = await createTestContext({
+      const context = createTestContext({
         authenticated: true,
         userId: "user-without-constellation",
       });
@@ -81,11 +82,11 @@ describe("Constellation Resolvers", () => {
       );
 
       expect(result.errors).toBeUndefined();
-      expect(result.data?.constellation).toBeNull();
+      expect(result.data?.["constellation"]).toBeNull();
     });
 
     it("should require authentication", async () => {
-      const context = await createTestContext({ authenticated: false });
+      const context = createTestContext({ authenticated: false });
 
       const result = await server.executeOperation(
         {
@@ -101,13 +102,13 @@ describe("Constellation Resolvers", () => {
       );
 
       expect(result.errors).toBeDefined();
-      expect(result.errors?.[0].message).toContain("Authentication required");
+      expect(result.errors?.[0]?.message).toContain("Authentication required");
     });
   });
 
   describe("Mutation: createConstellation", () => {
     it("should create constellation for authenticated user", async () => {
-      const context = await createTestContext({
+      const context = createTestContext({
         authenticated: true,
         userId: "new-user-id",
         email: "new@example.com",
@@ -147,7 +148,7 @@ describe("Constellation Resolvers", () => {
       );
 
       expect(result.errors).toBeUndefined();
-      expect(result.data?.createConstellation).toEqual({
+      expect(result.data?.["createConstellation"]).toEqual({
         id: "new-constellation-id",
         title: "My Family Tree",
       });
@@ -161,7 +162,7 @@ describe("Constellation Resolvers", () => {
     });
 
     it("should reject mutation without authentication", async () => {
-      const context = await createTestContext({ authenticated: false });
+      const context = createTestContext({ authenticated: false });
 
       const result = await server.executeOperation(
         {
@@ -180,17 +181,19 @@ describe("Constellation Resolvers", () => {
       );
 
       expect(result.errors).toBeDefined();
-      expect(result.errors?.[0].message).toContain("Authentication required");
+      expect(result.errors?.[0]?.message).toContain("Authentication required");
     });
   });
 
   describe("Mutation: updateConstellation", () => {
     it("should update user constellation", async () => {
-      const { user, constellation } = await seedTestUser();
-      const context = await createTestContext({
+      const { user, constellation } = seedTestUser();
+      const context = createTestContext({
         authenticated: true,
         userId: user.id,
       });
+
+      mockPrisma.constellation.findUnique.mockResolvedValueOnce(constellation);
 
       const updatedConstellation = {
         ...constellation,
@@ -222,7 +225,7 @@ describe("Constellation Resolvers", () => {
       );
 
       expect(result.errors).toBeUndefined();
-      expect(result.data?.updateConstellation).toEqual({
+      expect(result.data?.["updateConstellation"]).toEqual({
         id: constellation.id,
         title: "Updated Title",
         description: "New description",
@@ -230,7 +233,7 @@ describe("Constellation Resolvers", () => {
     });
 
     it("should require authentication", async () => {
-      const context = await createTestContext({ authenticated: false });
+      const context = createTestContext({ authenticated: false });
 
       const result = await server.executeOperation(
         {
@@ -249,7 +252,7 @@ describe("Constellation Resolvers", () => {
       );
 
       expect(result.errors).toBeDefined();
-      expect(result.errors?.[0].message).toContain("Authentication required");
+      expect(result.errors?.[0]?.message).toContain("Authentication required");
     });
   });
 });

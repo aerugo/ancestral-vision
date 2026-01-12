@@ -4,12 +4,15 @@
  * Tests for GraphQL user queries.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { createTestServer, createTestContext, mockPrisma } from "@/lib/graphql-test-utils";
 
-// Mock Prisma module
-vi.mock("@/lib/prisma", () => ({
-  prisma: mockPrisma,
-}));
+// Mock Prisma - MUST be before any imports that use prisma
+vi.mock("@/lib/prisma");
+
+import {
+  createTestServer,
+  createTestContext,
+  mockPrisma,
+} from "@/lib/graphql-test-utils";
 
 describe("User Resolvers", () => {
   let server: ReturnType<typeof createTestServer>;
@@ -19,13 +22,13 @@ describe("User Resolvers", () => {
     vi.clearAllMocks();
   });
 
-  afterEach(async () => {
-    await server.stop();
+  afterEach(() => {
+    server.stop();
   });
 
   describe("Query: me", () => {
     it("should return current user for authenticated request", async () => {
-      const context = await createTestContext({
+      const context = createTestContext({
         authenticated: true,
         userId: "test-user-id",
         email: "test@example.com",
@@ -48,7 +51,7 @@ describe("User Resolvers", () => {
       );
 
       expect(result.errors).toBeUndefined();
-      expect(result.data?.me).toEqual({
+      expect(result.data?.["me"]).toEqual({
         id: "test-user-id",
         email: "test@example.com",
         displayName: "Test User",
@@ -56,7 +59,7 @@ describe("User Resolvers", () => {
     });
 
     it("should return null for unauthenticated request", async () => {
-      const context = await createTestContext({ authenticated: false });
+      const context = createTestContext({ authenticated: false });
 
       const result = await server.executeOperation(
         {
@@ -73,11 +76,11 @@ describe("User Resolvers", () => {
       );
 
       expect(result.errors).toBeUndefined();
-      expect(result.data?.me).toBeNull();
+      expect(result.data?.["me"]).toBeNull();
     });
 
     it("should include constellation if user has one", async () => {
-      const context = await createTestContext({
+      const context = createTestContext({
         authenticated: true,
         userId: "user-with-constellation",
         email: "test@example.com",
@@ -115,7 +118,8 @@ describe("User Resolvers", () => {
       );
 
       expect(result.errors).toBeUndefined();
-      expect(result.data?.me?.constellation).toEqual({
+      const me = result.data?.["me"] as { constellation?: unknown } | null;
+      expect(me?.constellation).toEqual({
         id: "constellation-1",
         title: "My Family",
         personCount: 5,

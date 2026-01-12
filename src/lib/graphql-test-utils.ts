@@ -3,47 +3,61 @@
  *
  * Provides test server and context creation for GraphQL resolver tests.
  * Uses mocks for Prisma - no database required.
+ *
+ * IMPORTANT: Import this module AFTER calling vi.mock("@/lib/prisma")
  */
 import { vi } from "vitest";
 import type { GraphQLContext } from "@/graphql/context";
 import type { User, Constellation, Person } from "@prisma/client";
-import { execute, GraphQLSchema } from "graphql";
-import type { ExecutionResult } from "graphql";
+import { createYoga, type YogaInitialContext } from "graphql-yoga";
+import { makeExecutableSchema } from "@graphql-tools/schema";
 
-// Mock Prisma client
-export const mockPrisma = {
-  user: {
-    findUnique: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-  },
-  constellation: {
-    findUnique: vi.fn(),
-    findFirst: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-  },
-  person: {
-    findUnique: vi.fn(),
-    findMany: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-  },
-};
+// Import the mock for test assertions
+// This will be the actual mock from __mocks__/prisma.ts when vi.mock is active
+import { prisma } from "@/lib/prisma";
+import type { Mock } from "vitest";
+
+interface MockPrismaModel {
+  findUnique: Mock;
+  findFirst: Mock;
+  findMany: Mock;
+  create: Mock;
+  update: Mock;
+  delete: Mock;
+}
+
+interface MockPrismaClient {
+  user: MockPrismaModel;
+  constellation: MockPrismaModel;
+  person: MockPrismaModel;
+  relationship: MockPrismaModel;
+  $connect: Mock;
+  $disconnect: Mock;
+  $transaction: Mock;
+}
+
+// Cast to mock type for test access
+export const mockPrisma = prisma as unknown as MockPrismaClient;
 
 // Test data store
 const testDataStore = new Map<string, unknown>();
 
 /**
+ * Reset test data store
+ */
+export function resetTestData(): void {
+  testDataStore.clear();
+}
+
+/**
  * Create a test context for GraphQL execution
  */
-export async function createTestContext(options?: {
+export function createTestContext(options?: {
   authenticated?: boolean;
   userId?: string;
   email?: string;
   displayName?: string;
-}): Promise<GraphQLContext> {
+}): GraphQLContext {
   const { authenticated = false, userId, email, displayName } = options ?? {};
 
   let user: User | null = null;
@@ -69,43 +83,73 @@ export async function createTestContext(options?: {
   };
 }
 
+interface TestResult {
+  data?: Record<string, unknown> | null;
+  errors?: Array<{ message: string; [key: string]: unknown }>;
+}
+
 /**
  * Create a test server for executing GraphQL operations
  */
 export function createTestServer() {
-  let schema: GraphQLSchema | null = null;
+  // Dynamically import schema and resolvers to ensure mocks are in place
+  let yogaInstance: ReturnType<typeof createYoga> | null = null;
+
+  async function getYoga() {
+    if (!yogaInstance) {
+      const { typeDefs } = await import("@/graphql/schema");
+      const { resolvers } = await import("@/graphql/resolvers");
+
+      const schema = makeExecutableSchema({
+        typeDefs,
+        resolvers,
+      });
+
+      yogaInstance = createYoga({
+        schema,
+        // Provide context from our test context
+        context: (yogaCtx: YogaInitialContext) => {
+          // The context will be set per-request via headers
+          const contextHeader = yogaCtx.request.headers.get("x-test-context");
+          if (contextHeader) {
+            return JSON.parse(contextHeader);
+          }
+          return { user: null };
+        },
+        // Expose full error messages in tests (don't mask)
+        maskedErrors: false,
+      });
+    }
+    return yogaInstance;
+  }
 
   return {
     async executeOperation(
       operation: { query: string; variables?: Record<string, unknown> },
       context: GraphQLContext
-    ): Promise<ExecutionResult> {
-      if (!schema) {
-        // Lazy load schema to avoid circular dependencies
-        const { makeExecutableSchema } = await import("@graphql-tools/schema");
-        const { typeDefs } = await import("@/graphql/schema");
-        const { resolvers } = await import("@/graphql/resolvers");
+    ): Promise<TestResult> {
+      const yoga = await getYoga();
 
-        schema = makeExecutableSchema({
-          typeDefs,
-          resolvers,
-        });
-      }
-
-      return execute({
-        schema,
-        document: typeof operation.query === "string" 
-          ? (await import("graphql")).parse(operation.query)
-          : operation.query,
-        variableValues: operation.variables,
-        contextValue: context,
+      const response = await yoga.fetch("http://localhost:4000/graphql", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-test-context": JSON.stringify(context),
+        },
+        body: JSON.stringify({
+          query: operation.query,
+          variables: operation.variables,
+        }),
       });
+
+      const result = await response.json() as TestResult;
+      return result;
     },
 
-    async stop() {
-      // Cleanup if needed
-      schema = null;
+    stop() {
+      // Cleanup
       testDataStore.clear();
+      yogaInstance = null;
       vi.clearAllMocks();
     },
   };
@@ -114,7 +158,7 @@ export function createTestServer() {
 /**
  * Seed test data for a user
  */
-export async function seedTestUser(userId = "test-user-id") {
+export function seedTestUser(userId = "test-user-id") {
   const user: User = {
     id: userId,
     email: `${userId}@example.com`,
@@ -176,12 +220,20 @@ export async function seedTestUser(userId = "test-user-id") {
     testDataStore.set(`person-${person.id}`, person);
   });
 
-  // Mock Prisma responses
-  mockPrisma.user.findUnique.mockImplementation((args: { where: { id: string } }) => {
+  return { user, constellation, people };
+}
+
+/**
+ * Setup mock implementations for common test scenarios
+ */
+export function setupMockImplementations(mockPrismaClient: MockPrismaClient) {
+  // User mocks
+  mockPrismaClient.user.findUnique.mockImplementation((args: { where: { id: string } }) => {
     return Promise.resolve(testDataStore.get(`user-${args.where.id}`) ?? null);
   });
 
-  mockPrisma.constellation.findFirst.mockImplementation(
+  // Constellation mocks
+  mockPrismaClient.constellation.findFirst.mockImplementation(
     (args: { where: { ownerId: string } }) => {
       return Promise.resolve(
         testDataStore.get(`constellation-constellation-${args.where.ownerId}`) ?? null
@@ -189,7 +241,7 @@ export async function seedTestUser(userId = "test-user-id") {
     }
   );
 
-  mockPrisma.constellation.findUnique.mockImplementation(
+  mockPrismaClient.constellation.findUnique.mockImplementation(
     (args: { where: { id?: string; ownerId?: string } }) => {
       if (args.where.id) {
         return Promise.resolve(testDataStore.get(`constellation-${args.where.id}`) ?? null);
@@ -203,20 +255,26 @@ export async function seedTestUser(userId = "test-user-id") {
     }
   );
 
-  mockPrisma.person.findUnique.mockImplementation((args: { where: { id: string } }) => {
+  // Person mocks
+  mockPrismaClient.person.findUnique.mockImplementation((args: { where: { id: string } }) => {
     return Promise.resolve(testDataStore.get(`person-${args.where.id}`) ?? null);
   });
 
-  mockPrisma.person.findMany.mockImplementation(
+  mockPrismaClient.person.findMany.mockImplementation(
     (args?: { where?: { constellationId?: string } }) => {
+      const allPeople: Person[] = [];
+      testDataStore.forEach((value, key) => {
+        if (key.startsWith("person-") && value) {
+          allPeople.push(value as Person);
+        }
+      });
+
       if (!args?.where?.constellationId) {
-        return Promise.resolve(people);
+        return Promise.resolve(allPeople);
       }
       return Promise.resolve(
-        people.filter((p) => p.constellationId === args.where?.constellationId)
+        allPeople.filter((p) => p.constellationId === args.where?.constellationId)
       );
     }
   );
-
-  return { user, constellation, people };
 }

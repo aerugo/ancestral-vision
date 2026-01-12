@@ -4,17 +4,16 @@
  * Tests for GraphQL person queries and mutations.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+
+// Mock Prisma - MUST be before any imports that use prisma
+vi.mock("@/lib/prisma");
+
 import {
   createTestServer,
   createTestContext,
   seedTestUser,
   mockPrisma,
 } from "@/lib/graphql-test-utils";
-
-// Mock Prisma module
-vi.mock("@/lib/prisma", () => ({
-  prisma: mockPrisma,
-}));
 
 describe("Person Resolvers", () => {
   let server: ReturnType<typeof createTestServer>;
@@ -24,17 +23,19 @@ describe("Person Resolvers", () => {
     vi.clearAllMocks();
   });
 
-  afterEach(async () => {
-    await server.stop();
+  afterEach(() => {
+    server.stop();
   });
 
   describe("Mutation: createPerson", () => {
     it("should create person in user constellation", async () => {
-      const { user, constellation } = await seedTestUser();
-      const context = await createTestContext({
+      const { user, constellation } = seedTestUser();
+      const context = createTestContext({
         authenticated: true,
         userId: user.id,
       });
+
+      mockPrisma.constellation.findUnique.mockResolvedValueOnce(constellation);
 
       const newPerson = {
         id: "new-person-id",
@@ -86,7 +87,7 @@ describe("Person Resolvers", () => {
       );
 
       expect(result.errors).toBeUndefined();
-      expect(result.data?.createPerson).toEqual({
+      expect(result.data?.["createPerson"]).toEqual({
         id: "new-person-id",
         givenName: "John",
         surname: "Doe",
@@ -94,7 +95,7 @@ describe("Person Resolvers", () => {
     });
 
     it("should reject creating person without constellation", async () => {
-      const context = await createTestContext({
+      const context = createTestContext({
         authenticated: true,
         userId: "user-without-constellation",
       });
@@ -118,11 +119,11 @@ describe("Person Resolvers", () => {
       );
 
       expect(result.errors).toBeDefined();
-      expect(result.errors?.[0].message).toContain("constellation");
+      expect(result.errors?.[0]?.message).toContain("constellation");
     });
 
     it("should require authentication", async () => {
-      const context = await createTestContext({ authenticated: false });
+      const context = createTestContext({ authenticated: false });
 
       const result = await server.executeOperation(
         {
@@ -141,17 +142,20 @@ describe("Person Resolvers", () => {
       );
 
       expect(result.errors).toBeDefined();
-      expect(result.errors?.[0].message).toContain("Authentication required");
+      expect(result.errors?.[0]?.message).toContain("Authentication required");
     });
   });
 
   describe("Query: person", () => {
     it("should return person by id", async () => {
-      const { user, people } = await seedTestUser();
-      const context = await createTestContext({
+      const { user, constellation, people } = seedTestUser();
+      const context = createTestContext({
         authenticated: true,
         userId: user.id,
       });
+
+      mockPrisma.person.findUnique.mockResolvedValueOnce(people[0]);
+      mockPrisma.constellation.findUnique.mockResolvedValueOnce(constellation);
 
       const result = await server.executeOperation(
         {
@@ -164,42 +168,36 @@ describe("Person Resolvers", () => {
               }
             }
           `,
-          variables: { id: people[0].id },
+          variables: { id: people[0]?.id },
         },
         context
       );
 
       expect(result.errors).toBeUndefined();
-      expect(result.data?.person).toEqual({
-        id: people[0].id,
-        givenName: people[0].givenName,
-        surname: people[0].surname,
+      expect(result.data?.["person"]).toEqual({
+        id: people[0]?.id,
+        givenName: people[0]?.givenName,
+        surname: people[0]?.surname,
       });
     });
 
     it("should reject access to person in other constellation", async () => {
-      const { people: otherUserPeople } = await seedTestUser("other-user");
-      const { user: myUser } = await seedTestUser("my-user-id");
-      
-      const context = await createTestContext({
+      const { people: otherUserPeople, constellation: otherConstellation } =
+        seedTestUser("other-user");
+      const { user: myUser } = seedTestUser("my-user-id");
+
+      const context = createTestContext({
         authenticated: true,
         userId: myUser.id,
       });
 
       // Mock person lookup returning other user's person
       mockPrisma.person.findUnique.mockResolvedValueOnce(otherUserPeople[0]);
-      
+
       // Mock constellation lookup to show it belongs to different user
       mockPrisma.constellation.findUnique.mockResolvedValueOnce({
-        id: otherUserPeople[0].constellationId,
+        ...otherConstellation,
         ownerId: "other-user",
-        title: "Other Family",
-        description: null,
-        centeredPersonId: null,
-        personCount: 1,
-        generationSpan: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
       });
 
       const result = await server.executeOperation(
@@ -211,17 +209,17 @@ describe("Person Resolvers", () => {
               }
             }
           `,
-          variables: { id: otherUserPeople[0].id },
+          variables: { id: otherUserPeople[0]?.id },
         },
         context
       );
 
       expect(result.errors).toBeDefined();
-      expect(result.errors?.[0].message).toContain("access");
+      expect(result.errors?.[0]?.message).toContain("access");
     });
 
     it("should require authentication", async () => {
-      const context = await createTestContext({ authenticated: false });
+      const context = createTestContext({ authenticated: false });
 
       const result = await server.executeOperation(
         {
@@ -238,17 +236,20 @@ describe("Person Resolvers", () => {
       );
 
       expect(result.errors).toBeDefined();
-      expect(result.errors?.[0].message).toContain("Authentication required");
+      expect(result.errors?.[0]?.message).toContain("Authentication required");
     });
   });
 
   describe("Query: people", () => {
     it("should list people in constellation", async () => {
-      const { user, constellation, people } = await seedTestUser();
-      const context = await createTestContext({
+      const { user, constellation, people } = seedTestUser();
+      const context = createTestContext({
         authenticated: true,
         userId: user.id,
       });
+
+      mockPrisma.constellation.findUnique.mockResolvedValueOnce(constellation);
+      mockPrisma.person.findMany.mockResolvedValueOnce(people);
 
       const result = await server.executeOperation(
         {
@@ -267,16 +268,17 @@ describe("Person Resolvers", () => {
       );
 
       expect(result.errors).toBeUndefined();
-      expect(result.data?.people).toHaveLength(people.length);
-      expect(result.data?.people[0]).toEqual({
-        id: people[0].id,
-        givenName: people[0].givenName,
-        surname: people[0].surname,
+      const resultPeople = result.data?.["people"] as unknown[];
+      expect(resultPeople).toHaveLength(people.length);
+      expect(resultPeople[0]).toEqual({
+        id: people[0]?.id,
+        givenName: people[0]?.givenName,
+        surname: people[0]?.surname,
       });
     });
 
     it("should require authentication", async () => {
-      const context = await createTestContext({ authenticated: false });
+      const context = createTestContext({ authenticated: false });
 
       const result = await server.executeOperation(
         {
@@ -293,17 +295,20 @@ describe("Person Resolvers", () => {
       );
 
       expect(result.errors).toBeDefined();
-      expect(result.errors?.[0].message).toContain("Authentication required");
+      expect(result.errors?.[0]?.message).toContain("Authentication required");
     });
   });
 
   describe("Mutation: updatePerson", () => {
     it("should update person in user constellation", async () => {
-      const { user, people } = await seedTestUser();
-      const context = await createTestContext({
+      const { user, constellation, people } = seedTestUser();
+      const context = createTestContext({
         authenticated: true,
         userId: user.id,
       });
+
+      mockPrisma.person.findUnique.mockResolvedValueOnce(people[0]);
+      mockPrisma.constellation.findUnique.mockResolvedValueOnce(constellation);
 
       const updatedPerson = {
         ...people[0],
@@ -326,7 +331,7 @@ describe("Person Resolvers", () => {
             }
           `,
           variables: {
-            id: people[0].id,
+            id: people[0]?.id,
             input: {
               givenName: "Jane",
               surname: "Smith",
@@ -337,8 +342,8 @@ describe("Person Resolvers", () => {
       );
 
       expect(result.errors).toBeUndefined();
-      expect(result.data?.updatePerson).toEqual({
-        id: people[0].id,
+      expect(result.data?.["updatePerson"]).toEqual({
+        id: people[0]?.id,
         givenName: "Jane",
         surname: "Smith",
       });
@@ -347,11 +352,14 @@ describe("Person Resolvers", () => {
 
   describe("Mutation: deletePerson", () => {
     it("should soft delete person in user constellation", async () => {
-      const { user, people } = await seedTestUser();
-      const context = await createTestContext({
+      const { user, constellation, people } = seedTestUser();
+      const context = createTestContext({
         authenticated: true,
         userId: user.id,
       });
+
+      mockPrisma.person.findUnique.mockResolvedValueOnce(people[0]);
+      mockPrisma.constellation.findUnique.mockResolvedValueOnce(constellation);
 
       const deletedPerson = {
         ...people[0],
@@ -372,17 +380,18 @@ describe("Person Resolvers", () => {
             }
           `,
           variables: {
-            id: people[0].id,
+            id: people[0]?.id,
           },
         },
         context
       );
 
       expect(result.errors).toBeUndefined();
-      expect(result.data?.deletePerson).toMatchObject({
-        id: people[0].id,
+      const deletedResult = result.data?.["deletePerson"] as { id: string; deletedAt: unknown };
+      expect(deletedResult).toMatchObject({
+        id: people[0]?.id,
       });
-      expect(result.data?.deletePerson.deletedAt).toBeTruthy();
+      expect(deletedResult.deletedAt).toBeTruthy();
     });
   });
 });

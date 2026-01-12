@@ -28,11 +28,12 @@ This directory contains the comprehensive planning documentation for Ancestral V
 | 06 | [Technical Foundation](06_technical_foundation.md) | Existing codebase analysis | Complete |
 | 07 | [Technology Decisions](07_technology_decisions.md) | Tech stack decisions | Complete |
 | 08 | [Data Model](08_data_model.md) | Entity definitions and relationships | Complete |
-| 09 | [API Specification](09_api_specification.md) | Endpoint definitions | Scaffold |
-| 10 | [Security & Privacy](10_security_privacy.md) | Security architecture, privacy model | Scaffold |
-| 11 | [Deployment & Operations](11_deployment_operations.md) | Infrastructure and DevOps | Scaffold |
-| 12 | [Development Roadmap](12_roadmap.md) | Phased delivery plan | Scaffold |
-| 13 | [Risks & Mitigations](13_risks_mitigations.md) | Risk register | Scaffold |
+| 09 | [API Specification](09_api_specification.md) | Endpoint definitions | Complete |
+| 10 | [Security & Privacy](10_security_privacy.md) | Security architecture, privacy model | Complete |
+| 11 | [Deployment & Operations](11_deployment_operations.md) | Infrastructure and DevOps | Complete |
+| 12 | [Development Roadmap](12_roadmap.md) | Phased delivery plan | Complete |
+| 13 | [Development Principles](13_development.md) | AI-augmented dev workflow, TDD, specs | Complete |
+| 14 | [Risks & Mitigations](14_risks_mitigations.md) | Risk register | Complete |
 
 ---
 
@@ -57,10 +58,10 @@ See individual documents for complete question lists:
 - ~~05_features.md: Q5.1.x - Q5.11.x (Feature decisions)~~ ✓ Complete
 - ~~06_technical_foundation.md: Q6.x (Integration decisions)~~ ✓ Complete
 - ~~08_data_model.md: Q8.x (Data model decisions)~~ ✓ Complete
-- 09_api_specification.md: Q9.x (API decisions)
-- 10_security_privacy.md: Q10.x (Security decisions)
-- 11_deployment_operations.md: Q11.x (Operations decisions)
-- 12_roadmap.md: Q12.x (Scope decisions)
+- ~~09_api_specification.md: Q9.x (API decisions)~~ ✓ Complete
+- ~~10_security_privacy.md: Q10.x (Security decisions)~~ ✓ Complete
+- ~~11_deployment_operations.md: Q11.x (Operations decisions)~~ ✓ Complete
+- ~~12_roadmap.md: Q12.x (Scope decisions)~~ ✓ Complete
 
 ---
 
@@ -117,18 +118,22 @@ See individual documents for complete question lists:
           12_roadmap.md ◄────────────────┘
               │
               ▼
-          13_risks_mitigations.md
+          13_development.md
+              │
+              ▼
+          14_risks_mitigations.md
 ```
 
 ---
 
 ## Next Steps
 
-1. **Fill in scaffold documents** with decisions
-2. **Define data model** (08_data_model.md)
-3. **Create detailed designs** for Phase 0 features
-4. **Begin implementation**
+**All planning documents complete!**
+
+1. **Set up development environment**: Per 13_development.md (.claude/, docs/plans/, docs/invariants/)
+2. **Begin Phase 0 implementation**: Project setup, CI/CD, database schema
+3. **Start Phase 1 development**: MVP features per 12_roadmap.md
 
 ---
 
-*Last Updated: 2026-01-11*
+*Last Updated: 2026-01-12*

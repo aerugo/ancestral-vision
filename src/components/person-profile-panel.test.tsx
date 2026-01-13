@@ -24,6 +24,31 @@ vi.mock('@/store/selection-store', () => ({
   useSelectionStore: vi.fn(),
 }));
 
+// Mock PersonMediaTab to avoid complex dependencies
+vi.mock('./person-media-tab', () => ({
+  PersonMediaTab: ({ personId }: { personId: string }) => (
+    <div data-testid="person-media-tab">PersonMediaTab for {personId}</div>
+  ),
+}));
+
+// Mock AddRelationshipDialog
+vi.mock('./add-relationship-dialog', () => ({
+  AddRelationshipDialog: ({
+    personId,
+    relationshipType,
+    onClose,
+  }: {
+    personId: string;
+    relationshipType: string;
+    onClose: () => void;
+  }) => (
+    <div data-testid="add-relationship-dialog">
+      Adding {relationshipType} for {personId}
+      <button onClick={onClose}>Close Dialog</button>
+    </div>
+  ),
+}));
+
 import { usePerson } from '@/hooks/use-people';
 import { usePersonRelationships } from '@/hooks/use-relationships';
 import { useSelectionStore } from '@/store/selection-store';
@@ -269,6 +294,40 @@ describe('PersonProfilePanel', () => {
       expect(screen.getByRole('tab', { name: /notes/i })).toBeInTheDocument();
       expect(screen.getByRole('tab', { name: /photos/i })).toBeInTheDocument();
     });
+
+    it('should render PersonMediaTab when Photos tab is clicked', async () => {
+      vi.mocked(useSelectionStore).mockReturnValue({
+        selectedPersonId: 'person-123',
+        isPanelOpen: true,
+        clearSelection: mockClearSelection,
+        togglePanel: mockTogglePanel,
+        connectedPersonIds: [],
+      });
+
+      vi.mocked(usePerson).mockReturnValue({
+        data: {
+          id: 'person-123',
+          givenName: 'Jane',
+          surname: 'Smith',
+          generation: 0,
+          patronymic: null,
+          nameOrder: 'GIVEN_FIRST' as const,
+          speculative: false,
+          birthDate: null,
+          deathDate: null,
+        },
+        isLoading: false,
+      } as ReturnType<typeof usePerson>);
+
+      render(<PersonProfilePanel />, { wrapper: createWrapper() });
+
+      // Click on Photos tab
+      await userEvent.click(screen.getByRole('tab', { name: /photos/i }));
+
+      // Should render PersonMediaTab with correct personId
+      expect(screen.getByTestId('person-media-tab')).toBeInTheDocument();
+      expect(screen.getByText(/PersonMediaTab for person-123/)).toBeInTheDocument();
+    });
   });
 
   describe('Close Panel', () => {
@@ -446,6 +505,120 @@ describe('PersonProfilePanel', () => {
 
       const panel = screen.getByRole('complementary');
       expect(panel).toHaveClass('bg-background');
+    });
+  });
+
+  describe('Relationship Management', () => {
+    it('should show Add Parent, Add Child, Add Spouse buttons', () => {
+      vi.mocked(useSelectionStore).mockReturnValue({
+        selectedPersonId: 'person-123',
+        isPanelOpen: true,
+        clearSelection: mockClearSelection,
+        togglePanel: mockTogglePanel,
+        connectedPersonIds: [],
+      });
+
+      vi.mocked(usePerson).mockReturnValue({
+        data: { id: 'person-123', givenName: 'Test', surname: null, generation: 0, patronymic: null, nameOrder: 'GIVEN_FIRST', speculative: false, birthDate: null, deathDate: null },
+        isLoading: false,
+      } as ReturnType<typeof usePerson>);
+
+      render(<PersonProfilePanel />, { wrapper: createWrapper() });
+
+      expect(screen.getByRole('button', { name: /add parent/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /add child/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /add spouse/i })).toBeInTheDocument();
+    });
+
+    it('should open AddRelationshipDialog when Add Parent clicked', async () => {
+      vi.mocked(useSelectionStore).mockReturnValue({
+        selectedPersonId: 'person-123',
+        isPanelOpen: true,
+        clearSelection: mockClearSelection,
+        togglePanel: mockTogglePanel,
+        connectedPersonIds: [],
+      });
+
+      vi.mocked(usePerson).mockReturnValue({
+        data: { id: 'person-123', givenName: 'Test', surname: null, generation: 0, patronymic: null, nameOrder: 'GIVEN_FIRST', speculative: false, birthDate: null, deathDate: null },
+        isLoading: false,
+      } as ReturnType<typeof usePerson>);
+
+      render(<PersonProfilePanel />, { wrapper: createWrapper() });
+
+      await userEvent.click(screen.getByRole('button', { name: /add parent/i }));
+
+      expect(screen.getByTestId('add-relationship-dialog')).toBeInTheDocument();
+      expect(screen.getByText(/Adding parent for person-123/)).toBeInTheDocument();
+    });
+
+    it('should open AddRelationshipDialog when Add Child clicked', async () => {
+      vi.mocked(useSelectionStore).mockReturnValue({
+        selectedPersonId: 'person-123',
+        isPanelOpen: true,
+        clearSelection: mockClearSelection,
+        togglePanel: mockTogglePanel,
+        connectedPersonIds: [],
+      });
+
+      vi.mocked(usePerson).mockReturnValue({
+        data: { id: 'person-123', givenName: 'Test', surname: null, generation: 0, patronymic: null, nameOrder: 'GIVEN_FIRST', speculative: false, birthDate: null, deathDate: null },
+        isLoading: false,
+      } as ReturnType<typeof usePerson>);
+
+      render(<PersonProfilePanel />, { wrapper: createWrapper() });
+
+      await userEvent.click(screen.getByRole('button', { name: /add child/i }));
+
+      expect(screen.getByTestId('add-relationship-dialog')).toBeInTheDocument();
+      expect(screen.getByText(/Adding child for person-123/)).toBeInTheDocument();
+    });
+
+    it('should open AddRelationshipDialog when Add Spouse clicked', async () => {
+      vi.mocked(useSelectionStore).mockReturnValue({
+        selectedPersonId: 'person-123',
+        isPanelOpen: true,
+        clearSelection: mockClearSelection,
+        togglePanel: mockTogglePanel,
+        connectedPersonIds: [],
+      });
+
+      vi.mocked(usePerson).mockReturnValue({
+        data: { id: 'person-123', givenName: 'Test', surname: null, generation: 0, patronymic: null, nameOrder: 'GIVEN_FIRST', speculative: false, birthDate: null, deathDate: null },
+        isLoading: false,
+      } as ReturnType<typeof usePerson>);
+
+      render(<PersonProfilePanel />, { wrapper: createWrapper() });
+
+      await userEvent.click(screen.getByRole('button', { name: /add spouse/i }));
+
+      expect(screen.getByTestId('add-relationship-dialog')).toBeInTheDocument();
+      expect(screen.getByText(/Adding spouse for person-123/)).toBeInTheDocument();
+    });
+
+    it('should close dialog when onClose is called', async () => {
+      vi.mocked(useSelectionStore).mockReturnValue({
+        selectedPersonId: 'person-123',
+        isPanelOpen: true,
+        clearSelection: mockClearSelection,
+        togglePanel: mockTogglePanel,
+        connectedPersonIds: [],
+      });
+
+      vi.mocked(usePerson).mockReturnValue({
+        data: { id: 'person-123', givenName: 'Test', surname: null, generation: 0, patronymic: null, nameOrder: 'GIVEN_FIRST', speculative: false, birthDate: null, deathDate: null },
+        isLoading: false,
+      } as ReturnType<typeof usePerson>);
+
+      render(<PersonProfilePanel />, { wrapper: createWrapper() });
+
+      // Open dialog
+      await userEvent.click(screen.getByRole('button', { name: /add parent/i }));
+      expect(screen.getByTestId('add-relationship-dialog')).toBeInTheDocument();
+
+      // Close dialog
+      await userEvent.click(screen.getByRole('button', { name: /close dialog/i }));
+      expect(screen.queryByTestId('add-relationship-dialog')).not.toBeInTheDocument();
     });
   });
 });

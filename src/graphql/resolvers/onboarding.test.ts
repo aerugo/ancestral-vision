@@ -427,6 +427,245 @@ describe('Onboarding Resolvers', () => {
       expect(result.completedAt).toBeDefined();
       expect(result.completedAt).toBeInstanceOf(Date);
     });
+
+    it('should create self person from savedData.ADD_SELF', async () => {
+      if (!dbAvailable) {
+        console.log('Skipping: Database not available');
+        return;
+      }
+
+      // Create progress with saved self data
+      await testPrisma.onboardingProgress.create({
+        data: {
+          userId: testData.user.id,
+          status: 'IN_PROGRESS',
+          currentStep: 'AHA_MOMENT',
+          completedSteps: ['TOUR', 'ADD_SELF'],
+          savedData: {
+            ADD_SELF: { givenName: 'John', surname: 'Doe', birthYear: 1990 },
+          },
+        },
+      });
+
+      await resolvers.Mutation.completeOnboarding(null, {}, authContext);
+
+      // Verify person was created
+      const people = await testPrisma.person.findMany({
+        where: { constellationId: testData.constellation.id },
+      });
+
+      expect(people.length).toBe(1);
+      expect(people[0]!.givenName).toBe('John');
+      expect(people[0]!.surname).toBe('Doe');
+    });
+
+    it('should create parents from savedData.ADD_PARENTS', async () => {
+      if (!dbAvailable) {
+        console.log('Skipping: Database not available');
+        return;
+      }
+
+      // Create progress with saved self and parent data
+      await testPrisma.onboardingProgress.create({
+        data: {
+          userId: testData.user.id,
+          status: 'IN_PROGRESS',
+          currentStep: 'AHA_MOMENT',
+          completedSteps: ['TOUR', 'ADD_SELF', 'ADD_PARENTS'],
+          savedData: {
+            ADD_SELF: { givenName: 'John', surname: 'Doe' },
+            ADD_PARENTS: {
+              father: { givenName: 'Robert', surname: 'Doe' },
+              mother: { givenName: 'Mary', surname: 'Smith' },
+            },
+          },
+        },
+      });
+
+      await resolvers.Mutation.completeOnboarding(null, {}, authContext);
+
+      // Verify people were created
+      const people = await testPrisma.person.findMany({
+        where: { constellationId: testData.constellation.id },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      expect(people.length).toBe(3);
+
+      // Check self
+      expect(people.some((p) => p.givenName === 'John')).toBe(true);
+
+      // Check parents
+      expect(people.some((p) => p.givenName === 'Robert')).toBe(true);
+      expect(people.some((p) => p.givenName === 'Mary')).toBe(true);
+    });
+
+    it('should create parent-child relationships', async () => {
+      if (!dbAvailable) {
+        console.log('Skipping: Database not available');
+        return;
+      }
+
+      await testPrisma.onboardingProgress.create({
+        data: {
+          userId: testData.user.id,
+          status: 'IN_PROGRESS',
+          currentStep: 'AHA_MOMENT',
+          completedSteps: ['TOUR', 'ADD_SELF', 'ADD_PARENTS'],
+          savedData: {
+            ADD_SELF: { givenName: 'John', surname: 'Doe' },
+            ADD_PARENTS: {
+              father: { givenName: 'Robert', surname: 'Doe' },
+              mother: { givenName: 'Mary', surname: 'Smith' },
+            },
+          },
+        },
+      });
+
+      await resolvers.Mutation.completeOnboarding(null, {}, authContext);
+
+      // Verify parent-child relationships were created
+      const parentChildRels = await testPrisma.parentChildRelationship.findMany({
+        where: { constellationId: testData.constellation.id },
+      });
+
+      // Should have 2 parent-child relationships (father-child, mother-child)
+      expect(parentChildRels.length).toBe(2);
+    });
+
+    it('should create spouse relationship for parents', async () => {
+      if (!dbAvailable) {
+        console.log('Skipping: Database not available');
+        return;
+      }
+
+      await testPrisma.onboardingProgress.create({
+        data: {
+          userId: testData.user.id,
+          status: 'IN_PROGRESS',
+          currentStep: 'AHA_MOMENT',
+          completedSteps: ['TOUR', 'ADD_SELF', 'ADD_PARENTS'],
+          savedData: {
+            ADD_SELF: { givenName: 'John', surname: 'Doe' },
+            ADD_PARENTS: {
+              father: { givenName: 'Robert', surname: 'Doe' },
+              mother: { givenName: 'Mary', surname: 'Smith' },
+            },
+          },
+        },
+      });
+
+      await resolvers.Mutation.completeOnboarding(null, {}, authContext);
+
+      // Verify spouse relationship was created
+      const spouseRels = await testPrisma.spouseRelationship.findMany({
+        where: { constellationId: testData.constellation.id },
+      });
+
+      expect(spouseRels.length).toBe(1);
+    });
+
+    it('should handle missing optional parent data gracefully', async () => {
+      if (!dbAvailable) {
+        console.log('Skipping: Database not available');
+        return;
+      }
+
+      // Only father provided, no mother
+      await testPrisma.onboardingProgress.create({
+        data: {
+          userId: testData.user.id,
+          status: 'IN_PROGRESS',
+          currentStep: 'AHA_MOMENT',
+          completedSteps: ['TOUR', 'ADD_SELF', 'ADD_PARENTS'],
+          savedData: {
+            ADD_SELF: { givenName: 'John', surname: 'Doe' },
+            ADD_PARENTS: {
+              father: { givenName: 'Robert', surname: 'Doe' },
+              // mother not provided
+            },
+          },
+        },
+      });
+
+      await resolvers.Mutation.completeOnboarding(null, {}, authContext);
+
+      const people = await testPrisma.person.findMany({
+        where: { constellationId: testData.constellation.id },
+      });
+
+      // Should have self + father = 2 people
+      expect(people.length).toBe(2);
+    });
+
+    it('should skip people with empty givenName', async () => {
+      if (!dbAvailable) {
+        console.log('Skipping: Database not available');
+        return;
+      }
+
+      await testPrisma.onboardingProgress.create({
+        data: {
+          userId: testData.user.id,
+          status: 'IN_PROGRESS',
+          currentStep: 'AHA_MOMENT',
+          completedSteps: ['TOUR', 'ADD_SELF', 'ADD_PARENTS'],
+          savedData: {
+            ADD_SELF: { givenName: 'John', surname: 'Doe' },
+            ADD_PARENTS: {
+              father: { givenName: '', surname: '' }, // Empty - should skip
+              mother: { givenName: 'Mary', surname: 'Smith' },
+            },
+          },
+        },
+      });
+
+      await resolvers.Mutation.completeOnboarding(null, {}, authContext);
+
+      const people = await testPrisma.person.findMany({
+        where: { constellationId: testData.constellation.id },
+      });
+
+      // Should have self + mother = 2 people (father skipped due to empty name)
+      expect(people.length).toBe(2);
+    });
+
+    it('should be idempotent - not create duplicates on retry', async () => {
+      if (!dbAvailable) {
+        console.log('Skipping: Database not available');
+        return;
+      }
+
+      await testPrisma.onboardingProgress.create({
+        data: {
+          userId: testData.user.id,
+          status: 'IN_PROGRESS',
+          currentStep: 'AHA_MOMENT',
+          completedSteps: ['TOUR', 'ADD_SELF'],
+          savedData: {
+            ADD_SELF: { givenName: 'John', surname: 'Doe' },
+          },
+        },
+      });
+
+      // Complete twice
+      await resolvers.Mutation.completeOnboarding(null, {}, authContext);
+
+      // Reset status to allow second completion
+      await testPrisma.onboardingProgress.update({
+        where: { userId: testData.user.id },
+        data: { status: 'IN_PROGRESS' },
+      });
+
+      await resolvers.Mutation.completeOnboarding(null, {}, authContext);
+
+      const people = await testPrisma.person.findMany({
+        where: { constellationId: testData.constellation.id },
+      });
+
+      // Should still only have 1 person
+      expect(people.length).toBe(1);
+    });
   });
 
   describe('Mutation: skipOnboarding', () => {

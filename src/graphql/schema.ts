@@ -35,6 +35,12 @@ export const typeDefs = /* GraphQL */ `
 
     """Get a single event by ID"""
     event(id: ID!): Event
+
+    """Get media for a person"""
+    personMedia(personId: ID!): [Media!]!
+
+    """Get a single media by ID"""
+    media(id: ID!): Media
   }
 
   type Mutation {
@@ -94,6 +100,21 @@ export const typeDefs = /* GraphQL */ `
 
     """Remove a participant from an event"""
     removeEventParticipant(eventId: ID!, personId: ID!): Event!
+
+    """Prepare media upload and get signed URL (INV-D008)"""
+    prepareMediaUpload(input: PrepareMediaUploadInput!): PrepareUploadResult!
+
+    """Confirm media upload after file is uploaded to storage"""
+    confirmMediaUpload(input: ConfirmMediaUploadInput!): Media!
+
+    """Soft delete media"""
+    deleteMedia(id: ID!): Media!
+
+    """Associate media with a person"""
+    associateMediaWithPerson(mediaId: ID!, personId: ID!): Media!
+
+    """Remove media from a person"""
+    removeMediaFromPerson(mediaId: ID!, personId: ID!): Media!
   }
 
   type User {
@@ -362,6 +383,65 @@ export const typeDefs = /* GraphQL */ `
     icon: String
     date: JSON
     location: JSON
+    privacy: PrivacyLevel
+  }
+
+  """Media type enumeration"""
+  enum MediaType {
+    PHOTO
+    DOCUMENT
+    AUDIO
+  }
+
+  """Media file attached to people (INV-D008)"""
+  type Media {
+    id: ID!
+    type: MediaType!
+    filename: String!
+    mimeType: String!
+    fileSize: Int!
+    """Signed URL for accessing the media (1hr expiry)"""
+    url: String!
+    """Thumbnail URLs for images"""
+    thumbnails: JSON
+    title: String
+    description: String
+    """Date the media was taken/created"""
+    dateTaken: JSON
+    privacy: PrivacyLevel!
+    """People associated with this media"""
+    people: [Person!]!
+    deletedAt: DateTime
+    createdAt: DateTime!
+    updatedAt: DateTime!
+  }
+
+  """Result of preparing a media upload"""
+  type PrepareUploadResult {
+    mediaId: ID!
+    """Signed URL for uploading the file"""
+    uploadUrl: String!
+    """Whether a duplicate file was detected"""
+    isDuplicate: Boolean!
+    """ID of existing media if duplicate"""
+    duplicateMediaId: ID
+  }
+
+  input PrepareMediaUploadInput {
+    filename: String!
+    mimeType: String!
+    fileSize: Int!
+    """SHA-256 hash of file content for duplicate detection"""
+    hash: String!
+    """People to associate with this media"""
+    personIds: [ID!]!
+  }
+
+  input ConfirmMediaUploadInput {
+    mediaId: ID!
+    title: String
+    description: String
+    dateTaken: JSON
     privacy: PrivacyLevel
   }
 `;

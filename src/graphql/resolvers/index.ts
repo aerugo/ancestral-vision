@@ -28,6 +28,11 @@ import {
   eventFieldResolvers,
   eventParticipantFieldResolvers,
 } from './event-resolvers';
+import {
+  mediaQueries,
+  mediaMutations,
+  mediaFieldResolvers,
+} from './media-resolvers';
 
 /**
  * Composed GraphQL resolvers
@@ -40,6 +45,7 @@ export const resolvers = {
     ...relationshipQueries,
     ...noteQueries,
     ...eventQueries,
+    ...mediaQueries,
   },
 
   Mutation: {
@@ -48,6 +54,7 @@ export const resolvers = {
     ...relationshipMutations,
     ...noteMutations,
     ...eventMutations,
+    ...mediaMutations,
   },
 
   // Field resolvers
@@ -56,6 +63,7 @@ export const resolvers = {
   Person: personFieldResolvers,
   Event: eventFieldResolvers,
   EventParticipant: eventParticipantFieldResolvers,
+  Media: mediaFieldResolvers,
 
   // Union type resolver
   Relationship: relationshipTypeResolver,

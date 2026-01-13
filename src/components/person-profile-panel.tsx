@@ -13,6 +13,7 @@ import { usePerson } from '@/hooks/use-people';
 import { usePersonRelationships } from '@/hooks/use-relationships';
 import { Button } from '@/components/ui/button';
 import { PersonNotesTab } from './person-notes-tab';
+import { PersonEventsTab } from './person-events-tab';
 import type {
   Relationship,
   ParentChildRelationship,
@@ -218,8 +219,8 @@ export function PersonProfilePanel(): ReactElement | null {
 
           {/* Tab Content */}
           <div className="mb-4 flex-1 overflow-hidden">
-            {activeTab === 'events' && (
-              <p className="text-sm text-muted-foreground">No events recorded yet.</p>
+            {activeTab === 'events' && selectedPersonId && (
+              <PersonEventsTab personId={selectedPersonId} />
             )}
             {activeTab === 'notes' && selectedPersonId && (
               <PersonNotesTab personId={selectedPersonId} />

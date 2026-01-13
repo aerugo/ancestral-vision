@@ -22,6 +22,12 @@ import {
   relationshipTypeResolver,
 } from './relationship-resolvers';
 import { noteQueries, noteMutations } from './note-resolvers';
+import {
+  eventQueries,
+  eventMutations,
+  eventFieldResolvers,
+  eventParticipantFieldResolvers,
+} from './event-resolvers';
 
 /**
  * Composed GraphQL resolvers
@@ -33,6 +39,7 @@ export const resolvers = {
     ...personQueries,
     ...relationshipQueries,
     ...noteQueries,
+    ...eventQueries,
   },
 
   Mutation: {
@@ -40,12 +47,15 @@ export const resolvers = {
     ...personMutations,
     ...relationshipMutations,
     ...noteMutations,
+    ...eventMutations,
   },
 
   // Field resolvers
   User: userFieldResolvers,
   Constellation: constellationFieldResolvers,
   Person: personFieldResolvers,
+  Event: eventFieldResolvers,
+  EventParticipant: eventParticipantFieldResolvers,
 
   // Union type resolver
   Relationship: relationshipTypeResolver,

@@ -29,6 +29,12 @@ export const typeDefs = /* GraphQL */ `
 
     """Get a single note by ID"""
     note(id: ID!): Note
+
+    """Get events for a person (as primary or participant)"""
+    personEvents(personId: ID!): [Event!]!
+
+    """Get a single event by ID"""
+    event(id: ID!): Event
   }
 
   type Mutation {
@@ -73,6 +79,21 @@ export const typeDefs = /* GraphQL */ `
 
     """Soft delete a note"""
     deleteNote(id: ID!): Note!
+
+    """Create an event for a person"""
+    createEvent(input: CreateEventInput!): Event!
+
+    """Update an event"""
+    updateEvent(id: ID!, input: UpdateEventInput!): Event!
+
+    """Soft delete an event"""
+    deleteEvent(id: ID!): Event!
+
+    """Add a participant to an event"""
+    addEventParticipant(eventId: ID!, personId: ID!): Event!
+
+    """Remove a participant from an event"""
+    removeEventParticipant(eventId: ID!, personId: ID!): Event!
   }
 
   type User {
@@ -292,6 +313,55 @@ export const typeDefs = /* GraphQL */ `
   input UpdateNoteInput {
     title: String
     content: String
+    privacy: PrivacyLevel
+  }
+
+  """An event in a person's life (INV-D007: supports flexible dates)"""
+  type Event {
+    id: ID!
+    title: String!
+    description: String
+    icon: String
+    """GEDCOM-style flexible date (exact, approximate, before, after, range)"""
+    date: JSON
+    """Location information"""
+    location: JSON
+    """Primary person this event belongs to"""
+    primaryPersonId: ID!
+    primaryPerson: Person!
+    """Additional participants in the event"""
+    participants: [EventParticipant!]!
+    privacy: PrivacyLevel!
+    deletedAt: DateTime
+    createdAt: DateTime!
+    updatedAt: DateTime!
+  }
+
+  """A participant in an event"""
+  type EventParticipant {
+    id: ID!
+    eventId: ID!
+    personId: ID!
+    person: Person!
+  }
+
+  input CreateEventInput {
+    primaryPersonId: ID!
+    title: String!
+    description: String
+    icon: String
+    date: JSON
+    location: JSON
+    participantIds: [ID!]
+    privacy: PrivacyLevel
+  }
+
+  input UpdateEventInput {
+    title: String
+    description: String
+    icon: String
+    date: JSON
+    location: JSON
     privacy: PrivacyLevel
   }
 `;

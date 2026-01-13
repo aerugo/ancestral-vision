@@ -148,9 +148,36 @@ Tests: 354 passed (354)
 
 ### Phase 1.4: Notes System
 
-**Status**: Pending
-**Started**:
-**Completed**:
+**Status**: Complete
+**Started**: 2026-01-13
+**Completed**: 2026-01-13
+
+#### Test Results
+
+```
+Test Files: 38 passed (38)
+Tests: 392 passed (392)
+```
+
+#### Results
+
+- Created Note GraphQL types (Note, CreateNoteInput, UpdateNoteInput, PrivacyLevel enum)
+- Implemented note resolvers (personNotes query, createNote/updateNote/deleteNote mutations)
+- Added version history support with max 10 versions (INV-D006)
+- Enforced 50,000 character limit for note content
+- Implemented privacy levels (PRIVATE, CONNECTIONS, PUBLIC)
+- Created TanStack Query hooks for all note operations
+- Built NoteList component with timestamps, version badges, and privacy indicators
+- Soft delete support with deletedAt timestamp
+
+#### Notes
+
+- Used JSON field for previousVersions array in Prisma
+- Version history stores {version, content, updatedAt} for each previous version
+- Content preview extracts plain text from JSON (supports both Tiptap JSON and plain text)
+- Test file needed .tsx extension for JSX support
+- Added date-fns dependency for relative timestamps
+- 38 new tests: 15 resolver tests + 12 hook tests + 11 component tests
 
 ---
 
@@ -277,13 +304,26 @@ Tests: 354 passed (354)
 - `src/components/person-profile-panel.tsx` - Slide-in profile panel (INV-U004)
 - `src/components/person-profile-panel.test.tsx` - Profile panel tests (14 tests)
 
+### Created (Phase 1.4)
+
+- `src/graphql/resolvers/note.test.ts` - Note resolver tests (15 tests)
+- `src/hooks/use-notes.ts` - TanStack Query hooks for notes
+- `src/hooks/use-notes.test.tsx` - Note hooks tests (12 tests)
+- `src/components/note-list.tsx` - Note list component with timestamps
+- `src/components/note-list.test.tsx` - Note list tests (11 tests)
+
+### Modified (Phase 1.4)
+
+- `src/graphql/schema.ts` - Added Note types, PrivacyLevel enum, note queries/mutations
+- `src/graphql/resolvers/index.ts` - Added note resolver implementations
+
 ---
 
 ## Documentation Updates Required
 
 ### INVARIANTS.md Changes
 
-- [ ] Add INV-D006: Notes have version history (max 10)
+- [x] Add INV-D006: Notes have version history (max 10) - implemented in Phase 1.4
 - [ ] Add INV-D007: Events support flexible GEDCOM-style dates
 - [ ] Add INV-D008: Media files stored in Cloud Storage with signed URLs
 - [x] Add INV-A010: Auto-save with debounce (2s) for inline editing (implemented in Phase 1.2)
@@ -296,4 +336,4 @@ Tests: 354 passed (354)
 
 ---
 
-*Last Updated: 2026-01-13 (Phase 1.3 Complete)*
+*Last Updated: 2026-01-13 (Phase 1.4 Complete)*

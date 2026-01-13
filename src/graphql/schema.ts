@@ -23,6 +23,12 @@ export const typeDefs = /* GraphQL */ `
 
     """Get all relationships for a person (both parent-child and spouse)"""
     personRelationships(personId: ID!): [Relationship!]!
+
+    """Get notes for a person"""
+    personNotes(personId: ID!): [Note!]!
+
+    """Get a single note by ID"""
+    note(id: ID!): Note
   }
 
   type Mutation {
@@ -58,6 +64,15 @@ export const typeDefs = /* GraphQL */ `
 
     """Delete a spouse relationship"""
     deleteSpouseRelationship(id: ID!): SpouseRelationship!
+
+    """Create a note for a person"""
+    createNote(input: CreateNoteInput!): Note!
+
+    """Update a note"""
+    updateNote(id: ID!, input: UpdateNoteInput!): Note!
+
+    """Soft delete a note"""
+    deleteNote(id: ID!): Note!
   }
 
   type User {
@@ -243,5 +258,40 @@ export const typeDefs = /* GraphQL */ `
     FEMALE
     OTHER
     UNKNOWN
+  }
+
+  """Privacy level for content"""
+  enum PrivacyLevel {
+    PRIVATE
+    CONNECTIONS
+    PUBLIC
+  }
+
+  """A note attached to a person"""
+  type Note {
+    id: ID!
+    personId: ID!
+    title: String
+    content: String!
+    privacy: PrivacyLevel!
+    version: Int!
+    previousVersions: JSON
+    referencedPersonIds: [ID!]!
+    deletedAt: DateTime
+    createdAt: DateTime!
+    updatedAt: DateTime!
+  }
+
+  input CreateNoteInput {
+    personId: ID!
+    title: String
+    content: String!
+    privacy: PrivacyLevel
+  }
+
+  input UpdateNoteInput {
+    title: String
+    content: String
+    privacy: PrivacyLevel
   }
 `;

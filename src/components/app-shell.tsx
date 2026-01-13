@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
+import { Plus } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { SearchBar } from '@/components/search-bar';
+import { AddPersonDialog } from '@/components/add-person-dialog';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -26,6 +29,7 @@ interface AppShellProps {
  */
 export function AppShell({ children, onPersonSelect }: AppShellProps): React.ReactElement {
   const { user, loading, logout } = useAuth();
+  const [isAddPersonOpen, setIsAddPersonOpen] = useState(false);
 
   const initials =
     user?.displayName
@@ -41,11 +45,22 @@ export function AppShell({ children, onPersonSelect }: AppShellProps): React.Rea
         role="navigation"
       >
         <div className="container flex h-14 items-center justify-between">
-          <Link href="/" className="font-semibold text-lg">
+          <Link href={user ? '/constellation' : '/'} className="font-semibold text-lg">
             Ancestral Vision
           </Link>
 
           <div className="flex items-center gap-4">
+            {user && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAddPersonOpen(true)}
+                className="gap-1"
+              >
+                <Plus className="h-4 w-4" />
+                Add Person
+              </Button>
+            )}
             {user && onPersonSelect && (
               <SearchBar
                 onSelect={onPersonSelect}
@@ -93,6 +108,11 @@ export function AppShell({ children, onPersonSelect }: AppShellProps): React.Rea
           {children}
         </div>
       </main>
+
+      {/* Add Person Dialog */}
+      {isAddPersonOpen && (
+        <AddPersonDialog onClose={() => setIsAddPersonOpen(false)} />
+      )}
     </div>
   );
 }

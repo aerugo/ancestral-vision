@@ -54,6 +54,40 @@ export class ConstellationSelection {
   }
 
   /**
+   * Get the world position of the intersected mesh at the given screen coordinates
+   * @param normalizedX X coordinate in normalized device coordinates (-1 to 1)
+   * @param normalizedY Y coordinate in normalized device coordinates (-1 to 1)
+   * @returns The world position {x, y, z} if a star was clicked, null otherwise
+   */
+  public getIntersectedPosition(
+    normalizedX: number,
+    normalizedY: number
+  ): { x: number; y: number; z: number } | null {
+    if (this._isDisposed || !this._raycaster) {
+      return null;
+    }
+
+    const pointer = new THREE.Vector2(normalizedX, normalizedY);
+    this._raycaster.setFromCamera(pointer, this._camera);
+
+    const intersects = this._raycaster.intersectObjects(this._scene.children, true);
+
+    for (const intersect of intersects) {
+      const personId = intersect.object.userData.personId as string | undefined;
+      if (personId) {
+        // Return the intersection point in world coordinates
+        return {
+          x: intersect.point.x,
+          y: intersect.point.y,
+          z: intersect.point.z,
+        };
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Update the camera reference
    * @param camera The new camera to use
    */

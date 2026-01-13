@@ -14,6 +14,8 @@ import { usePersonRelationships } from '@/hooks/use-relationships';
 import { Button } from '@/components/ui/button';
 import { PersonNotesTab } from './person-notes-tab';
 import { PersonEventsTab } from './person-events-tab';
+import { PersonMediaTab } from './person-media-tab';
+import { AddRelationshipDialog, type RelationshipType } from './add-relationship-dialog';
 import type {
   Relationship,
   ParentChildRelationship,
@@ -115,6 +117,7 @@ export function PersonProfilePanel(): ReactElement | null {
   const { data: relationships, isLoading: isRelationshipsLoading } =
     usePersonRelationships(selectedPersonId);
   const [activeTab, setActiveTab] = useState<TabId>('events');
+  const [addingRelation, setAddingRelation] = useState<RelationshipType | null>(null);
 
   // Don't render if no selection or panel closed
   if (!selectedPersonId || !isPanelOpen) {
@@ -225,8 +228,8 @@ export function PersonProfilePanel(): ReactElement | null {
             {activeTab === 'notes' && selectedPersonId && (
               <PersonNotesTab personId={selectedPersonId} />
             )}
-            {activeTab === 'photos' && (
-              <p className="text-sm text-muted-foreground">No photos uploaded yet.</p>
+            {activeTab === 'photos' && selectedPersonId && (
+              <PersonMediaTab personId={selectedPersonId} />
             )}
           </div>
 
@@ -287,6 +290,43 @@ export function PersonProfilePanel(): ReactElement | null {
                 )}
               </div>
             </div>
+          )}
+
+          {/* Add Relationship Buttons */}
+          <div className="border-t pt-4">
+            <h3 className="font-medium mb-2">Add Family Member</h3>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAddingRelation('parent')}
+              >
+                + Add Parent
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAddingRelation('child')}
+              >
+                + Add Child
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAddingRelation('spouse')}
+              >
+                + Add Spouse
+              </Button>
+            </div>
+          </div>
+
+          {/* Add Relationship Dialog */}
+          {addingRelation && selectedPersonId && (
+            <AddRelationshipDialog
+              personId={selectedPersonId}
+              relationshipType={addingRelation}
+              onClose={() => setAddingRelation(null)}
+            />
           )}
         </div>
       ) : null}

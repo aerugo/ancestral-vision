@@ -47,6 +47,9 @@ export const typeDefs = /* GraphQL */ `
 
     """Get onboarding progress for current user"""
     onboardingProgress: OnboardingProgress
+
+    """Get current user settings"""
+    userSettings: UserSettings
   }
 
   type Mutation {
@@ -145,6 +148,12 @@ export const typeDefs = /* GraphQL */ `
 
     """Skip the entire onboarding process"""
     skipOnboarding: OnboardingProgress!
+
+    """Update user profile"""
+    updateProfile(input: UpdateProfileInput!): UserSettings!
+
+    """Update user preferences"""
+    updatePreferences(input: UpdatePreferencesInput!): UserSettings!
   }
 
   type User {
@@ -516,5 +525,36 @@ export const typeDefs = /* GraphQL */ `
     startedAt: DateTime!
     lastUpdatedAt: DateTime!
     completedAt: DateTime
+  }
+
+  """User settings with preferences"""
+  type UserSettings {
+    id: ID!
+    email: String!
+    displayName: String!
+    avatarUrl: String
+    preferences: UserPreferences!
+  }
+
+  """User preference settings"""
+  type UserPreferences {
+    theme: String!
+    defaultPrivacy: String!
+    emailNotifications: Boolean!
+    emailDigestFrequency: String!
+  }
+
+  """Input for updating user profile"""
+  input UpdateProfileInput {
+    displayName: String
+    avatarUrl: String
+  }
+
+  """Input for updating user preferences"""
+  input UpdatePreferencesInput {
+    theme: String
+    defaultPrivacy: String
+    emailNotifications: Boolean
+    emailDigestFrequency: String
   }
 `;

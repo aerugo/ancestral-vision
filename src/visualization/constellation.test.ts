@@ -61,7 +61,7 @@ describe('Constellation', () => {
       const mesh = createConstellationMesh(people);
       const node = mesh.children[0]!;
 
-      expect(node.userData.id).toBe('person-123');
+      expect(node.userData.personId).toBe('person-123');
       expect(node.userData.givenName).toBe('Alice');
     });
 

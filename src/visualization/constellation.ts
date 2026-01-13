@@ -49,7 +49,7 @@ export function createConstellationMesh(people: PlaceholderPerson[]): THREE.Grou
 
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(person.position.x, person.position.y, person.position.z);
-    mesh.userData = { id: person.id, givenName: person.givenName };
+    mesh.userData = { personId: person.id, givenName: person.givenName };
     mesh.name = `person-${person.id}`;
 
     group.add(mesh);

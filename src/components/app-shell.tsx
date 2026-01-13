@@ -11,9 +11,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SearchBar } from '@/components/search-bar';
 
 interface AppShellProps {
   children: React.ReactNode;
+  onPersonSelect?: (personId: string) => void;
 }
 
 /**
@@ -22,7 +24,7 @@ interface AppShellProps {
  * Provides the main application layout with navigation,
  * user menu, and a container for 3D canvas content.
  */
-export function AppShell({ children }: AppShellProps): React.ReactElement {
+export function AppShell({ children, onPersonSelect }: AppShellProps): React.ReactElement {
   const { user, loading, logout } = useAuth();
 
   const initials =
@@ -44,6 +46,12 @@ export function AppShell({ children }: AppShellProps): React.ReactElement {
           </Link>
 
           <div className="flex items-center gap-4">
+            {user && onPersonSelect && (
+              <SearchBar
+                onSelect={onPersonSelect}
+                className="w-64"
+              />
+            )}
             {loading ? (
               <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
             ) : user ? (

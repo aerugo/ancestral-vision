@@ -112,9 +112,34 @@ export async function seedTestUser(userId = 'seed-test-user'): Promise<SeedResul
  * Clean up all test data from the database
  */
 export async function cleanupTestData(): Promise<void> {
+  // Clean up in correct order (respecting foreign keys)
+  await prisma.parentChildRelationship.deleteMany();
+  await prisma.spouseRelationship.deleteMany();
   await prisma.person.deleteMany();
   await prisma.constellation.deleteMany();
   await prisma.user.deleteMany();
+}
+
+/**
+ * Seed a test user with constellation and multiple people for relationship testing
+ */
+export async function seedTestUserWithPeople(
+  userId = 'seed-relationship-user'
+): Promise<SeedResult & { person3: Person }> {
+  const result = await seedTestUser(userId);
+
+  // Add a third person for spouse testing
+  const person3 = await prisma.person.create({
+    data: {
+      constellationId: result.constellation.id,
+      givenName: 'Person',
+      surname: 'Three',
+      displayName: 'Person Three',
+      createdBy: result.user.id,
+    },
+  });
+
+  return { ...result, person3 };
 }
 
 /**

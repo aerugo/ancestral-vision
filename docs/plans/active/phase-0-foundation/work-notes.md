@@ -8,6 +8,73 @@
 
 ## Session Log
 
+### 2026-01-13 - Phase 0.6 UI Foundation Complete
+
+**Context**: Implemented Phase 0.6 (UI Foundation) following strict TDD principles.
+
+**Completed**:
+
+1. **shadcn/ui Setup**:
+   - Created `components.json` configuration
+   - Updated `globals.css` with CSS variables for dark theme
+   - Updated `tailwind.config.ts` with shadcn colors and border-radius
+   - Added `cn()` utility function to `src/lib/utils.ts`
+
+2. **UI Components Created**:
+   - Button, Input, Label, Card, DropdownMenu, Avatar
+   - All using Radix UI primitives with class-variance-authority
+
+3. **Landing Page (4 tests)**:
+   - Displays app title and description
+   - "Get Started" button links to /register
+   - "Sign In" button links to /login
+
+4. **Login Page (7 tests)**:
+   - Email and password form with Zod validation
+   - Shows error messages for invalid input
+   - Redirects to /constellation on success
+   - Links to /register for new users
+
+5. **Register Page (5 tests)**:
+   - Email, password, confirm password form
+   - Validates password match and minimum length
+   - Redirects to /constellation on success
+
+6. **App Shell (7 tests)**:
+   - Navigation bar with app title
+   - User menu when authenticated (avatar, settings, sign out)
+   - Sign In button when not authenticated
+   - Canvas container for 3D content
+
+7. **Providers Aggregation (5 tests)**:
+   - ThemeProvider (next-themes)
+   - AuthProvider (Firebase Auth)
+   - QueryProvider (TanStack Query)
+   - Proper nesting order
+
+**Test Results**:
+
+```
+Test Files  22 passed (22)
+Tests       187 passed (187)
+```
+
+**Invariants Enforced**:
+
+- INV-U001: Dark theme is default (cosmic aesthetic)
+- INV-U002: All pages accessible via keyboard navigation
+- INV-U003: Form validation uses Zod schemas
+
+**Success Criteria Met**:
+
+- [x] All UI component tests pass
+- [x] Landing page renders correctly
+- [x] Login/register forms validate input
+- [x] App shell displays user state
+- [x] Type check passes
+
+---
+
 ### 2026-01-13 - Phase 0.5 State Management Complete
 
 **Context**: Implemented Phase 0.5 (State Management) following strict TDD principles.
@@ -257,9 +324,47 @@ src/components/providers/query-provider.test.tsx (3 tests) ✓
 
 ### Phase 0.6: UI Foundation
 
-**Status**: Pending
-**Started**:
-**Completed**:
+**Status**: Complete
+**Started**: 2026-01-13
+**Completed**: 2026-01-13
+
+#### Test Results
+
+```
+src/app/page.test.tsx (4 tests) ✓
+src/app/(auth)/login/page.test.tsx (7 tests) ✓
+src/app/(auth)/register/page.test.tsx (5 tests) ✓
+src/components/app-shell.test.tsx (7 tests) ✓
+src/components/providers/providers.test.tsx (5 tests) ✓
+```
+
+#### Files Created
+
+- `components.json` - shadcn/ui configuration
+- `src/lib/utils.ts` - cn() utility for class merging
+- `src/components/ui/button.tsx` - Button component
+- `src/components/ui/input.tsx` - Input component
+- `src/components/ui/label.tsx` - Label component
+- `src/components/ui/card.tsx` - Card components
+- `src/components/ui/dropdown-menu.tsx` - Dropdown menu component
+- `src/components/ui/avatar.tsx` - Avatar component
+- `src/app/page.tsx` - Landing page with CTA buttons
+- `src/app/page.test.tsx` - Landing page tests (4 tests)
+- `src/app/(auth)/login/page.tsx` - Login page with form validation
+- `src/app/(auth)/login/page.test.tsx` - Login page tests (7 tests)
+- `src/app/(auth)/register/page.tsx` - Register page with form validation
+- `src/app/(auth)/register/page.test.tsx` - Register page tests (5 tests)
+- `src/components/app-shell.tsx` - App shell with nav and canvas container
+- `src/components/app-shell.test.tsx` - App shell tests (7 tests)
+- `src/components/providers/theme-provider.tsx` - Theme provider wrapper
+- `src/components/providers/index.tsx` - Providers aggregation
+- `src/components/providers/providers.test.tsx` - Providers tests (5 tests)
+
+#### Files Modified
+
+- `src/app/globals.css` - Added shadcn CSS variables for dark theme
+- `tailwind.config.ts` - Added shadcn colors and border-radius
+- `src/app/layout.tsx` - Updated to use Providers with dark theme
 
 ---
 
@@ -330,9 +435,33 @@ src/components/providers/query-provider.test.tsx (3 tests) ✓
 - `src/components/providers/query-provider.tsx` - TanStack Query provider
 - `src/components/providers/query-provider.test.tsx` - QueryProvider tests
 
+**Phase 0.6 Files**:
+- `components.json` - shadcn/ui configuration
+- `src/lib/utils.ts` - cn() utility function
+- `src/components/ui/button.tsx` - Button component
+- `src/components/ui/input.tsx` - Input component
+- `src/components/ui/label.tsx` - Label component
+- `src/components/ui/card.tsx` - Card components
+- `src/components/ui/dropdown-menu.tsx` - Dropdown menu component
+- `src/components/ui/avatar.tsx` - Avatar component
+- `src/app/page.tsx` - Landing page
+- `src/app/page.test.tsx` - Landing page tests
+- `src/app/(auth)/login/page.tsx` - Login page
+- `src/app/(auth)/login/page.test.tsx` - Login page tests
+- `src/app/(auth)/register/page.tsx` - Register page
+- `src/app/(auth)/register/page.test.tsx` - Register page tests
+- `src/components/app-shell.tsx` - App shell component
+- `src/components/app-shell.test.tsx` - App shell tests
+- `src/components/providers/theme-provider.tsx` - Theme provider
+- `src/components/providers/index.tsx` - Providers aggregation
+- `src/components/providers/providers.test.tsx` - Providers tests
+
 ### Modified
 
-- `package.json` - Added zustand, @tanstack/react-query, graphql-request
+- `package.json` - Added zustand, @tanstack/react-query, graphql-request, radix-ui components, react-hook-form, zod, next-themes, clsx, tailwind-merge, class-variance-authority
+- `src/app/globals.css` - Added shadcn CSS variables
+- `tailwind.config.ts` - Added shadcn colors and border-radius
+- `src/app/layout.tsx` - Updated to use Providers
 
 ---
 

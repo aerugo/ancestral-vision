@@ -225,3 +225,94 @@ describe('ConstellationSelection with mocked raycaster', () => {
     selection.dispose();
   });
 });
+
+describe('getIntersectedPosition', () => {
+  it('should return null when no intersection', () => {
+    const camera = new THREE.PerspectiveCamera();
+    const scene = new THREE.Scene();
+    const selection = new ConstellationSelection(camera, scene);
+
+    const raycasterSpy = vi.spyOn(THREE.Raycaster.prototype, 'intersectObjects');
+    raycasterSpy.mockReturnValue([]);
+
+    const result = selection.getIntersectedPosition(0, 0);
+
+    expect(result).toBeNull();
+
+    raycasterSpy.mockRestore();
+    selection.dispose();
+  });
+
+  it('should return position of first intersected mesh with personId', () => {
+    const camera = new THREE.PerspectiveCamera();
+    const scene = new THREE.Scene();
+    const selection = new ConstellationSelection(camera, scene);
+
+    const mockMesh = {
+      userData: { personId: 'person-123' },
+      getWorldPosition: vi.fn().mockImplementation((target: THREE.Vector3) => {
+        target.set(10, 20, 30);
+        return target;
+      }),
+    };
+
+    const mockIntersects = [
+      {
+        object: mockMesh,
+        point: new THREE.Vector3(10, 20, 30),
+      },
+    ];
+
+    const raycasterSpy = vi.spyOn(THREE.Raycaster.prototype, 'intersectObjects');
+    raycasterSpy.mockReturnValue(mockIntersects as unknown as THREE.Intersection[]);
+
+    const result = selection.getIntersectedPosition(0, 0);
+
+    expect(result).not.toBeNull();
+    expect(result?.x).toBe(10);
+    expect(result?.y).toBe(20);
+    expect(result?.z).toBe(30);
+
+    raycasterSpy.mockRestore();
+    selection.dispose();
+  });
+
+  it('should return null for mesh without personId', () => {
+    const camera = new THREE.PerspectiveCamera();
+    const scene = new THREE.Scene();
+    const selection = new ConstellationSelection(camera, scene);
+
+    const mockMesh = {
+      userData: {}, // No personId
+      getWorldPosition: vi.fn(),
+    };
+
+    const mockIntersects = [
+      {
+        object: mockMesh,
+        point: new THREE.Vector3(5, 10, 15),
+      },
+    ];
+
+    const raycasterSpy = vi.spyOn(THREE.Raycaster.prototype, 'intersectObjects');
+    raycasterSpy.mockReturnValue(mockIntersects as unknown as THREE.Intersection[]);
+
+    const result = selection.getIntersectedPosition(0, 0);
+
+    expect(result).toBeNull();
+
+    raycasterSpy.mockRestore();
+    selection.dispose();
+  });
+
+  it('should return null after dispose', () => {
+    const camera = new THREE.PerspectiveCamera();
+    const scene = new THREE.Scene();
+    const selection = new ConstellationSelection(camera, scene);
+
+    selection.dispose();
+
+    const result = selection.getIntersectedPosition(0, 0);
+    expect(result).toBeNull();
+  });
+});

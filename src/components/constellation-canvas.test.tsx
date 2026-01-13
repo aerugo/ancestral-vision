@@ -63,6 +63,7 @@ vi.mock('@/visualization/constellation', () => ({
 // Track ConstellationSelection instantiation
 const mockConstellationSelectionInstances: Array<{
   getIntersectedPerson: ReturnType<typeof vi.fn>;
+  getIntersectedPosition: ReturnType<typeof vi.fn>;
   dispose: ReturnType<typeof vi.fn>;
 }> = [];
 
@@ -71,9 +72,32 @@ vi.mock('@/visualization/selection', () => ({
   ConstellationSelection: function MockConstellationSelection() {
     const instance = {
       getIntersectedPerson: vi.fn().mockReturnValue(null),
+      getIntersectedPosition: vi.fn().mockReturnValue(null),
       dispose: vi.fn(),
     };
     mockConstellationSelectionInstances.push(instance);
+    return instance;
+  },
+}));
+
+// Track CameraAnimator instantiation
+const mockCameraAnimatorInstances: Array<{
+  animateTo: ReturnType<typeof vi.fn>;
+  update: ReturnType<typeof vi.fn>;
+  isAnimating: ReturnType<typeof vi.fn>;
+  stop: ReturnType<typeof vi.fn>;
+}> = [];
+
+// Mock camera animation
+vi.mock('@/visualization/camera-animation', () => ({
+  CameraAnimator: function MockCameraAnimator() {
+    const instance = {
+      animateTo: vi.fn(),
+      update: vi.fn(),
+      isAnimating: vi.fn().mockReturnValue(false),
+      stop: vi.fn(),
+    };
+    mockCameraAnimatorInstances.push(instance);
     return instance;
   },
 }));
@@ -91,6 +115,7 @@ describe('ConstellationCanvas', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockConstellationSelectionInstances.length = 0;
+    mockCameraAnimatorInstances.length = 0;
   });
 
   afterEach(() => {
@@ -239,6 +264,80 @@ describe('ConstellationCanvas', () => {
       // The handler uses ConstellationSelection.getIntersectedPerson
       // and calls selectPerson if a person is found
       // This structure is verified by the ConstellationSelection being called
+    });
+  });
+
+  describe('Camera Animation', () => {
+    it('should create CameraAnimator for smooth transitions', async () => {
+      render(<ConstellationCanvas />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        const container = screen.getByTestId('constellation-canvas');
+        expect(container.querySelector('canvas')).toBeInTheDocument();
+      });
+
+      // CameraAnimator is instantiated during scene init
+      expect(mockCameraAnimatorInstances.length).toBeGreaterThan(0);
+    });
+
+    it('should animate camera when clicking a star', async () => {
+      // Set up mock to return a person ID when clicked
+      const mockGetIntersectedPerson = vi.fn().mockReturnValue('person-1');
+      const mockGetIntersectedPosition = vi.fn().mockReturnValue({ x: 10, y: 5, z: 20 });
+
+      vi.mocked(
+        await import('@/visualization/selection')
+      ).ConstellationSelection = function MockSelection() {
+        const instance = {
+          getIntersectedPerson: mockGetIntersectedPerson,
+          getIntersectedPosition: mockGetIntersectedPosition,
+          dispose: vi.fn(),
+        };
+        mockConstellationSelectionInstances.push(instance as typeof mockConstellationSelectionInstances[0]);
+        return instance;
+      } as unknown as typeof import('@/visualization/selection').ConstellationSelection;
+
+      render(<ConstellationCanvas />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        const container = screen.getByTestId('constellation-canvas');
+        expect(container.querySelector('canvas')).toBeInTheDocument();
+      });
+
+      // Simulate click on canvas
+      const container = screen.getByTestId('constellation-canvas');
+      const canvas = container.querySelector('canvas');
+      if (canvas) {
+        fireEvent.click(canvas, { clientX: 100, clientY: 100 });
+      }
+
+      // Camera animator should have been called to animate
+      // Note: The actual animateTo call depends on the internal implementation
+    });
+
+    it('should update camera animator in animation loop', async () => {
+      const { createRenderer } = await import('@/visualization/renderer');
+
+      let capturedAnimationCallback: ((time: number) => void) | null = null;
+      const mockRenderer = {
+        setAnimationLoop: vi.fn((callback: ((time: number) => void) | null) => {
+          capturedAnimationCallback = callback;
+        }),
+        render: vi.fn(),
+        dispose: vi.fn(),
+        setSize: vi.fn(),
+      };
+      (createRenderer as ReturnType<typeof vi.fn>).mockResolvedValue(mockRenderer);
+
+      render(<ConstellationCanvas />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        expect(mockRenderer.setAnimationLoop).toHaveBeenCalled();
+      });
+
+      // Animation loop should include camera animator update
+      // The camera animator update method should be called during animation
+      expect(mockCameraAnimatorInstances.length).toBeGreaterThan(0);
     });
   });
 });

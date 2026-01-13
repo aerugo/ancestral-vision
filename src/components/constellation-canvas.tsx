@@ -20,8 +20,10 @@ import {
   type PlaceholderPerson,
 } from '@/visualization/constellation';
 import { ConstellationSelection } from '@/visualization/selection';
+import { CameraAnimator } from '@/visualization/camera-animation';
 import { usePeople } from '@/hooks/use-people';
 import { useSelectionStore } from '@/store/selection-store';
+import * as THREE from 'three';
 
 /**
  * Convert API people data to PlaceholderPerson format for visualization
@@ -55,6 +57,8 @@ export function ConstellationCanvas(): React.ReactElement {
   const controlsRef = useRef<OrbitControls | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const selectionRef = useRef<ConstellationSelection | null>(null);
+  const cameraAnimatorRef = useRef<CameraAnimator | null>(null);
+  const clockRef = useRef<THREE.Clock | null>(null);
 
   // Fetch real people data
   const { data: people } = usePeople();
@@ -96,6 +100,12 @@ export function ConstellationCanvas(): React.ReactElement {
     // Create selection handler
     selectionRef.current = new ConstellationSelection(camera, scene);
 
+    // Create camera animator for smooth transitions
+    cameraAnimatorRef.current = new CameraAnimator(camera);
+
+    // Create clock for delta time
+    clockRef.current = new THREE.Clock();
+
     // Add constellation - use real data if available, otherwise placeholder
     const constellationPeople =
       people && people.length > 0
@@ -115,6 +125,24 @@ export function ConstellationCanvas(): React.ReactElement {
       const personId = selectionRef.current.getIntersectedPerson(x, y);
       if (personId) {
         selectPerson(personId, []);
+
+        // Animate camera to focus on the selected person
+        const position = selectionRef.current.getIntersectedPosition(x, y);
+        if (position && cameraAnimatorRef.current) {
+          // Calculate camera target position (offset from the star)
+          const cameraOffset = new THREE.Vector3(0, 10, 40);
+          const targetPosition = new THREE.Vector3(
+            position.x + cameraOffset.x,
+            position.y + cameraOffset.y,
+            position.z + cameraOffset.z
+          );
+          const lookAtTarget = new THREE.Vector3(position.x, position.y, position.z);
+
+          cameraAnimatorRef.current.animateTo(targetPosition, lookAtTarget, {
+            duration: 1.5,
+            easing: 'easeInOutCubic',
+          });
+        }
       }
     };
 
@@ -122,6 +150,13 @@ export function ConstellationCanvas(): React.ReactElement {
 
     // Animation loop - use setAnimationLoop per INV-A002
     renderer.setAnimationLoop(() => {
+      const deltaTime = clockRef.current?.getDelta() ?? 0;
+
+      // Update camera animation
+      if (cameraAnimatorRef.current) {
+        cameraAnimatorRef.current.update(deltaTime);
+      }
+
       controls.update();
       renderer.render(scene, camera);
     });

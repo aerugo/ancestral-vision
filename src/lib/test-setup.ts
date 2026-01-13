@@ -1,9 +1,11 @@
 // Test setup for Vitest
-// Note: Using node environment for unit tests
-// React component tests will use jsdom when needed
+// Provides DOM matchers and cleanup utilities
 
 import { afterEach } from "vitest";
+import { cleanup } from "@testing-library/react";
+import "@testing-library/jest-dom/vitest";
 
+// Cleanup after each test to prevent memory leaks and test pollution
 afterEach(() => {
-  // Cleanup after each test if needed
+  cleanup();
 });

@@ -48,7 +48,7 @@ export function getFirebaseAdmin(): FirebaseAdminInstance {
   }
 
   return {
-    app: adminApp,
+    app: adminApp!,
     auth: adminAuth!,
   };
 }

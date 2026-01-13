@@ -229,6 +229,7 @@ describe('Prisma Schema Validation', () => {
         data: {
           constellationId: constellation.id,
           givenName: 'John',
+          displayName: 'John',
           createdBy: user.id,
         },
       });
@@ -305,6 +306,7 @@ describe('Prisma Schema Validation', () => {
         data: {
           constellationId: constellation.id,
           givenName: 'Jane',
+          displayName: 'Jane',
           createdBy: user.id,
         },
       });
@@ -349,6 +351,7 @@ describe('Prisma Schema Validation', () => {
         data: {
           constellationId: constellation.id,
           givenName: 'Default',
+          displayName: 'Default',
           createdBy: user.id,
         },
       });
@@ -380,6 +383,7 @@ describe('Prisma Schema Validation', () => {
         data: {
           constellationId: constellation.id,
           givenName: 'JSON',
+          displayName: 'JSON',
           createdBy: user.id,
           birthDate: fuzzyDate,
         },

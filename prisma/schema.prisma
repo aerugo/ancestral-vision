@@ -134,6 +134,9 @@ model Person {
   // Speculative flag
   speculative Boolean @default(false)
 
+  // Generation relative to self (0=self, -1=parents, +1=children, etc.)
+  generation Int @default(0)
+
   // Soft delete
   deletedAt DateTime?
   deletedBy String?

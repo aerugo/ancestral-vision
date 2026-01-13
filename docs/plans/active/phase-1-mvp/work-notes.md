@@ -148,9 +148,9 @@ Tests: 354 passed (354)
 
 ### Phase 1.4: Notes System
 
-**Status**: Complete
+**Status**: Complete (Backend) / Pending (UI - see Phase 1.4b)
 **Started**: 2026-01-13
-**Completed**: 2026-01-13
+**Completed**: 2026-01-13 (Backend)
 
 #### Test Results
 
@@ -178,6 +178,23 @@ Tests: 392 passed (392)
 - Test file needed .tsx extension for JSX support
 - Added date-fns dependency for relative timestamps
 - 38 new tests: 15 resolver tests + 12 hook tests + 11 component tests
+
+---
+
+### Phase 1.4b: Notes UI Completion
+
+**Status**: Pending
+**Started**:
+**Completed**:
+
+**Scope**: Remaining UI work from Phase 1.4:
+- Tiptap rich text editor component (~12 tests)
+- Version history component (~8 tests)
+- Profile panel Notes tab integration (~10 tests)
+
+**Dependencies**: Phase 1.4 backend (complete)
+
+**Plan**: See [phases/phase-1.4b-notes-ui.md](phases/phase-1.4b-notes-ui.md)
 
 ---
 

@@ -33,6 +33,7 @@ import {
   mediaMutations,
   mediaFieldResolvers,
 } from './media-resolvers';
+import { searchQueries } from './search-resolvers';
 
 /**
  * Composed GraphQL resolvers
@@ -46,6 +47,7 @@ export const resolvers = {
     ...noteQueries,
     ...eventQueries,
     ...mediaQueries,
+    ...searchQueries,
   },
 
   Mutation: {

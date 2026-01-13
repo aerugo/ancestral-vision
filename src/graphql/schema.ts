@@ -41,6 +41,9 @@ export const typeDefs = /* GraphQL */ `
 
     """Get a single media by ID"""
     media(id: ID!): Media
+
+    """Search people by name with fuzzy matching (pg_trgm)"""
+    searchPeople(query: String!, limit: Int): [SearchResult!]!
   }
 
   type Mutation {
@@ -443,5 +446,16 @@ export const typeDefs = /* GraphQL */ `
     description: String
     dateTaken: JSON
     privacy: PrivacyLevel
+  }
+
+  """Search result with similarity score"""
+  type SearchResult {
+    id: ID!
+    displayName: String!
+    givenName: String
+    surname: String
+    birthDate: JSON
+    """Similarity score from pg_trgm (0-1)"""
+    similarity: Float!
   }
 `;

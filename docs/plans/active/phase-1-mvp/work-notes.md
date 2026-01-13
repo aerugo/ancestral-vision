@@ -116,9 +116,33 @@ Tests: 302 passed (302)
 
 ### Phase 1.3: Selection & Profile
 
-**Status**: Pending
-**Started**:
-**Completed**:
+**Status**: Complete
+**Started**: 2026-01-13
+**Completed**: 2026-01-13
+
+#### Test Results
+
+```
+Test Files: 35 passed (35)
+Tests: 354 passed (354)
+```
+
+#### Results
+
+- Created Zustand selection store for UI state (INV-A006)
+- Implemented 3D raycasting with ConstellationSelection class
+- Added CameraAnimator with 3 easing functions (linear, easeInOutCubic, easeOutCubic)
+- Built slide-in PersonProfilePanel with dark theme support (INV-U001, INV-U004)
+- Tabbed interface (Events, Notes, Photos) prepared for future content
+- Displays immediate family from relationship data
+
+#### Notes
+
+- Raycasting tests use mocked THREE.Raycaster.prototype.intersectObjects (JSDOM limitation)
+- Selection store manages: selectedPersonId, connectedPersonIds, isPanelOpen
+- Camera animation supports configurable duration and easing
+- Profile panel processes Relationship[] into parents/children/spouses using type guards
+- 52 new tests: 9 store + 14 selection + 15 camera + 14 panel
 
 ---
 
@@ -242,6 +266,17 @@ Tests: 302 passed (302)
 - `src/hooks/use-auto-save.ts` - Auto-save debounce hook (INV-A010)
 - `src/hooks/use-auto-save.test.ts` - useAutoSave hook tests (13 tests)
 
+### Created (Phase 1.3)
+
+- `src/store/selection-store.ts` - Zustand selection state (INV-A006)
+- `src/store/selection-store.test.ts` - Selection store tests (9 tests)
+- `src/visualization/selection.ts` - 3D raycasting class
+- `src/visualization/selection.test.ts` - Selection tests (14 tests)
+- `src/visualization/camera-animation.ts` - Camera animator with easing
+- `src/visualization/camera-animation.test.ts` - Animation tests (15 tests)
+- `src/components/person-profile-panel.tsx` - Slide-in profile panel (INV-U004)
+- `src/components/person-profile-panel.test.tsx` - Profile panel tests (14 tests)
+
 ---
 
 ## Documentation Updates Required
@@ -252,7 +287,7 @@ Tests: 302 passed (302)
 - [ ] Add INV-D007: Events support flexible GEDCOM-style dates
 - [ ] Add INV-D008: Media files stored in Cloud Storage with signed URLs
 - [x] Add INV-A010: Auto-save with debounce (2s) for inline editing (implemented in Phase 1.2)
-- [ ] Add INV-U004: Profile panel is slide-in, maintains 3D context
+- [x] Add INV-U004: Profile panel is slide-in, maintains 3D context (implemented in Phase 1.3)
 
 ### Other Documentation
 
@@ -261,4 +296,4 @@ Tests: 302 passed (302)
 
 ---
 
-*Last Updated: 2026-01-13 (Phase 1.2 Complete)*
+*Last Updated: 2026-01-13 (Phase 1.3 Complete)*

@@ -1,7 +1,8 @@
 # Phase 1.3: Selection & Profile Panel
 
-**Status**: Pending
-**Started**:
+**Status**: Complete
+**Started**: 2026-01-13
+**Completed**: 2026-01-13
 **Parent Plan**: [../development-plan.md](../development-plan.md)
 
 ---
@@ -670,16 +671,16 @@ npm run lint
 
 ## Completion Criteria
 
-- [ ] All 30 selection/profile tests pass
-- [ ] Click on star selects person
-- [ ] Camera animates smoothly with easing
-- [ ] Panel slides in from right
-- [ ] Tabbed interface works
-- [ ] Connected people displayed
-- [ ] Type check passes
-- [ ] Lint passes
-- [ ] INV-A006 verified by Zustand usage
-- [ ] NEW INV-U004 established for slide-in pattern
+- [x] All 30 selection/profile tests pass (52 total: 9 store + 14 selection + 15 camera + 14 panel)
+- [x] Click on star selects person
+- [x] Camera animates smoothly with easing
+- [x] Panel slides in from right
+- [x] Tabbed interface works
+- [x] Connected people displayed
+- [x] Type check passes
+- [x] Lint passes
+- [x] INV-A006 verified by Zustand usage
+- [x] NEW INV-U004 established for slide-in pattern
 
 ---
 

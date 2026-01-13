@@ -6,25 +6,18 @@
 // User hooks
 export { useMe, meQueryKey, type CurrentUser } from './use-me';
 
-// Constellation hooks
-export {
-  useConstellation,
-  useCreateConstellation,
-  constellationQueryKey,
-  type Constellation,
-  type CreateConstellationInput,
-} from './use-constellation';
-
 // People hooks
 export {
   usePeople,
   usePerson,
   useCreatePerson,
+  useUpdatePerson,
   peopleQueryKey,
   personQueryKey,
   type PersonSummary,
   type Person,
   type CreatePersonInput,
+  type UpdatePersonInput,
 } from './use-people';
 
 // Relationship hooks

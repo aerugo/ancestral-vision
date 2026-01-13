@@ -85,9 +85,32 @@ Tests: 269 passed (269)
 
 ### Phase 1.2: Person Enhancement
 
-**Status**: Pending
-**Started**:
-**Completed**:
+**Status**: Complete
+**Started**: 2026-01-13
+**Completed**: 2026-01-13
+
+#### Test Results
+
+```
+Test Files: 31 passed (31)
+Tests: 302 passed (302)
+```
+
+#### Results
+
+- Created Zod validation schema for person forms (INV-U003)
+- Implemented PersonForm component with full international name support
+- Added useAutoSave hook with 2s debounce (INV-A010)
+- Contextual creation headers ("Add Parent/Child/Spouse of X")
+- 20 PersonForm tests + 13 useAutoSave tests = 33 new tests
+
+#### Notes
+
+- Used z.preprocess() to handle empty strings from HTML form selects
+- PersonFormInput vs PersonFormData types distinguish raw form data from validated output
+- International names: Western, Eastern, Patronymic, Patronymic Suffix, Matronymic
+- Optional fields: surname, maidenName, patronymic, matronymic, nickname, suffix, biography
+- Speculative flag for uncertain/theoretical ancestors
 
 ---
 
@@ -211,6 +234,14 @@ Tests: 269 passed (269)
 - `src/graphql/resolvers/relationship.test.ts` - TDD test suite for relationships
 - `src/hooks/use-relationships.ts` - TanStack Query hooks for relationships
 
+### Created (Phase 1.2)
+
+- `src/lib/schemas/person.ts` - Zod validation schema for person forms
+- `src/components/person-form.tsx` - Person form component with international name support
+- `src/components/person-form.test.tsx` - PersonForm component tests (20 tests)
+- `src/hooks/use-auto-save.ts` - Auto-save debounce hook (INV-A010)
+- `src/hooks/use-auto-save.test.ts` - useAutoSave hook tests (13 tests)
+
 ---
 
 ## Documentation Updates Required
@@ -220,7 +251,7 @@ Tests: 269 passed (269)
 - [ ] Add INV-D006: Notes have version history (max 10)
 - [ ] Add INV-D007: Events support flexible GEDCOM-style dates
 - [ ] Add INV-D008: Media files stored in Cloud Storage with signed URLs
-- [ ] Add INV-A010: Auto-save with debounce (2s) for inline editing
+- [x] Add INV-A010: Auto-save with debounce (2s) for inline editing (implemented in Phase 1.2)
 - [ ] Add INV-U004: Profile panel is slide-in, maintains 3D context
 
 ### Other Documentation
@@ -230,4 +261,4 @@ Tests: 269 passed (269)
 
 ---
 
-*Last Updated: 2026-01-13*
+*Last Updated: 2026-01-13 (Phase 1.2 Complete)*

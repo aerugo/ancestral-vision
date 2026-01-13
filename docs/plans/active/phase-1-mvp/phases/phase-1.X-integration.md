@@ -327,13 +327,13 @@ describe('Constellation Page Integration', () => {
 - [x] Clicking a star selects the person
 - [x] Profile panel opens with correct person data
 - [x] Notes/Events/Media tabs work in panel
-- [ ] Camera animates to selected star (deferred - not critical for MVP)
+- [x] Camera animates to selected star
 - [x] SearchBar is visible and functional
 - [x] Search results select person and open panel
 - [x] New users redirect to onboarding
 - [x] Completed onboarding users stay on constellation
 - [x] Navigation allows returning to constellation from settings
-- [x] All 796+ tests still pass (815 tests passing)
+- [x] All 796+ tests still pass (822 tests passing)
 - [x] Integration tests pass
 
 ---

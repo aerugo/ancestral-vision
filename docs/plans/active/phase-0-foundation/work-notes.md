@@ -8,6 +8,59 @@
 
 ## Session Log
 
+### 2026-01-13 - Phase 0.5 State Management Complete
+
+**Context**: Implemented Phase 0.5 (State Management) following strict TDD principles.
+
+**Completed**:
+
+1. **Dependencies Installed**:
+   - zustand (client state)
+   - @tanstack/react-query (server state)
+   - graphql-request (GraphQL client)
+
+2. **Zustand Stores Created (28 tests)**:
+   - `src/store/auth-store.ts` - Auth state (user, token, isAuthenticated)
+   - `src/store/ui-store.ts` - UI state (theme, viewMode, selectedPerson, panel, camera)
+   - Both stores use persist middleware for localStorage
+
+3. **GraphQL Client Created (5 tests)**:
+   - `src/lib/graphql-client.ts` - Client with auth header middleware
+   - Automatically includes Bearer token from auth store
+
+4. **TanStack Query Hooks Created (23 tests)**:
+   - `src/hooks/use-me.ts` - Current user query
+   - `src/hooks/use-constellation.ts` - Constellation query and create mutation
+   - `src/hooks/use-people.ts` - People queries and create mutation
+
+5. **QueryProvider Component Created (3 tests)**:
+   - `src/components/providers/query-provider.tsx` - TanStack Query provider
+   - Configured with sensible defaults (staleTime, gcTime, retry)
+
+**Test Results**:
+
+```
+Test Files  17 passed (17)
+Tests       159 passed (159)
+```
+
+**Invariants Enforced**:
+
+- INV-A005: TanStack Query is the only way to fetch server data
+- INV-A006: Zustand stores handle only client/UI state
+- INV-A007: GraphQL client automatically includes auth token
+
+**Success Criteria Met**:
+
+- [x] All store tests pass
+- [x] All hook tests pass
+- [x] Auth store persists token
+- [x] UI store persists theme preference
+- [x] GraphQL client includes auth header
+- [x] Type check passes
+
+---
+
 ### 2026-01-12 - TDD Completion Plan Created
 
 **Context Review Completed**:
@@ -165,9 +218,40 @@ Since this is Phase 0, we're establishing invariants rather than respecting exis
 
 ### Phase 0.5: State Management
 
-**Status**: Pending
-**Started**:
-**Completed**:
+**Status**: Complete
+**Started**: 2026-01-13
+**Completed**: 2026-01-13
+
+#### Test Results
+
+```
+src/store/auth-store.test.ts (10 tests) ✓
+src/store/ui-store.test.ts (18 tests) ✓
+src/lib/graphql-client.test.ts (5 tests) ✓
+src/hooks/use-constellation.test.tsx (7 tests) ✓
+src/hooks/use-me.test.tsx (4 tests) ✓
+src/hooks/use-people.test.tsx (8 tests) ✓
+src/components/providers/query-provider.test.tsx (3 tests) ✓
+```
+
+#### Files Created
+
+- `src/store/auth-store.ts` - Auth state with persistence
+- `src/store/auth-store.test.ts` - 10 tests
+- `src/store/ui-store.ts` - UI state with persistence
+- `src/store/ui-store.test.ts` - 18 tests
+- `src/store/index.ts` - Store exports
+- `src/lib/graphql-client.ts` - GraphQL client with auth headers
+- `src/lib/graphql-client.test.ts` - 5 tests
+- `src/hooks/use-constellation.ts` - Constellation queries/mutations
+- `src/hooks/use-constellation.test.tsx` - 7 tests
+- `src/hooks/use-me.ts` - Current user query
+- `src/hooks/use-me.test.tsx` - 4 tests
+- `src/hooks/use-people.ts` - People queries/mutations
+- `src/hooks/use-people.test.tsx` - 8 tests
+- `src/hooks/index.ts` - Hook exports
+- `src/components/providers/query-provider.tsx` - TanStack Query provider
+- `src/components/providers/query-provider.test.tsx` - 3 tests
 
 ---
 
@@ -228,9 +312,27 @@ Since this is Phase 0, we're establishing invariants rather than respecting exis
 - `docs/plans/active/phase-0-foundation/work-notes.md` - This file
 - `docs/plans/active/phase-0-foundation/phases/` - Directory for phase plans
 
+**Phase 0.5 Files**:
+- `src/store/auth-store.ts` - Auth state management
+- `src/store/auth-store.test.ts` - Auth store tests
+- `src/store/ui-store.ts` - UI state management
+- `src/store/ui-store.test.ts` - UI store tests
+- `src/store/index.ts` - Store exports
+- `src/lib/graphql-client.ts` - GraphQL client with auth
+- `src/lib/graphql-client.test.ts` - GraphQL client tests
+- `src/hooks/use-me.ts` - Current user hook
+- `src/hooks/use-me.test.tsx` - useMe tests
+- `src/hooks/use-constellation.ts` - Constellation hooks
+- `src/hooks/use-constellation.test.tsx` - Constellation hook tests
+- `src/hooks/use-people.ts` - People hooks
+- `src/hooks/use-people.test.tsx` - People hook tests
+- `src/hooks/index.ts` - Hook exports
+- `src/components/providers/query-provider.tsx` - TanStack Query provider
+- `src/components/providers/query-provider.test.tsx` - QueryProvider tests
+
 ### Modified
 
-- (none yet)
+- `package.json` - Added zustand, @tanstack/react-query, graphql-request
 
 ---
 

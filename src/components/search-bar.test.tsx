@@ -3,8 +3,8 @@
  *
  * Tests for the global search bar with dropdown results.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SearchBar } from './search-bar';
@@ -68,6 +68,11 @@ describe('SearchBar', () => {
       isError: false,
       error: null,
     } as ReturnType<typeof searchHooks.useSearchPeople>);
+  });
+
+  afterEach(() => {
+    // Cleanup to unmount components and clear any pending timers
+    cleanup();
   });
 
   describe('Rendering', () => {

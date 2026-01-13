@@ -32,6 +32,16 @@ export function SearchBar({ onSelect, className }: SearchBarProps): ReactElement
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup blur timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const { data: results = [], isLoading } = useSearchPeople(query);
 
@@ -137,7 +147,9 @@ export function SearchBar({ onSelect, className }: SearchBarProps): ReactElement
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => query.length >= 2 && setIsOpen(true)}
-          onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+          onBlur={() => {
+            blurTimeoutRef.current = setTimeout(() => setIsOpen(false), 200);
+          }}
           onKeyDown={handleKeyDown}
           className="pl-10 pr-10"
           aria-expanded={showDropdown}

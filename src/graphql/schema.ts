@@ -44,6 +44,9 @@ export const typeDefs = /* GraphQL */ `
 
     """Search people by name with fuzzy matching (pg_trgm)"""
     searchPeople(query: String!, limit: Int): [SearchResult!]!
+
+    """Get onboarding progress for current user"""
+    onboardingProgress: OnboardingProgress
   }
 
   type Mutation {
@@ -118,6 +121,30 @@ export const typeDefs = /* GraphQL */ `
 
     """Remove media from a person"""
     removeMediaFromPerson(mediaId: ID!, personId: ID!): Media!
+
+    """Start the onboarding process"""
+    startOnboarding: OnboardingProgress!
+
+    """Update current onboarding step"""
+    updateOnboardingStep(step: OnboardingStep!): OnboardingProgress!
+
+    """Complete an onboarding step with optional data"""
+    completeOnboardingStep(step: OnboardingStep!, data: JSON): OnboardingProgress!
+
+    """Save arbitrary onboarding data"""
+    saveOnboardingData(data: JSON!): OnboardingProgress!
+
+    """Mark tour as completed"""
+    completeTour: OnboardingProgress!
+
+    """Skip the tour"""
+    skipTour: OnboardingProgress!
+
+    """Complete the entire onboarding process"""
+    completeOnboarding: OnboardingProgress!
+
+    """Skip the entire onboarding process"""
+    skipOnboarding: OnboardingProgress!
   }
 
   type User {
@@ -457,5 +484,37 @@ export const typeDefs = /* GraphQL */ `
     birthDate: JSON
     """Similarity score from pg_trgm (0-1)"""
     similarity: Float!
+  }
+
+  """Onboarding status enumeration"""
+  enum OnboardingStatus {
+    NOT_STARTED
+    IN_PROGRESS
+    COMPLETED
+    SKIPPED
+  }
+
+  """Onboarding step enumeration"""
+  enum OnboardingStep {
+    TOUR
+    ADD_SELF
+    ADD_PARENTS
+    ADD_GRANDPARENTS
+    AHA_MOMENT
+  }
+
+  """User's onboarding progress"""
+  type OnboardingProgress {
+    id: ID!
+    userId: ID!
+    status: OnboardingStatus!
+    currentStep: OnboardingStep!
+    completedSteps: [OnboardingStep!]!
+    savedData: JSON
+    hasCompletedTour: Boolean!
+    tourSkipped: Boolean!
+    startedAt: DateTime!
+    lastUpdatedAt: DateTime!
+    completedAt: DateTime
   }
 `;

@@ -34,6 +34,7 @@ import {
   mediaFieldResolvers,
 } from './media-resolvers';
 import { searchQueries } from './search-resolvers';
+import { onboardingQueries, onboardingMutations } from './onboarding-resolvers';
 
 /**
  * Composed GraphQL resolvers
@@ -48,6 +49,7 @@ export const resolvers = {
     ...eventQueries,
     ...mediaQueries,
     ...searchQueries,
+    ...onboardingQueries,
   },
 
   Mutation: {
@@ -57,6 +59,7 @@ export const resolvers = {
     ...noteMutations,
     ...eventMutations,
     ...mediaMutations,
+    ...onboardingMutations,
   },
 
   // Field resolvers

@@ -41,7 +41,7 @@ export function AppShell({ children, onPersonSelect }: AppShellProps): React.Rea
         role="navigation"
       >
         <div className="container flex h-14 items-center justify-between">
-          <Link href="/" className="font-semibold text-lg">
+          <Link href={user ? '/constellation' : '/'} className="font-semibold text-lg">
             Ancestral Vision
           </Link>
 

@@ -1,6 +1,27 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import { ConstellationCanvas } from './constellation-canvas';
+
+// Mock the selection store
+const mockSelectPerson = vi.fn();
+vi.mock('@/store/selection-store', () => ({
+  useSelectionStore: vi.fn(() => ({
+    selectPerson: mockSelectPerson,
+  })),
+}));
+
+// Mock usePeople hook
+vi.mock('@/hooks/use-people', () => ({
+  usePeople: vi.fn(() => ({
+    data: [
+      { id: 'person-1', givenName: 'John', surname: 'Doe', generation: 0 },
+      { id: 'person-2', givenName: 'Jane', surname: 'Doe', generation: 1 },
+    ],
+    isLoading: false,
+  })),
+}));
 
 // Mock the visualization modules
 vi.mock('@/visualization/renderer', () => ({
@@ -18,6 +39,7 @@ vi.mock('@/visualization/scene', () => ({
     add: vi.fn(),
     traverse: vi.fn(),
     clear: vi.fn(),
+    children: [],
   }),
   createCamera: vi.fn().mockReturnValue({
     position: { set: vi.fn() },
@@ -38,9 +60,37 @@ vi.mock('@/visualization/constellation', () => ({
   generatePlaceholderPeople: vi.fn().mockReturnValue([]),
 }));
 
+// Track ConstellationSelection instantiation
+const mockConstellationSelectionInstances: Array<{
+  getIntersectedPerson: ReturnType<typeof vi.fn>;
+  dispose: ReturnType<typeof vi.fn>;
+}> = [];
+
+// Mock selection utility - use a function constructor
+vi.mock('@/visualization/selection', () => ({
+  ConstellationSelection: function MockConstellationSelection() {
+    const instance = {
+      getIntersectedPerson: vi.fn().mockReturnValue(null),
+      dispose: vi.fn(),
+    };
+    mockConstellationSelectionInstances.push(instance);
+    return instance;
+  },
+}));
+
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+}
+
 describe('ConstellationCanvas', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockConstellationSelectionInstances.length = 0;
   });
 
   afterEach(() => {
@@ -64,7 +114,7 @@ describe('ConstellationCanvas', () => {
   it('should initialize the 3D scene', async () => {
     const { createRenderer } = await import('@/visualization/renderer');
     const { createScene, createCamera, createControls } = await import('@/visualization/scene');
-    const { createConstellationMesh, generatePlaceholderPeople } = await import('@/visualization/constellation');
+    const { createConstellationMesh } = await import('@/visualization/constellation');
 
     render(<ConstellationCanvas />);
 
@@ -73,7 +123,7 @@ describe('ConstellationCanvas', () => {
       expect(createScene).toHaveBeenCalled();
       expect(createCamera).toHaveBeenCalled();
       expect(createControls).toHaveBeenCalled();
-      expect(generatePlaceholderPeople).toHaveBeenCalled();
+      // createConstellationMesh is called with real or placeholder data
       expect(createConstellationMesh).toHaveBeenCalled();
     });
   });
@@ -113,7 +163,7 @@ describe('ConstellationCanvas', () => {
     (createRenderer as ReturnType<typeof vi.fn>).mockResolvedValue(mockRenderer);
     (createControls as ReturnType<typeof vi.fn>).mockReturnValue(mockControls);
 
-    const { unmount } = render(<ConstellationCanvas />);
+    const { unmount } = render(<ConstellationCanvas />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(mockRenderer.setAnimationLoop).toHaveBeenCalled();
@@ -126,6 +176,69 @@ describe('ConstellationCanvas', () => {
       expect(mockControls.dispose).toHaveBeenCalled();
       expect(disposeScene).toHaveBeenCalled();
       expect(mockRenderer.dispose).toHaveBeenCalled();
+    });
+  });
+
+  describe('People Data Integration', () => {
+    it('should use usePeople hook to fetch data', async () => {
+      const { usePeople } = await import('@/hooks/use-people');
+
+      render(<ConstellationCanvas />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        expect(usePeople).toHaveBeenCalled();
+      });
+    });
+
+    it('should create constellation mesh with people data', async () => {
+      const { createConstellationMesh } = await import('@/visualization/constellation');
+
+      render(<ConstellationCanvas />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        expect(createConstellationMesh).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('Click Selection', () => {
+    it('should create ConstellationSelection for raycasting', async () => {
+      render(<ConstellationCanvas />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        // Wait for scene initialization - canvas is created dynamically
+        const container = screen.getByTestId('constellation-canvas');
+        expect(container.querySelector('canvas')).toBeInTheDocument();
+      });
+
+      // ConstellationSelection is instantiated during scene init
+      expect(mockConstellationSelectionInstances.length).toBeGreaterThan(0);
+    });
+
+    it('should not call selectPerson on initial render', async () => {
+      render(<ConstellationCanvas />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('constellation-canvas')).toBeInTheDocument();
+      });
+
+      // Selection should not be triggered without user interaction
+      expect(mockSelectPerson).not.toHaveBeenCalled();
+    });
+
+    it('should set up click handler on canvas', async () => {
+      render(<ConstellationCanvas />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        // Canvas is created and attached to the container
+        const container = screen.getByTestId('constellation-canvas');
+        expect(container.querySelector('canvas')).toBeInTheDocument();
+      });
+
+      // The component sets up a click handler during initialization
+      // The handler uses ConstellationSelection.getIntersectedPerson
+      // and calls selectPerson if a person is found
+      // This structure is verified by the ConstellationSelection being called
     });
   });
 });

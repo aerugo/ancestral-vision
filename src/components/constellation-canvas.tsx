@@ -14,7 +14,38 @@ import type { WebGLRenderer, PerspectiveCamera, Scene } from 'three';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { createRenderer } from '@/visualization/renderer';
 import { createScene, createCamera, createControls, disposeScene } from '@/visualization/scene';
-import { createConstellationMesh, generatePlaceholderPeople } from '@/visualization/constellation';
+import {
+  createConstellationMesh,
+  generatePlaceholderPeople,
+  type PlaceholderPerson,
+} from '@/visualization/constellation';
+import { ConstellationSelection } from '@/visualization/selection';
+import { usePeople } from '@/hooks/use-people';
+import { useSelectionStore } from '@/store/selection-store';
+
+/**
+ * Convert API people data to PlaceholderPerson format for visualization
+ */
+function peopleToPlacelderPeople(
+  people: Array<{ id: string; givenName: string | null; surname: string | null; generation: number }>
+): PlaceholderPerson[] {
+  return people.map((person, index) => {
+    // Arrange in a spiral pattern based on generation
+    const angle = (index / Math.max(people.length, 1)) * Math.PI * 4;
+    const radius = 20 + Math.abs(person.generation) * 15;
+    const height = person.generation * 20;
+
+    return {
+      id: person.id,
+      givenName: person.givenName || person.surname || 'Unknown',
+      position: {
+        x: Math.cos(angle) * radius,
+        y: height,
+        z: Math.sin(angle) * radius,
+      },
+    };
+  });
+}
 
 export function ConstellationCanvas(): React.ReactElement {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -23,6 +54,11 @@ export function ConstellationCanvas(): React.ReactElement {
   const cameraRef = useRef<PerspectiveCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const selectionRef = useRef<ConstellationSelection | null>(null);
+
+  // Fetch real people data
+  const { data: people } = usePeople();
+  const { selectPerson } = useSelectionStore();
 
   const initScene = useCallback(async (): Promise<(() => void) | undefined> => {
     const container = containerRef.current;
@@ -57,10 +93,32 @@ export function ConstellationCanvas(): React.ReactElement {
     const controls = createControls(camera, canvas);
     controlsRef.current = controls;
 
-    // Add placeholder constellation
-    const placeholderPeople = generatePlaceholderPeople(10);
-    const constellation = createConstellationMesh(placeholderPeople);
+    // Create selection handler
+    selectionRef.current = new ConstellationSelection(camera, scene);
+
+    // Add constellation - use real data if available, otherwise placeholder
+    const constellationPeople =
+      people && people.length > 0
+        ? peopleToPlacelderPeople(people)
+        : generatePlaceholderPeople(10);
+    const constellation = createConstellationMesh(constellationPeople);
     scene.add(constellation);
+
+    // Click handler for selection
+    const handleClick = (event: MouseEvent): void => {
+      if (!selectionRef.current || !canvasRef.current) return;
+
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      const personId = selectionRef.current.getIntersectedPerson(x, y);
+      if (personId) {
+        selectPerson(personId, []);
+      }
+    };
+
+    canvas.addEventListener('click', handleClick);
 
     // Animation loop - use setAnimationLoop per INV-A002
     renderer.setAnimationLoop(() => {
@@ -85,15 +143,17 @@ export function ConstellationCanvas(): React.ReactElement {
     // Return cleanup function (INV-A009)
     return () => {
       window.removeEventListener('resize', handleResize);
+      canvas.removeEventListener('click', handleClick);
       renderer.setAnimationLoop(null);
       controls.dispose();
+      selectionRef.current?.dispose();
       disposeScene(scene);
       renderer.dispose();
       if (canvas.parentNode) {
         canvas.parentNode.removeChild(canvas);
       }
     };
-  }, []);
+  }, [people, selectPerson]);
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;

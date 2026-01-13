@@ -136,7 +136,7 @@ describe('App Shell', () => {
     expect(screen.queryByRole('link', { name: /sign in/i })).not.toBeInTheDocument();
   });
 
-  it('should show logo link to home', () => {
+  it('should link logo to landing page when not authenticated', () => {
     mockedUseAuth.mockReturnValue({
       user: null,
       loading: false,
@@ -151,6 +151,23 @@ describe('App Shell', () => {
     renderWithQueryClient(<AppShell>Content</AppShell>);
     const logoLink = screen.getByRole('link', { name: /ancestral vision/i });
     expect(logoLink).toHaveAttribute('href', '/');
+  });
+
+  it('should link logo to constellation when authenticated', () => {
+    mockedUseAuth.mockReturnValue({
+      user: { uid: 'test', email: 'test@example.com', displayName: 'Test User' },
+      loading: false,
+      error: null,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+      getIdToken: vi.fn(),
+      clearError: vi.fn(),
+    });
+
+    renderWithQueryClient(<AppShell>Content</AppShell>);
+    const logoLink = screen.getByRole('link', { name: /ancestral vision/i });
+    expect(logoLink).toHaveAttribute('href', '/constellation');
   });
 
   it('should render search bar when authenticated and onPersonSelect provided', () => {

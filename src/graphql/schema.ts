@@ -20,6 +20,9 @@ export const typeDefs = /* GraphQL */ `
 
     """List people in user's constellation"""
     people(includeDeleted: Boolean = false): [Person!]!
+
+    """Get all relationships for a person (both parent-child and spouse)"""
+    personRelationships(personId: ID!): [Relationship!]!
   }
 
   type Mutation {
@@ -37,6 +40,24 @@ export const typeDefs = /* GraphQL */ `
 
     """Soft delete person (30-day recovery)"""
     deletePerson(id: ID!): Person!
+
+    """Create a parent-child relationship"""
+    createParentChildRelationship(input: CreateParentChildRelationshipInput!): ParentChildRelationship!
+
+    """Update a parent-child relationship"""
+    updateParentChildRelationship(id: ID!, input: UpdateParentChildRelationshipInput!): ParentChildRelationship!
+
+    """Delete a parent-child relationship"""
+    deleteParentChildRelationship(id: ID!): ParentChildRelationship!
+
+    """Create a spouse relationship"""
+    createSpouseRelationship(input: CreateSpouseRelationshipInput!): SpouseRelationship!
+
+    """Update a spouse relationship"""
+    updateSpouseRelationship(id: ID!, input: UpdateSpouseRelationshipInput!): SpouseRelationship!
+
+    """Delete a spouse relationship"""
+    deleteSpouseRelationship(id: ID!): SpouseRelationship!
   }
 
   type User {
@@ -81,6 +102,85 @@ export const typeDefs = /* GraphQL */ `
     deletedBy: ID
     createdAt: DateTime!
     updatedAt: DateTime!
+    """Parents of this person"""
+    parents: [Person!]!
+    """Children of this person"""
+    children: [Person!]!
+    """Spouses/partners of this person"""
+    spouses: [Person!]!
+  }
+
+  """Parent-child relationship type"""
+  enum ParentType {
+    BIOLOGICAL
+    ADOPTIVE
+    FOSTER
+    STEP
+    GUARDIAN
+    UNKNOWN
+  }
+
+  """A parent-child relationship between two people"""
+  type ParentChildRelationship {
+    id: ID!
+    parent: Person!
+    child: Person!
+    parentId: ID!
+    childId: ID!
+    relationshipType: ParentType!
+    isPreferred: Boolean!
+    startDate: JSON
+    endDate: JSON
+    createdAt: DateTime!
+  }
+
+  """A spouse/partner relationship between two people"""
+  type SpouseRelationship {
+    id: ID!
+    person1: Person!
+    person2: Person!
+    person1Id: ID!
+    person2Id: ID!
+    marriageDate: JSON
+    marriagePlace: JSON
+    divorceDate: JSON
+    description: String
+    createdAt: DateTime!
+  }
+
+  """Union type for all relationship types"""
+  union Relationship = ParentChildRelationship | SpouseRelationship
+
+  input CreateParentChildRelationshipInput {
+    parentId: ID!
+    childId: ID!
+    relationshipType: ParentType!
+    isPreferred: Boolean
+    startDate: JSON
+    endDate: JSON
+  }
+
+  input UpdateParentChildRelationshipInput {
+    relationshipType: ParentType
+    isPreferred: Boolean
+    startDate: JSON
+    endDate: JSON
+  }
+
+  input CreateSpouseRelationshipInput {
+    person1Id: ID!
+    person2Id: ID!
+    marriageDate: JSON
+    marriagePlace: JSON
+    divorceDate: JSON
+    description: String
+  }
+
+  input UpdateSpouseRelationshipInput {
+    marriageDate: JSON
+    marriagePlace: JSON
+    divorceDate: JSON
+    description: String
   }
 
   input CreateConstellationInput {

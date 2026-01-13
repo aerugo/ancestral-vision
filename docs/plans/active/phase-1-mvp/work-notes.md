@@ -54,23 +54,32 @@
 
 ### Phase 1.1: Relationships
 
-**Status**: Pending
-**Started**:
-**Completed**:
+**Status**: Complete
+**Started**: 2026-01-13
+**Completed**: 2026-01-13
 
 #### Test Results
 
 ```
-(not yet started)
+Test Files: 29 passed (29)
+Tests: 269 passed (269)
 ```
 
 #### Results
 
--
+- Added 25+ relationship resolver tests
+- Extended GraphQL schema with relationship types and mutations
+- Implemented 6 relationship mutations (create/update/delete for parent-child and spouse)
+- Added personRelationships query
+- Implemented Person field resolvers (parents, children, spouses)
+- Created TanStack Query hooks for all relationship operations
 
 #### Notes
 
--
+- Prisma models (ParentChildRelationship, SpouseRelationship) already existed in schema
+- Used existing isDatabaseAvailable() pattern for graceful test skipping
+- Query returns empty array for unauthenticated (consistent with other queries)
+- Mutations throw GraphQLError for unauthenticated (INV-S001)
 
 ---
 
@@ -193,7 +202,14 @@
 
 ### Modified
 
-- (none yet)
+- `src/graphql/schema.ts` - Extended with relationship types and mutations
+- `src/graphql/resolvers/index.ts` - Added relationship resolver implementations
+- `tests/graphql-test-utils.ts` - Added cleanupTestData and seedTestUserWithPeople
+
+### Created (Phase 1.1)
+
+- `src/graphql/resolvers/relationship.test.ts` - TDD test suite for relationships
+- `src/hooks/use-relationships.ts` - TanStack Query hooks for relationships
 
 ---
 

@@ -8,6 +8,241 @@
 
 ## Session Log
 
+### 2026-01-13 - Phase 0.8 CI/CD & Deployment Complete
+
+**Context**: Implemented Phase 0.8 (CI/CD & Deployment) following strict TDD principles.
+
+**Completed**:
+
+1. **Health Check Endpoint (9 tests)**:
+   - `GET /api/health` returns service status
+   - Checks database connectivity with simple query
+   - Returns 200 when healthy, 503 when unhealthy
+   - Includes version, timestamp, and database status
+
+2. **Dockerfile**:
+   - Multi-stage build for optimized image size
+   - Node.js 20 Alpine base
+   - Generates Prisma client in deps stage
+   - Runs as non-root user for security
+   - Auto-runs migrations on startup (INV-I004)
+
+3. **Cloud Build Pipeline**:
+   - Runs lint, typecheck, tests before deploy (INV-I002)
+   - Builds and pushes Docker image to Artifact Registry
+   - Deploys to Cloud Run with secrets (INV-I003)
+   - Connects to Cloud SQL instance
+
+4. **Configuration**:
+   - `next.config.ts` updated for standalone output
+   - `.dockerignore` to exclude dev files
+   - `.env.production.example` template
+   - `test:ci` npm script added
+
+**Test Results**:
+
+```
+Test Files  28 passed (28)
+Tests       246 passed (246)
+```
+
+**Invariants Enforced**:
+
+- INV-I001: Cloud Build triggers on main branch merge
+- INV-I002: CI runs lint, typecheck, tests before deploy
+- INV-I003: Secrets from Secret Manager via Cloud Run
+- INV-I004: Prisma migrations run in Dockerfile CMD
+
+**Success Criteria Met**:
+
+- [x] Health check endpoint returns 200
+- [x] Dockerfile builds successfully
+- [x] Cloud Build pipeline configured
+- [x] Secrets handled via Secret Manager
+- [x] Database migrations configured for auto-deploy
+- [x] Type check passes
+
+---
+
+### 2026-01-13 - Phase 0.7 3D Foundation Complete
+
+**Context**: Implemented Phase 0.7 (3D Foundation) following strict TDD principles.
+
+**Completed**:
+
+1. **Renderer Module (9 tests)**:
+   - WebGPU detection with `isWebGPUSupported()`
+   - WebGL fallback when WebGPU unavailable
+   - `createRenderer()` with async initialization (INV-A001)
+   - Pixel ratio clamped to max 2 for performance
+
+2. **Scene Module (17 tests)**:
+   - `createScene()` with cosmic dark background
+   - `createCamera()` with perspective camera
+   - `createControls()` with OrbitControls (damping, zoom, pan)
+   - `disposeScene()` for memory cleanup (INV-A009)
+
+3. **Constellation Module (15 tests)**:
+   - `createConstellationMesh()` creates spherical nodes
+   - `updateConstellation()` updates node positions
+   - `generatePlaceholderPeople()` for demo data
+   - Nodes store userData for selection/interaction
+
+4. **ConstellationCanvas Component (5 tests)**:
+   - Mounts 3D canvas in React
+   - Uses `setAnimationLoop()` per INV-A002
+   - Handles resize events
+   - Cleans up on unmount (INV-A009)
+
+5. **Constellation Page (4 tests)**:
+   - Full-screen layout with AppShell
+   - Canvas container for 3D content
+
+**Test Results**:
+
+```
+Test Files  27 passed (27)
+Tests       237 passed (237)
+```
+
+**Invariants Enforced**:
+
+- INV-A001: WebGPURenderer initialized with `await renderer.init()`
+- INV-A002: Using `renderer.setAnimationLoop()` not `requestAnimationFrame()`
+- INV-A008: WebGPU uses `three/webgpu` imports
+- INV-A009: Scene cleanup on unmount (dispose geometry, materials)
+
+**Success Criteria Met**:
+
+- [x] All visualization tests pass
+- [x] WebGPU renderer initializes (or falls back to WebGL)
+- [x] Placeholder constellation renders
+- [x] Camera controls work (orbit, zoom, pan)
+- [x] Proper cleanup on unmount
+- [x] Type check passes
+
+---
+
+### 2026-01-13 - Phase 0.6 UI Foundation Complete
+
+**Context**: Implemented Phase 0.6 (UI Foundation) following strict TDD principles.
+
+**Completed**:
+
+1. **shadcn/ui Setup**:
+   - Created `components.json` configuration
+   - Updated `globals.css` with CSS variables for dark theme
+   - Updated `tailwind.config.ts` with shadcn colors and border-radius
+   - Added `cn()` utility function to `src/lib/utils.ts`
+
+2. **UI Components Created**:
+   - Button, Input, Label, Card, DropdownMenu, Avatar
+   - All using Radix UI primitives with class-variance-authority
+
+3. **Landing Page (4 tests)**:
+   - Displays app title and description
+   - "Get Started" button links to /register
+   - "Sign In" button links to /login
+
+4. **Login Page (7 tests)**:
+   - Email and password form with Zod validation
+   - Shows error messages for invalid input
+   - Redirects to /constellation on success
+   - Links to /register for new users
+
+5. **Register Page (5 tests)**:
+   - Email, password, confirm password form
+   - Validates password match and minimum length
+   - Redirects to /constellation on success
+
+6. **App Shell (7 tests)**:
+   - Navigation bar with app title
+   - User menu when authenticated (avatar, settings, sign out)
+   - Sign In button when not authenticated
+   - Canvas container for 3D content
+
+7. **Providers Aggregation (5 tests)**:
+   - ThemeProvider (next-themes)
+   - AuthProvider (Firebase Auth)
+   - QueryProvider (TanStack Query)
+   - Proper nesting order
+
+**Test Results**:
+
+```
+Test Files  22 passed (22)
+Tests       187 passed (187)
+```
+
+**Invariants Enforced**:
+
+- INV-U001: Dark theme is default (cosmic aesthetic)
+- INV-U002: All pages accessible via keyboard navigation
+- INV-U003: Form validation uses Zod schemas
+
+**Success Criteria Met**:
+
+- [x] All UI component tests pass
+- [x] Landing page renders correctly
+- [x] Login/register forms validate input
+- [x] App shell displays user state
+- [x] Type check passes
+
+---
+
+### 2026-01-13 - Phase 0.5 State Management Complete
+
+**Context**: Implemented Phase 0.5 (State Management) following strict TDD principles.
+
+**Completed**:
+
+1. **Dependencies Installed**:
+   - zustand (client state)
+   - @tanstack/react-query (server state)
+   - graphql-request (GraphQL client)
+
+2. **Zustand Stores Created (28 tests)**:
+   - `src/store/auth-store.ts` - Auth state (user, token, isAuthenticated)
+   - `src/store/ui-store.ts` - UI state (theme, viewMode, selectedPerson, panel, camera)
+   - Both stores use persist middleware for localStorage
+
+3. **GraphQL Client Created (5 tests)**:
+   - `src/lib/graphql-client.ts` - Client with auth header middleware
+   - Automatically includes Bearer token from auth store
+
+4. **TanStack Query Hooks Created (23 tests)**:
+   - `src/hooks/use-me.ts` - Current user query
+   - `src/hooks/use-constellation.ts` - Constellation query and create mutation
+   - `src/hooks/use-people.ts` - People queries and create mutation
+
+5. **QueryProvider Component Created (3 tests)**:
+   - `src/components/providers/query-provider.tsx` - TanStack Query provider
+   - Configured with sensible defaults (staleTime, gcTime, retry)
+
+**Test Results**:
+
+```
+Test Files  17 passed (17)
+Tests       159 passed (159)
+```
+
+**Invariants Enforced**:
+
+- INV-A005: TanStack Query is the only way to fetch server data
+- INV-A006: Zustand stores handle only client/UI state
+- INV-A007: GraphQL client automatically includes auth token
+
+**Success Criteria Met**:
+
+- [x] All store tests pass
+- [x] All hook tests pass
+- [x] Auth store persists token
+- [x] UI store persists theme preference
+- [x] GraphQL client includes auth header
+- [x] Type check passes
+
+---
+
 ### 2026-01-12 - TDD Completion Plan Created
 
 **Context Review Completed**:
@@ -165,33 +400,146 @@ Since this is Phase 0, we're establishing invariants rather than respecting exis
 
 ### Phase 0.5: State Management
 
-**Status**: Pending
-**Started**:
-**Completed**:
+**Status**: Complete
+**Started**: 2026-01-13
+**Completed**: 2026-01-13
+
+#### Test Results
+
+```
+src/store/auth-store.test.ts (10 tests) ✓
+src/store/ui-store.test.ts (18 tests) ✓
+src/lib/graphql-client.test.ts (5 tests) ✓
+src/hooks/use-constellation.test.tsx (7 tests) ✓
+src/hooks/use-me.test.tsx (4 tests) ✓
+src/hooks/use-people.test.tsx (8 tests) ✓
+src/components/providers/query-provider.test.tsx (3 tests) ✓
+```
+
+#### Files Created
+
+- `src/store/auth-store.ts` - Auth state with persistence
+- `src/store/auth-store.test.ts` - 10 tests
+- `src/store/ui-store.ts` - UI state with persistence
+- `src/store/ui-store.test.ts` - 18 tests
+- `src/store/index.ts` - Store exports
+- `src/lib/graphql-client.ts` - GraphQL client with auth headers
+- `src/lib/graphql-client.test.ts` - 5 tests
+- `src/hooks/use-constellation.ts` - Constellation queries/mutations
+- `src/hooks/use-constellation.test.tsx` - 7 tests
+- `src/hooks/use-me.ts` - Current user query
+- `src/hooks/use-me.test.tsx` - 4 tests
+- `src/hooks/use-people.ts` - People queries/mutations
+- `src/hooks/use-people.test.tsx` - 8 tests
+- `src/hooks/index.ts` - Hook exports
+- `src/components/providers/query-provider.tsx` - TanStack Query provider
+- `src/components/providers/query-provider.test.tsx` - 3 tests
 
 ---
 
 ### Phase 0.6: UI Foundation
 
-**Status**: Pending
-**Started**:
-**Completed**:
+**Status**: Complete
+**Started**: 2026-01-13
+**Completed**: 2026-01-13
+
+#### Test Results
+
+```
+src/app/page.test.tsx (4 tests) ✓
+src/app/(auth)/login/page.test.tsx (7 tests) ✓
+src/app/(auth)/register/page.test.tsx (5 tests) ✓
+src/components/app-shell.test.tsx (7 tests) ✓
+src/components/providers/providers.test.tsx (5 tests) ✓
+```
+
+#### Files Created
+
+- `components.json` - shadcn/ui configuration
+- `src/lib/utils.ts` - cn() utility for class merging
+- `src/components/ui/button.tsx` - Button component
+- `src/components/ui/input.tsx` - Input component
+- `src/components/ui/label.tsx` - Label component
+- `src/components/ui/card.tsx` - Card components
+- `src/components/ui/dropdown-menu.tsx` - Dropdown menu component
+- `src/components/ui/avatar.tsx` - Avatar component
+- `src/app/page.tsx` - Landing page with CTA buttons
+- `src/app/page.test.tsx` - Landing page tests (4 tests)
+- `src/app/(auth)/login/page.tsx` - Login page with form validation
+- `src/app/(auth)/login/page.test.tsx` - Login page tests (7 tests)
+- `src/app/(auth)/register/page.tsx` - Register page with form validation
+- `src/app/(auth)/register/page.test.tsx` - Register page tests (5 tests)
+- `src/components/app-shell.tsx` - App shell with nav and canvas container
+- `src/components/app-shell.test.tsx` - App shell tests (7 tests)
+- `src/components/providers/theme-provider.tsx` - Theme provider wrapper
+- `src/components/providers/index.tsx` - Providers aggregation
+- `src/components/providers/providers.test.tsx` - Providers tests (5 tests)
+
+#### Files Modified
+
+- `src/app/globals.css` - Added shadcn CSS variables for dark theme
+- `tailwind.config.ts` - Added shadcn colors and border-radius
+- `src/app/layout.tsx` - Updated to use Providers with dark theme
 
 ---
 
 ### Phase 0.7: 3D Foundation
 
-**Status**: Pending
-**Started**:
-**Completed**:
+**Status**: Complete
+**Started**: 2026-01-13
+**Completed**: 2026-01-13
+
+#### Test Results
+
+```
+src/visualization/renderer.test.ts (9 tests) ✓
+src/visualization/scene.test.ts (17 tests) ✓
+src/visualization/constellation.test.ts (15 tests) ✓
+src/components/constellation-canvas.test.tsx (5 tests) ✓
+src/app/(app)/constellation/page.test.tsx (4 tests) ✓
+```
+
+#### Files Created
+
+- `src/visualization/renderer.ts` - WebGPU/WebGL renderer with fallback
+- `src/visualization/renderer.test.ts` - 9 tests
+- `src/visualization/scene.ts` - Scene, camera, controls setup
+- `src/visualization/scene.test.ts` - 17 tests
+- `src/visualization/constellation.ts` - Constellation mesh creation
+- `src/visualization/constellation.test.ts` - 15 tests
+- `src/visualization/index.ts` - Visualization module exports
+- `src/components/constellation-canvas.tsx` - React canvas component
+- `src/components/constellation-canvas.test.tsx` - 5 tests
+- `src/app/(app)/constellation/page.tsx` - Constellation page
+- `src/app/(app)/constellation/page.test.tsx` - 4 tests
 
 ---
 
 ### Phase 0.8: CI/CD & Deployment
 
-**Status**: Pending
-**Started**:
-**Completed**:
+**Status**: Complete
+**Started**: 2026-01-13
+**Completed**: 2026-01-13
+
+#### Test Results
+
+```
+src/app/api/health/route.test.ts (9 tests) ✓
+```
+
+#### Files Created
+
+- `src/app/api/health/route.ts` - Health check endpoint with DB connectivity
+- `src/app/api/health/route.test.ts` - 9 tests
+- `Dockerfile` - Multi-stage production build
+- `cloudbuild.yaml` - Cloud Build CI/CD pipeline
+- `.dockerignore` - Docker build exclusions
+- `.env.production.example` - Production environment template
+
+#### Files Modified
+
+- `next.config.ts` - Added standalone output for Docker
+- `package.json` - Added test:ci script
 
 ---
 
@@ -228,9 +576,51 @@ Since this is Phase 0, we're establishing invariants rather than respecting exis
 - `docs/plans/active/phase-0-foundation/work-notes.md` - This file
 - `docs/plans/active/phase-0-foundation/phases/` - Directory for phase plans
 
+**Phase 0.5 Files**:
+- `src/store/auth-store.ts` - Auth state management
+- `src/store/auth-store.test.ts` - Auth store tests
+- `src/store/ui-store.ts` - UI state management
+- `src/store/ui-store.test.ts` - UI store tests
+- `src/store/index.ts` - Store exports
+- `src/lib/graphql-client.ts` - GraphQL client with auth
+- `src/lib/graphql-client.test.ts` - GraphQL client tests
+- `src/hooks/use-me.ts` - Current user hook
+- `src/hooks/use-me.test.tsx` - useMe tests
+- `src/hooks/use-constellation.ts` - Constellation hooks
+- `src/hooks/use-constellation.test.tsx` - Constellation hook tests
+- `src/hooks/use-people.ts` - People hooks
+- `src/hooks/use-people.test.tsx` - People hook tests
+- `src/hooks/index.ts` - Hook exports
+- `src/components/providers/query-provider.tsx` - TanStack Query provider
+- `src/components/providers/query-provider.test.tsx` - QueryProvider tests
+
+**Phase 0.6 Files**:
+- `components.json` - shadcn/ui configuration
+- `src/lib/utils.ts` - cn() utility function
+- `src/components/ui/button.tsx` - Button component
+- `src/components/ui/input.tsx` - Input component
+- `src/components/ui/label.tsx` - Label component
+- `src/components/ui/card.tsx` - Card components
+- `src/components/ui/dropdown-menu.tsx` - Dropdown menu component
+- `src/components/ui/avatar.tsx` - Avatar component
+- `src/app/page.tsx` - Landing page
+- `src/app/page.test.tsx` - Landing page tests
+- `src/app/(auth)/login/page.tsx` - Login page
+- `src/app/(auth)/login/page.test.tsx` - Login page tests
+- `src/app/(auth)/register/page.tsx` - Register page
+- `src/app/(auth)/register/page.test.tsx` - Register page tests
+- `src/components/app-shell.tsx` - App shell component
+- `src/components/app-shell.test.tsx` - App shell tests
+- `src/components/providers/theme-provider.tsx` - Theme provider
+- `src/components/providers/index.tsx` - Providers aggregation
+- `src/components/providers/providers.test.tsx` - Providers tests
+
 ### Modified
 
-- (none yet)
+- `package.json` - Added zustand, @tanstack/react-query, graphql-request, radix-ui components, react-hook-form, zod, next-themes, clsx, tailwind-merge, class-variance-authority
+- `src/app/globals.css` - Added shadcn CSS variables
+- `tailwind.config.ts` - Added shadcn colors and border-radius
+- `src/app/layout.tsx` - Updated to use Providers
 
 ---
 

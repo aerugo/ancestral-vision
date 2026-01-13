@@ -183,16 +183,32 @@ Tests: 392 passed (392)
 
 ### Phase 1.4b: Notes UI Completion
 
-**Status**: Pending
-**Started**:
-**Completed**:
+**Status**: Complete
+**Started**: 2026-01-13
+**Completed**: 2026-01-13
 
-**Scope**: Remaining UI work from Phase 1.4:
-- Tiptap rich text editor component (~12 tests)
-- Version history component (~8 tests)
-- Profile panel Notes tab integration (~10 tests)
+#### Test Results
 
-**Dependencies**: Phase 1.4 backend (complete)
+```
+Test Files: 41 passed (41)
+Tests: 422 passed (422)
+```
+
+#### Results
+
+- Installed Tiptap dependencies (@tiptap/react, @tiptap/starter-kit, @tiptap/extension-character-count)
+- Created NoteEditor component with rich text formatting toolbar
+- Created NoteVersionHistory component with preview and restore
+- Created PersonNotesTab component orchestrating list/edit/history views
+- Integrated Notes tab into PersonProfilePanel with tab switching
+- 30 new tests: 12 editor + 8 version history + 10 notes tab
+
+#### Notes
+
+- Mocked Tiptap in JSDOM tests (useEditor, EditorContent)
+- Used native HTML select for privacy dropdown (simpler than shadcn Select)
+- Used fixed overlay for confirmation dialogs (simpler than AlertDialog)
+- Auto-save uses 2s debounce via setTimeout in editor component
 
 **Plan**: See [phases/phase-1.4b-notes-ui.md](phases/phase-1.4b-notes-ui.md)
 
@@ -353,4 +369,4 @@ Tests: 392 passed (392)
 
 ---
 
-*Last Updated: 2026-01-13 (Phase 1.4 Complete)*
+*Last Updated: 2026-01-13 (Phase 1.4b Complete)*

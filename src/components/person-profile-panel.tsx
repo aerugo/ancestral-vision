@@ -6,12 +6,13 @@
  */
 'use client';
 
-import type { ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 import { X } from 'lucide-react';
 import { useSelectionStore } from '@/store/selection-store';
 import { usePerson } from '@/hooks/use-people';
 import { usePersonRelationships } from '@/hooks/use-relationships';
 import { Button } from '@/components/ui/button';
+import { PersonNotesTab } from './person-notes-tab';
 import type {
   Relationship,
   ParentChildRelationship,
@@ -105,11 +106,14 @@ function processRelationships(
  * - Displays immediate family members
  * - Dark theme styling (INV-U001)
  */
+type TabId = 'events' | 'notes' | 'photos';
+
 export function PersonProfilePanel(): ReactElement | null {
   const { selectedPersonId, isPanelOpen, clearSelection } = useSelectionStore();
   const { data: person, isLoading: isPersonLoading } = usePerson(selectedPersonId);
   const { data: relationships, isLoading: isRelationshipsLoading } =
     usePersonRelationships(selectedPersonId);
+  const [activeTab, setActiveTab] = useState<TabId>('events');
 
   // Don't render if no selection or panel closed
   if (!selectedPersonId || !isPanelOpen) {
@@ -176,30 +180,53 @@ export function PersonProfilePanel(): ReactElement | null {
           <div className="border-b mb-4" role="tablist">
             <button
               role="tab"
-              aria-selected="true"
-              className="px-4 py-2 text-sm font-medium border-b-2 border-primary"
+              aria-selected={activeTab === 'events'}
+              onClick={() => setActiveTab('events')}
+              className={`px-4 py-2 text-sm font-medium ${
+                activeTab === 'events'
+                  ? 'border-b-2 border-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
             >
               Events
             </button>
             <button
               role="tab"
-              aria-selected="false"
-              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+              aria-selected={activeTab === 'notes'}
+              onClick={() => setActiveTab('notes')}
+              className={`px-4 py-2 text-sm font-medium ${
+                activeTab === 'notes'
+                  ? 'border-b-2 border-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
             >
               Notes
             </button>
             <button
               role="tab"
-              aria-selected="false"
-              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+              aria-selected={activeTab === 'photos'}
+              onClick={() => setActiveTab('photos')}
+              className={`px-4 py-2 text-sm font-medium ${
+                activeTab === 'photos'
+                  ? 'border-b-2 border-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
             >
               Photos
             </button>
           </div>
 
-          {/* Tab Content Placeholder */}
-          <div className="mb-4">
-            <p className="text-sm text-muted-foreground">No events recorded yet.</p>
+          {/* Tab Content */}
+          <div className="mb-4 flex-1 overflow-hidden">
+            {activeTab === 'events' && (
+              <p className="text-sm text-muted-foreground">No events recorded yet.</p>
+            )}
+            {activeTab === 'notes' && selectedPersonId && (
+              <PersonNotesTab personId={selectedPersonId} />
+            )}
+            {activeTab === 'photos' && (
+              <p className="text-sm text-muted-foreground">No photos uploaded yet.</p>
+            )}
           </div>
 
           {/* Family Members */}

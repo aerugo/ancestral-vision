@@ -1,8 +1,8 @@
 # Phase 1.4b: Notes UI Completion
 
-**Status**: Pending
-**Started**:
-**Completed**:
+**Status**: Complete
+**Started**: 2026-01-13
+**Completed**: 2026-01-13
 **Parent Plan**: [phase-1.4.md](phase-1.4.md)
 
 ---
@@ -1414,16 +1414,16 @@ npx tsc --noEmit
 
 ## Completion Criteria
 
-- [ ] All ~30 new tests pass
-- [ ] Tiptap editor renders with formatting toolbar
-- [ ] Bold, italic, headings, lists work
-- [ ] Character count displays correctly
-- [ ] Auto-save triggers after 2s debounce
-- [ ] Version history displays previous versions
-- [ ] Can restore previous version
-- [ ] Notes tab integrated in profile panel
-- [ ] Type check passes
-- [ ] Lint passes
+- [x] All ~30 new tests pass (30 tests)
+- [x] Tiptap editor renders with formatting toolbar
+- [x] Bold, italic, headings, lists work
+- [x] Character count displays correctly
+- [x] Auto-save triggers after 2s debounce
+- [x] Version history displays previous versions
+- [x] Can restore previous version
+- [x] Notes tab integrated in profile panel
+- [x] Type check passes
+- [x] Lint passes
 
 ---
 

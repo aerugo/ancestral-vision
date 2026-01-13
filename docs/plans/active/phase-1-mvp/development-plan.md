@@ -172,6 +172,7 @@ Phase 0 Foundation provides:
 | 1.8 | Onboarding | First-run wizard | Wizard flow, progress | ~25 tests |
 | 1.9 | Settings | Account settings page | Forms, preferences | ~15 tests |
 | **1.X** | **Integration** | **Wire components together** | **E2E flow, state connection** | **~15 tests** |
+| **1.X.1** | **Integration Fixes** | **Fix onboarding, media, relationships** | **Data persistence, UI wiring** | **~15 tests** |
 | 1.10 | Subscription | LemonSqueezy billing | Webhooks, quota tracking | ~20 tests |
 | 1.11 | Export | GEDCOM/JSON export | Export logic, download | ~15 tests |
 | 1.12 | Polish | Visual enhancements | Brightness, animations | ~15 tests |
@@ -552,21 +553,22 @@ After implementation is complete:
 
 | Phase | Status | Started | Completed | Notes |
 |-------|--------|---------|-----------|-------|
-| 1.1 Relationships | Complete | 2026-01-13 | 2026-01-13 | |
-| 1.2 Person Enhancement | Complete | 2026-01-13 | 2026-01-13 | |
+| 1.1 Relationships | Complete | 2026-01-13 | 2026-01-13 | No UI - needs 1.X.1 |
+| 1.2 Person Enhancement | Complete | 2026-01-13 | 2026-01-13 | PersonForm orphaned - needs 1.X.1 |
 | 1.3 Selection & Profile | Complete | 2026-01-13 | 2026-01-13 | Wired in 1.X |
 | 1.4 Notes System | Complete | 2026-01-13 | 2026-01-13 | + Phase 1.4b for UI |
 | 1.5 Events System | Complete | 2026-01-13 | 2026-01-13 | |
-| 1.6 Media System | Complete | 2026-01-13 | 2026-01-13 | |
+| 1.6 Media System | Complete | 2026-01-13 | 2026-01-13 | Tab not rendered - needs 1.X.1 |
 | 1.7 Search | Complete | 2026-01-13 | 2026-01-13 | Wired in 1.X |
-| 1.8 Onboarding | Complete | 2026-01-13 | 2026-01-13 | Wired in 1.X |
+| 1.8 Onboarding | Complete | 2026-01-13 | 2026-01-13 | **Data not persisted - needs 1.X.1** |
 | 1.9 Settings | Complete | 2026-01-13 | 2026-01-13 | |
-| **1.X Integration** | **Complete** | 2026-01-13 | 2026-01-13 | All components wired |
+| **1.X Integration** | **Complete** | 2026-01-13 | 2026-01-13 | Display path wired |
+| **1.X.1 Integration Fixes** | **Pending** | | | **P0: Fix data persistence** |
 | 1.10 Subscription | Pending | | | |
 | 1.11 Export | Pending | | | |
 | 1.12 Polish | Pending | | | |
 
-**Current Test Count**: 796 passing
+**Current Test Count**: 822 passing
 
 ---
 

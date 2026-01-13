@@ -227,6 +227,7 @@ export const onboardingMutations = {
               givenName: selfData.givenName,
               surname: selfData.surname || null,
               displayName,
+              generation: 0, // Self is always generation 0
               createdBy: user.id,
             },
           });
@@ -253,6 +254,7 @@ export const onboardingMutations = {
               givenName: parentsData.father.givenName,
               surname: parentsData.father.surname || null,
               displayName,
+              generation: -1, // Parents are generation -1
               createdBy: user.id,
             },
           });
@@ -271,6 +273,7 @@ export const onboardingMutations = {
               givenName: parentsData.mother.givenName,
               surname: parentsData.mother.surname || null,
               displayName,
+              generation: -1, // Parents are generation -1
               createdBy: user.id,
             },
           });

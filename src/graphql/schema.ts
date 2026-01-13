@@ -194,6 +194,8 @@ export const typeDefs = /* GraphQL */ `
     deathPlace: JSON
     biography: String
     speculative: Boolean!
+    """Generation relative to self (0=self, -1=parents, -2=grandparents, +1=children)"""
+    generation: Int!
     deletedAt: DateTime
     deletedBy: ID
     createdAt: DateTime!

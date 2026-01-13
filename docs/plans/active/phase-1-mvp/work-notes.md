@@ -216,41 +216,159 @@ Tests: 422 passed (422)
 
 ### Phase 1.5: Events System
 
-**Status**: Pending
-**Started**:
-**Completed**:
+**Status**: Complete
+**Started**: 2026-01-13
+**Completed**: 2026-01-13
+
+#### Test Results
+
+```
+Test Files: 49 passed
+Tests: 522 passed
+```
+
+#### Results
+
+- Created date-utils.ts with GEDCOM-style flexible date parsing and formatting (INV-D007)
+- Implemented Event GraphQL types and CRUD mutations
+- Created EventForm component with flexible date input
+- Built EventTimeline component for chronological display
+- Created PersonEventsTab for profile panel integration
+- Support for shared events with multiple participants
 
 ---
 
 ### Phase 1.6: Media System
 
-**Status**: Pending
-**Started**:
-**Completed**:
+**Status**: Complete
+**Started**: 2026-01-13
+**Completed**: 2026-01-13
+
+#### Test Results
+
+```
+Test Files: 55 passed
+Tests: 610 passed
+```
+
+#### Results
+
+- Created Media GraphQL types and mutations
+- Implemented Cloud Storage integration with signed URLs (INV-D008)
+- Built MediaUploader component with drag-and-drop support
+- Created MediaGallery for photo display
+- Added PersonMediaTab for profile panel integration
+- Thumbnail generation for images
+- Privacy levels (PRIVATE, CONNECTIONS, PUBLIC)
 
 ---
 
 ### Phase 1.7: Search
 
-**Status**: Pending
-**Started**:
-**Completed**:
+**Status**: Complete
+**Started**: 2026-01-13
+**Completed**: 2026-01-13
+
+#### Test Results
+
+```
+Test Files: 58 passed
+Tests: 650 passed
+```
+
+#### Results
+
+- Implemented searchPeople GraphQL query with fuzzy matching
+- Created SearchBar component with dropdown results
+- Wired search results to constellation navigation
+- Rate limiting support (10 req/min)
+- Minimum query length of 2 characters
 
 ---
 
 ### Phase 1.8: Onboarding
 
-**Status**: Pending
-**Started**:
-**Completed**:
+**Status**: Complete
+**Started**: 2026-01-13
+**Completed**: 2026-01-13
+
+#### Test Results
+
+```
+Test Files: 62 passed
+Tests: 720 passed
+```
+
+#### Results
+
+- Created OnboardingProgress model and GraphQL types
+- Built OnboardingWizard multi-step component
+- Implemented OnboardingStep component for individual steps
+- Created PersonQuickForm for simplified data entry
+- Step persistence between sessions
+- Real-time star appearance via useCameraReveal hook
 
 ---
 
 ### Phase 1.9: Settings
 
-**Status**: Pending
-**Started**:
-**Completed**:
+**Status**: Complete
+**Started**: 2026-01-13
+**Completed**: 2026-01-13
+
+#### Test Results
+
+```
+Test Files: 66 passed
+Tests: 780 passed
+```
+
+#### Results
+
+- Created SettingsForm for profile management
+- Built SecuritySettings for password changes
+- Implemented theme preference with ThemeProvider
+- Added useSettings hook for settings data
+- Wired settings page at /settings
+
+---
+
+### Phase 1.X: Integration
+
+**Status**: Complete
+**Started**: 2026-01-13
+**Completed**: 2026-01-13
+
+#### Results
+
+- Wired ConstellationCanvas to usePeople hook (real data)
+- Integrated selection store with PersonProfilePanel
+- Connected SearchBar to AppShell
+- Added click handler for star selection
+- Implemented camera animation on selection
+
+---
+
+### Phase 1.X.1: Integration Fixes
+
+**Status**: Complete
+**Started**: 2026-01-13
+**Completed**: 2026-01-13
+
+#### Test Results
+
+```
+Test Files: 70 passed
+Tests: 856 passed
+```
+
+#### Results
+
+- Fixed onboarding data persistence (completeOnboarding now creates Person records)
+- Wired PersonMediaTab into PersonProfilePanel
+- Added Add Parent/Child/Spouse buttons with AddRelationshipDialog
+- Added "Add Person" button to AppShell with AddPersonDialog
+- All critical P0/P1 gaps resolved
 
 ---
 

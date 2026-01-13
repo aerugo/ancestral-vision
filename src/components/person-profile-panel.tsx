@@ -7,7 +7,7 @@
 'use client';
 
 import { useState, type ReactElement } from 'react';
-import { X } from 'lucide-react';
+import { X, Pencil } from 'lucide-react';
 import { useSelectionStore } from '@/store/selection-store';
 import { usePerson } from '@/hooks/use-people';
 import { usePersonRelationships } from '@/hooks/use-relationships';
@@ -16,6 +16,7 @@ import { PersonNotesTab } from './person-notes-tab';
 import { PersonEventsTab } from './person-events-tab';
 import { PersonMediaTab } from './person-media-tab';
 import { AddRelationshipDialog, type RelationshipType } from './add-relationship-dialog';
+import { EditPersonDialog } from './edit-person-dialog';
 import type {
   Relationship,
   ParentChildRelationship,
@@ -118,6 +119,7 @@ export function PersonProfilePanel(): ReactElement | null {
     usePersonRelationships(selectedPersonId);
   const [activeTab, setActiveTab] = useState<TabId>('events');
   const [addingRelation, setAddingRelation] = useState<RelationshipType | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   // Don't render if no selection or panel closed
   if (!selectedPersonId || !isPanelOpen) {
@@ -149,14 +151,24 @@ export function PersonProfilePanel(): ReactElement | null {
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
         <h2 className="text-xl font-semibold truncate">{displayName}</h2>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={clearSelection}
-          aria-label="Close panel"
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsEditDialogOpen(true)}
+            aria-label="Edit"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={clearSelection}
+            aria-label="Close panel"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Content */}
@@ -326,6 +338,14 @@ export function PersonProfilePanel(): ReactElement | null {
               personId={selectedPersonId}
               relationshipType={addingRelation}
               onClose={() => setAddingRelation(null)}
+            />
+          )}
+
+          {/* Edit Person Dialog */}
+          {isEditDialogOpen && selectedPersonId && (
+            <EditPersonDialog
+              personId={selectedPersonId}
+              onClose={() => setIsEditDialogOpen(false)}
             />
           )}
         </div>

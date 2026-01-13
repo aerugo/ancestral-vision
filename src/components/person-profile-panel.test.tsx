@@ -49,6 +49,22 @@ vi.mock('./add-relationship-dialog', () => ({
   ),
 }));
 
+// Mock EditPersonDialog
+vi.mock('./edit-person-dialog', () => ({
+  EditPersonDialog: ({
+    personId,
+    onClose,
+  }: {
+    personId: string;
+    onClose: () => void;
+  }) => (
+    <div data-testid="edit-person-dialog">
+      Editing {personId}
+      <button onClick={onClose}>Close Edit Dialog</button>
+    </div>
+  ),
+}));
+
 import { usePerson } from '@/hooks/use-people';
 import { usePersonRelationships } from '@/hooks/use-relationships';
 import { useSelectionStore } from '@/store/selection-store';
@@ -619,6 +635,74 @@ describe('PersonProfilePanel', () => {
       // Close dialog
       await userEvent.click(screen.getByRole('button', { name: /close dialog/i }));
       expect(screen.queryByTestId('add-relationship-dialog')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Edit Person (AC6: International Names)', () => {
+    it('should show Edit button in the header', () => {
+      vi.mocked(useSelectionStore).mockReturnValue({
+        selectedPersonId: 'person-123',
+        isPanelOpen: true,
+        clearSelection: mockClearSelection,
+        togglePanel: mockTogglePanel,
+        connectedPersonIds: [],
+      });
+
+      vi.mocked(usePerson).mockReturnValue({
+        data: { id: 'person-123', givenName: 'Test', surname: null, generation: 0, patronymic: null, nameOrder: 'GIVEN_FIRST', speculative: false, birthDate: null, deathDate: null },
+        isLoading: false,
+      } as ReturnType<typeof usePerson>);
+
+      render(<PersonProfilePanel />, { wrapper: createWrapper() });
+
+      expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument();
+    });
+
+    it('should open EditPersonDialog when Edit button clicked', async () => {
+      vi.mocked(useSelectionStore).mockReturnValue({
+        selectedPersonId: 'person-123',
+        isPanelOpen: true,
+        clearSelection: mockClearSelection,
+        togglePanel: mockTogglePanel,
+        connectedPersonIds: [],
+      });
+
+      vi.mocked(usePerson).mockReturnValue({
+        data: { id: 'person-123', givenName: 'Test', surname: null, generation: 0, patronymic: null, nameOrder: 'GIVEN_FIRST', speculative: false, birthDate: null, deathDate: null },
+        isLoading: false,
+      } as ReturnType<typeof usePerson>);
+
+      render(<PersonProfilePanel />, { wrapper: createWrapper() });
+
+      await userEvent.click(screen.getByRole('button', { name: /edit/i }));
+
+      expect(screen.getByTestId('edit-person-dialog')).toBeInTheDocument();
+      expect(screen.getByText(/Editing person-123/)).toBeInTheDocument();
+    });
+
+    it('should close EditPersonDialog when onClose is called', async () => {
+      vi.mocked(useSelectionStore).mockReturnValue({
+        selectedPersonId: 'person-123',
+        isPanelOpen: true,
+        clearSelection: mockClearSelection,
+        togglePanel: mockTogglePanel,
+        connectedPersonIds: [],
+      });
+
+      vi.mocked(usePerson).mockReturnValue({
+        data: { id: 'person-123', givenName: 'Test', surname: null, generation: 0, patronymic: null, nameOrder: 'GIVEN_FIRST', speculative: false, birthDate: null, deathDate: null },
+        isLoading: false,
+      } as ReturnType<typeof usePerson>);
+
+      render(<PersonProfilePanel />, { wrapper: createWrapper() });
+
+      // Open dialog
+      await userEvent.click(screen.getByRole('button', { name: /edit/i }));
+      expect(screen.getByTestId('edit-person-dialog')).toBeInTheDocument();
+
+      // Close dialog
+      await userEvent.click(screen.getByRole('button', { name: /close edit dialog/i }));
+      expect(screen.queryByTestId('edit-person-dialog')).not.toBeInTheDocument();
     });
   });
 });

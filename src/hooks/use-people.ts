@@ -16,7 +16,13 @@ export interface PersonSummary {
  */
 export interface Person extends PersonSummary {
   patronymic: string | null;
-  nameOrder: 'GIVEN_FIRST' | 'FAMILY_FIRST';
+  maidenName: string | null;
+  matronymic: string | null;
+  nickname: string | null;
+  suffix: string | null;
+  nameOrder: string | null;
+  gender: string | null;
+  biography: string | null;
   speculative: boolean;
   birthDate: string | null;
   deathDate: string | null;
@@ -30,6 +36,25 @@ export interface CreatePersonInput {
   surname?: string;
   patronymic?: string;
   nameOrder?: 'GIVEN_FIRST' | 'FAMILY_FIRST';
+  speculative?: boolean;
+}
+
+/**
+ * Input for updating an existing person
+ */
+export interface UpdatePersonInput {
+  givenName?: string;
+  surname?: string;
+  maidenName?: string;
+  patronymic?: string;
+  matronymic?: string;
+  nickname?: string;
+  suffix?: string;
+  nameOrder?: string;
+  gender?: string;
+  birthDate?: unknown;
+  deathDate?: unknown;
+  biography?: string;
   speculative?: boolean;
 }
 
@@ -52,7 +77,13 @@ const PERSON_QUERY = `
       givenName
       surname
       patronymic
+      maidenName
+      matronymic
+      nickname
+      suffix
       nameOrder
+      gender
+      biography
       speculative
       generation
       birthDate
@@ -68,6 +99,28 @@ const CREATE_PERSON_MUTATION = `
       givenName
       surname
       generation
+    }
+  }
+`;
+
+const UPDATE_PERSON_MUTATION = `
+  mutation UpdatePerson($id: ID!, $input: UpdatePersonInput!) {
+    updatePerson(id: $id, input: $input) {
+      id
+      givenName
+      surname
+      patronymic
+      maidenName
+      matronymic
+      nickname
+      suffix
+      nameOrder
+      gender
+      biography
+      speculative
+      generation
+      birthDate
+      deathDate
     }
   }
 `;
@@ -187,6 +240,51 @@ export function useCreatePerson() {
     onSuccess: () => {
       // Invalidate people query to refetch the list
       queryClient.invalidateQueries({ queryKey: peopleQueryKey });
+    },
+  });
+}
+
+/**
+ * Hook to update an existing person in the constellation
+ *
+ * @returns TanStack Query mutation result
+ *
+ * @example
+ * ```tsx
+ * function EditPersonForm({ personId }: { personId: string }) {
+ *   const { mutate, isPending } = useUpdatePerson();
+ *
+ *   const handleSubmit = (data: UpdatePersonInput) => {
+ *     mutate({ id: personId, input: data });
+ *   };
+ *
+ *   return (
+ *     <form onSubmit={handleSubmit}>
+ *       ...
+ *       <button disabled={isPending}>
+ *         {isPending ? 'Saving...' : 'Save'}
+ *       </button>
+ *     </form>
+ *   );
+ * }
+ * ```
+ */
+export function useUpdatePerson() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, input }: { id: string; input: UpdatePersonInput }) => {
+      const data = await gql<{ updatePerson: Person }>(
+        UPDATE_PERSON_MUTATION,
+        { id, input }
+      );
+      return data.updatePerson;
+    },
+    onSuccess: (updatedPerson) => {
+      // Invalidate people list
+      queryClient.invalidateQueries({ queryKey: peopleQueryKey });
+      // Update the specific person cache
+      queryClient.setQueryData(personQueryKey(updatedPerson.id), updatedPerson);
     },
   });
 }

@@ -15,7 +15,7 @@ import { OnboardingWizard } from '@/components/onboarding-wizard';
 export default function OnboardingPage(): React.ReactElement {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { data: progress, isLoading: progressLoading } = useOnboarding();
+  const { data: progress, isPending: progressPending } = useOnboarding();
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -37,7 +37,7 @@ export default function OnboardingPage(): React.ReactElement {
   };
 
   // Loading state
-  if (authLoading || progressLoading) {
+  if (authLoading || progressPending) {
     return (
       <div
         className="flex items-center justify-center min-h-screen"

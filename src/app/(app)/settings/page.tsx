@@ -11,6 +11,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { useSettings } from '@/hooks/use-settings';
 import { SettingsForm } from '@/components/settings-form';
 import { SecuritySettings } from '@/components/security-settings';
+import { DangerZone } from '@/components/danger-zone';
 
 /**
  * Settings page component
@@ -57,6 +58,10 @@ export default function SettingsPage(): React.ReactElement {
       <section className="settings-section security">
         <h2>Security</h2>
         <SecuritySettings />
+      </section>
+
+      <section className="settings-section danger">
+        <DangerZone />
       </section>
     </div>
   );

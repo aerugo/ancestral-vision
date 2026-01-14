@@ -44,7 +44,8 @@ export default function RegisterPage(): React.ReactElement {
     try {
       setError(null);
       await registerUser(data.email, data.password, data.name);
-      router.push('/constellation');
+      // New users should go through onboarding first
+      router.push('/onboarding');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     }

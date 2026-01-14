@@ -21,12 +21,18 @@ const schema = makeExecutableSchema({
 /**
  * Create GraphQL Yoga handler
  */
-const { handleRequest } = createYoga({
+const yoga = createYoga({
   schema,
-  context: createContext,
+  context: ({ request }) => createContext(request),
   graphqlEndpoint: '/api/graphql',
-  fetchAPI: { Response },
 });
+
+/**
+ * Wrap yoga handler for Next.js App Router
+ */
+const handleRequest = async (request: Request) => {
+  return yoga.handle(request);
+};
 
 /**
  * Handle GET requests (GraphQL playground)

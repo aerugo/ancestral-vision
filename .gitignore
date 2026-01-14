@@ -313,3 +313,4 @@ Icon?
 # WebGPU/WebGL shader cache (if generated)
 .shader-cache/
 .env.gcp
+.playwright-mcp/

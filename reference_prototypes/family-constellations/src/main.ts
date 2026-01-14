@@ -717,9 +717,20 @@ class AncestralWebApp {
       return;
     }
 
-    // Load default family
-    const familyData = parseFamily(sampleFamilyYaml);
-    await this.loadFamily(familyData);
+    // Load default family from genealogy.json
+    try {
+      const response = await fetch('/examples/genealogy.json');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch genealogy.json: ${response.status}`);
+      }
+      const jsonContent = await response.text();
+      const familyData = parseGenealogyFile(jsonContent, 'genealogy.json');
+      await this.loadFamily(familyData);
+    } catch (error) {
+      console.warn('Failed to load genealogy.json, falling back to embedded sample:', error);
+      const familyData = parseFamily(sampleFamilyYaml);
+      await this.loadFamily(familyData);
+    }
   }
 
   private showLoading(): void {

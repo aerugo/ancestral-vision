@@ -10,7 +10,7 @@
  */
 import { prisma } from '@/lib/prisma';
 import { requireAuth, type GraphQLContext } from './utils';
-import type { OnboardingProgress, OnboardingStep, OnboardingStatus } from '@prisma/client';
+import type { OnboardingProgress, OnboardingStep, OnboardingStatus, Prisma } from '@prisma/client';
 
 /**
  * Onboarding query resolvers
@@ -84,6 +84,7 @@ export const onboardingMutations = {
 
   /**
    * Complete an onboarding step with optional data
+   * Creates Person records immediately for ADD_SELF, ADD_PARENTS, ADD_GRANDPARENTS (AC33)
    */
   completeOnboardingStep: async (
     _parent: unknown,
@@ -106,11 +107,176 @@ export const onboardingMutations = {
     const existingData = (progress?.savedData as Record<string, unknown>) || {};
     const savedData = data ? { ...existingData, [step]: data } : existingData;
 
+    // Create people immediately for AC33 (Real-time stars during onboarding)
+    if (data && (step === 'ADD_SELF' || step === 'ADD_PARENTS' || step === 'ADD_GRANDPARENTS')) {
+      // Get or create constellation
+      let constellation = await prisma.constellation.findUnique({
+        where: { ownerId: user.id },
+      });
+
+      if (!constellation) {
+        constellation = await prisma.constellation.create({
+          data: {
+            ownerId: user.id,
+            title: 'My Family',
+          },
+        });
+      }
+
+      const constellationId = constellation.id;
+      type PersonData = { givenName?: string; surname?: string };
+
+      if (step === 'ADD_SELF') {
+        const selfData = data as PersonData;
+        if (selfData?.givenName && selfData.givenName.trim()) {
+          const displayName = selfData.surname
+            ? `${selfData.givenName} ${selfData.surname}`
+            : selfData.givenName;
+
+          // Check if self already exists
+          const existingSelf = await prisma.person.findFirst({
+            where: { constellationId, generation: 0 },
+          });
+
+          if (!existingSelf) {
+            await prisma.person.create({
+              data: {
+                constellationId,
+                givenName: selfData.givenName,
+                surname: selfData.surname || null,
+                displayName,
+                generation: 0,
+                createdBy: user.id,
+              },
+            });
+          }
+        }
+      }
+
+      if (step === 'ADD_PARENTS') {
+        const parentsData = data as { father?: PersonData; mother?: PersonData };
+
+        // Get self person for relationship
+        const selfPerson = await prisma.person.findFirst({
+          where: { constellationId, generation: 0 },
+        });
+
+        let fatherId: string | null = null;
+        let motherId: string | null = null;
+
+        if (parentsData?.father?.givenName && parentsData.father.givenName.trim()) {
+          const displayName = parentsData.father.surname
+            ? `${parentsData.father.givenName} ${parentsData.father.surname}`
+            : parentsData.father.givenName;
+
+          const father = await prisma.person.create({
+            data: {
+              constellationId,
+              givenName: parentsData.father.givenName,
+              surname: parentsData.father.surname || null,
+              displayName,
+              generation: -1,
+              createdBy: user.id,
+            },
+          });
+          fatherId = father.id;
+
+          // Create parent-child relationship
+          if (selfPerson) {
+            await prisma.parentChildRelationship.create({
+              data: {
+                parentId: fatherId,
+                childId: selfPerson.id,
+                constellationId,
+                createdBy: user.id,
+              },
+            });
+          }
+        }
+
+        if (parentsData?.mother?.givenName && parentsData.mother.givenName.trim()) {
+          const displayName = parentsData.mother.surname
+            ? `${parentsData.mother.givenName} ${parentsData.mother.surname}`
+            : parentsData.mother.givenName;
+
+          const mother = await prisma.person.create({
+            data: {
+              constellationId,
+              givenName: parentsData.mother.givenName,
+              surname: parentsData.mother.surname || null,
+              displayName,
+              generation: -1,
+              createdBy: user.id,
+            },
+          });
+          motherId = mother.id;
+
+          // Create parent-child relationship
+          if (selfPerson) {
+            await prisma.parentChildRelationship.create({
+              data: {
+                parentId: motherId,
+                childId: selfPerson.id,
+                constellationId,
+                createdBy: user.id,
+              },
+            });
+          }
+        }
+
+        // Create spouse relationship between parents
+        if (fatherId && motherId) {
+          await prisma.spouseRelationship.create({
+            data: {
+              person1Id: fatherId,
+              person2Id: motherId,
+              constellationId,
+              createdBy: user.id,
+            },
+          });
+        }
+      }
+
+      if (step === 'ADD_GRANDPARENTS') {
+        const grandparentsData = data as Record<string, PersonData>;
+
+        // Map grandparent keys to their parent's role and position
+        const grandparentRoles = {
+          paternalGrandfather: { generation: -2, side: 'paternal' },
+          paternalGrandmother: { generation: -2, side: 'paternal' },
+          maternalGrandfather: { generation: -2, side: 'maternal' },
+          maternalGrandmother: { generation: -2, side: 'maternal' },
+        };
+
+        for (const [key, gp] of Object.entries(grandparentsData)) {
+          if (gp?.givenName && gp.givenName.trim()) {
+            const role = grandparentRoles[key as keyof typeof grandparentRoles];
+            if (!role) continue;
+
+            const displayName = gp.surname
+              ? `${gp.givenName} ${gp.surname}`
+              : gp.givenName;
+
+            await prisma.person.create({
+              data: {
+                constellationId,
+                givenName: gp.givenName,
+                surname: gp.surname || null,
+                displayName,
+                generation: role.generation,
+                createdBy: user.id,
+              },
+            });
+          }
+        }
+      }
+    }
+
     return prisma.onboardingProgress.update({
       where: { userId: user.id },
       data: {
         completedSteps,
-        savedData,
+        savedData: savedData as Prisma.InputJsonValue,
       },
     });
   },
@@ -130,11 +296,11 @@ export const onboardingMutations = {
     });
 
     const existingData = (progress?.savedData as Record<string, unknown>) || {};
-    const savedData = { ...existingData, ...(data as Record<string, unknown>) };
+    const mergedData = { ...existingData, ...(data as Record<string, unknown>) };
 
     return prisma.onboardingProgress.update({
       where: { userId: user.id },
-      data: { savedData },
+      data: { savedData: mergedData as Prisma.InputJsonValue },
     });
   },
 
@@ -178,7 +344,7 @@ export const onboardingMutations = {
 
   /**
    * Complete the entire onboarding process
-   * Creates Person records from saved onboarding data and establishes relationships
+   * People are now created during each step (AC33), so this just marks completion
    */
   completeOnboarding: async (
     _parent: unknown,
@@ -187,137 +353,18 @@ export const onboardingMutations = {
   ): Promise<OnboardingProgress> => {
     const user = requireAuth(context);
 
-    // Get current progress with saved data
-    const progress = await prisma.onboardingProgress.findUnique({
-      where: { userId: user.id },
+    // Ensure constellation exists (should have been created during steps)
+    let constellation = await prisma.constellation.findUnique({
+      where: { ownerId: user.id },
     });
 
-    // Get user's constellation
-    const userWithConstellation = await prisma.user.findUnique({
-      where: { id: user.id },
-      include: { constellation: true },
-    });
-
-    const constellationId = userWithConstellation?.constellationId;
-
-    if (constellationId && progress?.savedData) {
-      const savedData = progress.savedData as Record<string, unknown>;
-
-      // Track created people for idempotency check and relationship linking
-      type PersonData = { givenName?: string; surname?: string };
-      const createdPeople: { id: string; role: string }[] = [];
-
-      // Check if people already exist (idempotency)
-      const existingPeople = await prisma.person.findMany({
-        where: { constellationId },
+    if (!constellation) {
+      constellation = await prisma.constellation.create({
+        data: {
+          ownerId: user.id,
+          title: 'My Family',
+        },
       });
-
-      // Only create people if none exist (first completion)
-      if (existingPeople.length === 0) {
-        // 1. Create self person from ADD_SELF
-        const selfData = savedData.ADD_SELF as PersonData | undefined;
-        if (selfData?.givenName && selfData.givenName.trim()) {
-          const displayName = selfData.surname
-            ? `${selfData.givenName} ${selfData.surname}`
-            : selfData.givenName;
-
-          const selfPerson = await prisma.person.create({
-            data: {
-              constellationId,
-              givenName: selfData.givenName,
-              surname: selfData.surname || null,
-              displayName,
-              generation: 0, // Self is always generation 0
-              createdBy: user.id,
-            },
-          });
-          createdPeople.push({ id: selfPerson.id, role: 'self' });
-        }
-
-        // 2. Create parents from ADD_PARENTS
-        const parentsData = savedData.ADD_PARENTS as {
-          father?: PersonData;
-          mother?: PersonData;
-        } | undefined;
-
-        let fatherId: string | null = null;
-        let motherId: string | null = null;
-
-        if (parentsData?.father?.givenName && parentsData.father.givenName.trim()) {
-          const displayName = parentsData.father.surname
-            ? `${parentsData.father.givenName} ${parentsData.father.surname}`
-            : parentsData.father.givenName;
-
-          const father = await prisma.person.create({
-            data: {
-              constellationId,
-              givenName: parentsData.father.givenName,
-              surname: parentsData.father.surname || null,
-              displayName,
-              generation: -1, // Parents are generation -1
-              createdBy: user.id,
-            },
-          });
-          fatherId = father.id;
-          createdPeople.push({ id: father.id, role: 'father' });
-        }
-
-        if (parentsData?.mother?.givenName && parentsData.mother.givenName.trim()) {
-          const displayName = parentsData.mother.surname
-            ? `${parentsData.mother.givenName} ${parentsData.mother.surname}`
-            : parentsData.mother.givenName;
-
-          const mother = await prisma.person.create({
-            data: {
-              constellationId,
-              givenName: parentsData.mother.givenName,
-              surname: parentsData.mother.surname || null,
-              displayName,
-              generation: -1, // Parents are generation -1
-              createdBy: user.id,
-            },
-          });
-          motherId = mother.id;
-          createdPeople.push({ id: mother.id, role: 'mother' });
-        }
-
-        // 3. Create parent-child relationships
-        const selfPerson = createdPeople.find((p) => p.role === 'self');
-        if (selfPerson) {
-          if (fatherId) {
-            await prisma.parentChildRelationship.create({
-              data: {
-                parentId: fatherId,
-                childId: selfPerson.id,
-                constellationId,
-                createdBy: user.id,
-              },
-            });
-          }
-          if (motherId) {
-            await prisma.parentChildRelationship.create({
-              data: {
-                parentId: motherId,
-                childId: selfPerson.id,
-                constellationId,
-                createdBy: user.id,
-              },
-            });
-          }
-        }
-
-        // 4. Create spouse relationship between parents if both exist
-        if (fatherId && motherId) {
-          await prisma.spouseRelationship.create({
-            data: {
-              person1Id: fatherId,
-              person2Id: motherId,
-              constellationId,
-              createdBy: user.id,
-            },
-          });
-        }
-      }
     }
 
     // Mark onboarding as complete

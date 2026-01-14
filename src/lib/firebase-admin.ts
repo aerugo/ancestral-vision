@@ -24,23 +24,41 @@ export interface FirebaseAdminInstance {
 }
 
 /**
+ * Check if running with Firebase emulator
+ */
+function isEmulatorMode(): boolean {
+  return !!process.env.FIREBASE_AUTH_EMULATOR_HOST;
+}
+
+/**
  * Get Firebase Admin instance (singleton pattern)
  *
  * Creates or returns existing Firebase Admin app and auth instances.
  * Uses environment variables for configuration.
+ * Supports Firebase emulator when FIREBASE_AUTH_EMULATOR_HOST is set.
  */
 export function getFirebaseAdmin(): FirebaseAdminInstance {
   if (!adminApp) {
     if (getApps().length === 0) {
-      const serviceAccount: ServiceAccount = {
-        projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      };
+      if (isEmulatorMode()) {
+        // For emulator, initialize without credentials
+        // The Admin SDK will auto-detect FIREBASE_AUTH_EMULATOR_HOST
+        // Project ID comes from .firebaserc (ancestral-vision)
+        adminApp = initializeApp({
+          projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
+        });
+      } else {
+        // For production, use service account credentials
+        const serviceAccount: ServiceAccount = {
+          projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+          privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        };
 
-      adminApp = initializeApp({
-        credential: cert(serviceAccount),
-      });
+        adminApp = initializeApp({
+          credential: cert(serviceAccount),
+        });
+      }
     } else {
       adminApp = getApps()[0];
     }

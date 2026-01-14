@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { gql } from '@/lib/graphql-client';
+import { useAuthStore } from '@/store/auth-store';
 
 /**
  * Current user data from the API
@@ -48,11 +49,14 @@ export const meQueryKey = ['me'] as const;
  * ```
  */
 export function useMe() {
+  const token = useAuthStore((state) => state.token);
+
   return useQuery({
     queryKey: meQueryKey,
     queryFn: async () => {
       const data = await gql<{ me: CurrentUser | null }>(ME_QUERY);
       return data.me;
     },
+    enabled: !!token,
   });
 }

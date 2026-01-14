@@ -46,29 +46,58 @@ export async function verifyAuthToken(token: string): Promise<DecodedToken> {
  */
 export async function getOrCreateUser(tokenData: DecodedToken): Promise<User> {
   const { uid, email, name } = tokenData;
+  const userEmail = email ?? `${uid}@placeholder.ancestralvision.com`;
 
+  // First, check if user exists by UID
   let user = await prisma.user.findUnique({
     where: { id: uid },
   });
 
-  if (!user) {
-    // Create new user
-    user = await prisma.user.create({
-      data: {
-        id: uid,
-        email: email ?? `${uid}@placeholder.ancestralvision.com`,
-        displayName: name ?? 'New User',
-      },
-    });
-  } else {
-    // Update last login time
-    user = await prisma.user.update({
+  if (user) {
+    // User exists with this UID, update last login
+    return prisma.user.update({
       where: { id: uid },
       data: { lastLoginAt: new Date() },
     });
   }
 
-  return user;
+  // User doesn't exist by UID - check if email exists (from old UID)
+  // This handles Firebase emulator resets where UID changes but email stays same
+  const existingByEmail = await prisma.user.findUnique({
+    where: { email: userEmail },
+  });
+
+  if (existingByEmail) {
+    // Update the existing user's ID to the new Firebase UID
+    return prisma.user.update({
+      where: { email: userEmail },
+      data: {
+        id: uid,
+        lastLoginAt: new Date(),
+      },
+    });
+  }
+
+  // No existing user - create new user with a constellation
+  const newUser = await prisma.user.create({
+    data: {
+      id: uid,
+      email: userEmail,
+      displayName: name ?? 'New User',
+    },
+  });
+
+  // Create default constellation for new user
+  const constellation = await prisma.constellation.create({
+    data: {
+      ownerId: newUser.id,
+      title: 'My Family',
+    },
+  });
+
+  // The constellation is already linked via ownerId, no need to update user
+  // Just return the user (Prisma relation is established through constellation.ownerId)
+  return newUser;
 }
 
 /**
@@ -82,18 +111,25 @@ export async function getOrCreateUser(tokenData: DecodedToken): Promise<User> {
  */
 export async function getCurrentUser(authHeader: string | null): Promise<User | null> {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('[Auth] No Authorization header or invalid format');
     return null;
   }
 
   const token = authHeader.substring(7);
   if (!token) {
+    console.log('[Auth] Empty token');
     return null;
   }
 
+  console.log('[Auth] Verifying token...');
   try {
     const tokenData = await verifyAuthToken(token);
-    return await getOrCreateUser(tokenData);
-  } catch {
+    console.log('[Auth] Token verified, uid:', tokenData.uid);
+    const user = await getOrCreateUser(tokenData);
+    console.log('[Auth] User retrieved:', user.id);
+    return user;
+  } catch (error) {
+    console.error('[Auth] Token verification failed:', error);
     return null;
   }
 }

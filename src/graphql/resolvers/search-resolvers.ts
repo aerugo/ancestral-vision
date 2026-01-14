@@ -4,7 +4,7 @@
  * Implements fuzzy name search using PostgreSQL pg_trgm extension.
  * Falls back to ILIKE search if pg_trgm is not available.
  */
-import type { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 
 const DEFAULT_LIMIT = 20;
 const MIN_QUERY_LENGTH = 2;
@@ -18,9 +18,9 @@ interface SearchResult {
   similarity: number;
 }
 
+// GraphQL context type (user is the Prisma User record)
 interface GraphQLContext {
-  prisma: PrismaClient;
-  user: { uid: string } | null;
+  user: { id: string } | null;
 }
 
 /**
@@ -50,8 +50,8 @@ export const searchQueries = {
     }
 
     // Get user's constellation (INV-S002)
-    const constellation = await ctx.prisma.constellation.findFirst({
-      where: { ownerId: ctx.user.uid },
+    const constellation = await prisma.constellation.findFirst({
+      where: { ownerId: ctx.user.id },
     });
 
     if (!constellation) {
@@ -63,7 +63,7 @@ export const searchQueries = {
 
     try {
       // Try pg_trgm similarity search first
-      const results = await ctx.prisma.$queryRaw<SearchResult[]>`
+      const results = await prisma.$queryRaw<SearchResult[]>`
         SELECT
           id,
           "displayName",
@@ -94,7 +94,7 @@ export const searchQueries = {
       console.warn('pg_trgm not available, falling back to ILIKE search');
 
       const pattern = `%${trimmedQuery}%`;
-      const results = await ctx.prisma.person.findMany({
+      const results = await prisma.person.findMany({
         where: {
           constellationId: constellation.id,
           deletedAt: null,

@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { graphqlClient } from '@/lib/graphql-client';
+import { useAuthStore } from '@/store/auth-store';
 
 const SEARCH_PEOPLE = /* GraphQL */ `
   query SearchPeople($query: String!, $limit: Int) {
@@ -63,6 +64,7 @@ export function useDebouncedValue<T>(value: T, delay: number): T {
  */
 export function useSearchPeople(query: string, limit = 20) {
   const debouncedQuery = useDebouncedValue(query, 300);
+  const token = useAuthStore((state) => state.token);
 
   return useQuery({
     queryKey: ['searchPeople', debouncedQuery, limit],
@@ -79,8 +81,8 @@ export function useSearchPeople(query: string, limit = 20) {
 
       return result.searchPeople;
     },
-    // Only enable query when we have a valid search term
-    enabled: debouncedQuery.trim().length >= 2,
+    // Only enable query when we have a valid search term and auth token
+    enabled: debouncedQuery.trim().length >= 2 && !!token,
     // Cache results for 30 seconds
     staleTime: 30000,
     // Use placeholder data instead of initialData to allow fetching

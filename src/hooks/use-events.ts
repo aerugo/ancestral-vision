@@ -6,6 +6,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { graphqlClient } from '@/lib/graphql-client';
 import { gql } from 'graphql-request';
+import { useAuthStore } from '@/store/auth-store';
 import type { FuzzyDate } from '@/lib/date-utils';
 
 // Types
@@ -191,6 +192,8 @@ const REMOVE_EVENT_PARTICIPANT_MUTATION = gql`
  * Hook to fetch events for a person
  */
 export function usePersonEvents(personId: string | null | undefined) {
+  const token = useAuthStore((state) => state.token);
+
   return useQuery({
     queryKey: ['events', 'person', personId],
     queryFn: async () => {
@@ -200,7 +203,7 @@ export function usePersonEvents(personId: string | null | undefined) {
       );
       return response.personEvents;
     },
-    enabled: !!personId,
+    enabled: !!personId && !!token,
   });
 }
 
@@ -208,6 +211,8 @@ export function usePersonEvents(personId: string | null | undefined) {
  * Hook to fetch a single event by ID
  */
 export function useEvent(eventId: string | null | undefined) {
+  const token = useAuthStore((state) => state.token);
+
   return useQuery({
     queryKey: ['events', eventId],
     queryFn: async () => {
@@ -217,7 +222,7 @@ export function useEvent(eventId: string | null | undefined) {
       );
       return response.event;
     },
-    enabled: !!eventId,
+    enabled: !!eventId && !!token,
   });
 }
 

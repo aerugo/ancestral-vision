@@ -5,6 +5,8 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { graphqlClient } from '@/lib/graphql-client';
+import { useAuthStore } from '@/store/auth-store';
+import { peopleQueryKey } from './use-people';
 
 // GraphQL Operations
 
@@ -232,16 +234,47 @@ const ONBOARDING_QUERY_KEY = ['onboarding'];
 
 /**
  * Fetch onboarding progress for current user
+ * Only runs when user is authenticated (has token)
  */
 export function useOnboarding() {
+  const token = useAuthStore((state) => state.token);
+  console.log('[useOnboarding] Token from store:', !!token, 'enabled:', !!token);
+
   return useQuery({
     queryKey: ONBOARDING_QUERY_KEY,
     queryFn: async (): Promise<OnboardingProgress | null> => {
-      const result = await graphqlClient.request<OnboardingProgressResponse>(
-        ONBOARDING_PROGRESS
-      );
-      return result.onboardingProgress;
+      console.log('[useOnboarding] Query function running, making fetch request...');
+      try {
+        // Direct fetch to debug
+        const storeToken = useAuthStore.getState().token;
+        console.log('[useOnboarding] Token for request:', !!storeToken);
+
+        const response = await fetch('/api/graphql', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(storeToken ? { Authorization: `Bearer ${storeToken}` } : {}),
+          },
+          body: JSON.stringify({ query: ONBOARDING_PROGRESS }),
+        });
+
+        console.log('[useOnboarding] Response status:', response.status);
+        const data = await response.json();
+        console.log('[useOnboarding] Response data:', data);
+
+        if (data.errors) {
+          console.error('[useOnboarding] GraphQL errors:', data.errors);
+          throw new Error(data.errors[0]?.message || 'GraphQL error');
+        }
+
+        return data.data?.onboardingProgress ?? null;
+      } catch (error) {
+        console.error('[useOnboarding] Query failed:', error);
+        throw error;
+      }
     },
+    // Only fetch when authenticated
+    enabled: !!token,
   });
 }
 
@@ -286,6 +319,7 @@ export function useUpdateOnboardingStep() {
 
 /**
  * Complete an onboarding step with optional data
+ * Also invalidates people query to trigger constellation refresh (AC33)
  */
 export function useCompleteOnboardingStep() {
   const queryClient = useQueryClient();
@@ -306,6 +340,8 @@ export function useCompleteOnboardingStep() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ONBOARDING_QUERY_KEY });
+      // Invalidate people query to refresh constellation with new stars (AC33)
+      queryClient.invalidateQueries({ queryKey: peopleQueryKey });
     },
   });
 }

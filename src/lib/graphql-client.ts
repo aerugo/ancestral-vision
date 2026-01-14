@@ -2,9 +2,18 @@ import { GraphQLClient } from 'graphql-request';
 import { useAuthStore } from '@/store/auth-store';
 
 /**
- * GraphQL endpoint - uses relative path for same-origin requests
+ * Get the GraphQL endpoint URL
+ * graphql-request requires an absolute URL for the URL constructor
  */
-const GRAPHQL_ENDPOINT = '/api/graphql';
+function getGraphQLEndpoint(): string {
+  // In browser, use window.location.origin
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/api/graphql`;
+  }
+  // Server-side: use environment variable or default to localhost
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  return `${baseUrl}/api/graphql`;
+}
 
 /**
  * Get authorization headers based on current auth state
@@ -12,6 +21,7 @@ const GRAPHQL_ENDPOINT = '/api/graphql';
  */
 export function getAuthHeaders(): Record<string, string> {
   const token = useAuthStore.getState().token;
+  console.log('[GraphQL] Getting auth headers, token exists:', !!token);
   if (token) {
     return {
       Authorization: `Bearer ${token}`,
@@ -23,12 +33,16 @@ export function getAuthHeaders(): Record<string, string> {
 /**
  * GraphQL client instance configured with auth middleware
  */
-export const graphqlClient = new GraphQLClient(GRAPHQL_ENDPOINT, {
+export const graphqlClient = new GraphQLClient(getGraphQLEndpoint(), {
+  headers: {
+    'Content-Type': 'application/json',
+  },
   requestMiddleware: (request) => {
     const authHeaders = getAuthHeaders();
     return {
       ...request,
       headers: {
+        'Content-Type': 'application/json',
         ...request.headers,
         ...authHeaders,
       },

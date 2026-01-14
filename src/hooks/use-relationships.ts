@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gql } from '@/lib/graphql-client';
+import { useAuthStore } from '@/store/auth-store';
 
 /**
  * Parent type enum matching GraphQL schema
@@ -257,6 +258,8 @@ export function personRelationshipsQueryKey(personId: string | null) {
  * @returns TanStack Query result with array of relationships
  */
 export function usePersonRelationships(personId: string | null) {
+  const token = useAuthStore((state) => state.token);
+
   return useQuery({
     queryKey: personRelationshipsQueryKey(personId),
     queryFn: async () => {
@@ -267,7 +270,7 @@ export function usePersonRelationships(personId: string | null) {
       );
       return data.personRelationships;
     },
-    enabled: personId !== null,
+    enabled: personId !== null && !!token,
   });
 }
 

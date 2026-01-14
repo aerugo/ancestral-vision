@@ -11,6 +11,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gql } from '@/lib/graphql-client';
+import { useAuthStore } from '@/store/auth-store';
 
 /**
  * Privacy level enum matching GraphQL schema
@@ -132,6 +133,8 @@ export function personNotesQueryKey(personId: string | null) {
  * @returns TanStack Query result with array of notes
  */
 export function usePersonNotes(personId: string | null) {
+  const token = useAuthStore((state) => state.token);
+
   return useQuery({
     queryKey: personNotesQueryKey(personId),
     queryFn: async () => {
@@ -141,7 +144,7 @@ export function usePersonNotes(personId: string | null) {
       });
       return data.personNotes;
     },
-    enabled: personId !== null,
+    enabled: personId !== null && !!token,
   });
 }
 

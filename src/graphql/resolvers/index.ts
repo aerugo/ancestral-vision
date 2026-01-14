@@ -9,7 +9,7 @@
 export { type GraphQLContext } from './utils';
 
 // Import domain resolvers
-import { userQueries, userFieldResolvers } from './user-resolvers';
+import { userQueries, userMutations, userFieldResolvers } from './user-resolvers';
 import {
   constellationQueries,
   constellationMutations,
@@ -55,6 +55,7 @@ export const resolvers = {
   },
 
   Mutation: {
+    ...userMutations,
     ...constellationMutations,
     ...personMutations,
     ...relationshipMutations,

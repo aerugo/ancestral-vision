@@ -5,7 +5,8 @@
  */
 import { GraphQLError } from 'graphql';
 import { v4 as uuidv4 } from 'uuid';
-import type { GraphQLContext } from '../types';
+import { prisma } from '@/lib/prisma';
+import type { User } from '@prisma/client';
 import {
   generateStoragePath,
   generateUploadUrl,
@@ -15,6 +16,11 @@ import {
   checkDuplicate,
   generateThumbnails,
 } from '@/lib/storage';
+
+// GraphQL context type
+interface GraphQLContext {
+  user: User | null;
+}
 
 // Helper to require authentication
 function requireAuth(ctx: GraphQLContext): void {
@@ -61,13 +67,13 @@ export const mediaQueries = {
     if (!ctx.user) return [];
 
     // Check person belongs to user's constellation
-    const person = await ctx.prisma.person.findFirst({
+    const person = await prisma.person.findFirst({
       where: { id: personId, constellation: { ownerId: ctx.user.uid } },
     });
     if (!person) return [];
 
     // Get media associated with this person
-    const mediaPersons = await ctx.prisma.mediaPerson.findMany({
+    const mediaPersons = await prisma.mediaPerson.findMany({
       where: { personId },
       include: { media: true },
     });
@@ -78,7 +84,7 @@ export const mediaQueries = {
   media: async (_: unknown, { id }: { id: string }, ctx: GraphQLContext) => {
     if (!ctx.user) return null;
 
-    const media = await ctx.prisma.media.findFirst({
+    const media = await prisma.media.findFirst({
       where: { id, constellation: { ownerId: ctx.user.uid }, deletedAt: null },
     });
 
@@ -101,7 +107,7 @@ export const mediaMutations = {
     validateMediaFile({ mimeType: input.mimeType, size: input.fileSize });
 
     // Get constellation
-    const constellation = await ctx.prisma.constellation.findFirst({
+    const constellation = await prisma.constellation.findFirst({
       where: { ownerId: ctx.user!.uid },
     });
     if (!constellation) {
@@ -110,7 +116,7 @@ export const mediaMutations = {
 
     // Verify all persons exist in constellation
     for (const personId of input.personIds) {
-      const person = await ctx.prisma.person.findFirst({
+      const person = await prisma.person.findFirst({
         where: { id: personId, constellationId: constellation.id },
       });
       if (!person) {
@@ -120,7 +126,7 @@ export const mediaMutations = {
 
     // Check for duplicate
     const { isDuplicate, mediaId: duplicateMediaId } = await checkDuplicate(
-      ctx.prisma,
+      prisma,
       constellation.id,
       input.hash
     );
@@ -138,7 +144,7 @@ export const mediaMutations = {
     });
 
     // Create pending media record with people associations
-    await ctx.prisma.media.create({
+    await prisma.media.create({
       data: {
         id: mediaId,
         constellationId: constellation.id,
@@ -172,7 +178,7 @@ export const mediaMutations = {
   ) => {
     requireAuth(ctx);
 
-    const media = await ctx.prisma.media.findFirst({
+    const media = await prisma.media.findFirst({
       where: { id: input.mediaId, constellation: { ownerId: ctx.user!.uid } },
     });
 
@@ -183,7 +189,7 @@ export const mediaMutations = {
     // Generate thumbnails for images
     const thumbnails = await generateThumbnails(media.storagePath, media.mimeType);
 
-    return ctx.prisma.media.update({
+    return prisma.media.update({
       where: { id: input.mediaId },
       data: {
         title: input.title,
@@ -200,7 +206,7 @@ export const mediaMutations = {
   deleteMedia: async (_: unknown, { id }: { id: string }, ctx: GraphQLContext) => {
     requireAuth(ctx);
 
-    const media = await ctx.prisma.media.findFirst({
+    const media = await prisma.media.findFirst({
       where: { id, constellation: { ownerId: ctx.user!.uid } },
     });
 
@@ -208,7 +214,7 @@ export const mediaMutations = {
       throw new GraphQLError('Media not found');
     }
 
-    return ctx.prisma.media.update({
+    return prisma.media.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
@@ -221,7 +227,7 @@ export const mediaMutations = {
   ) => {
     requireAuth(ctx);
 
-    const media = await ctx.prisma.media.findFirst({
+    const media = await prisma.media.findFirst({
       where: { id: mediaId, constellation: { ownerId: ctx.user!.uid } },
     });
 
@@ -230,7 +236,7 @@ export const mediaMutations = {
     }
 
     // Verify person is in same constellation
-    const person = await ctx.prisma.person.findFirst({
+    const person = await prisma.person.findFirst({
       where: { id: personId, constellationId: media.constellationId },
     });
 
@@ -239,7 +245,7 @@ export const mediaMutations = {
     }
 
     // Create association (ignore if already exists)
-    await ctx.prisma.mediaPerson.upsert({
+    await prisma.mediaPerson.upsert({
       where: {
         mediaId_personId: { mediaId, personId },
       },
@@ -247,7 +253,7 @@ export const mediaMutations = {
       update: {},
     });
 
-    return ctx.prisma.media.findUnique({
+    return prisma.media.findUnique({
       where: { id: mediaId },
       include: { people: { include: { person: true } } },
     });
@@ -260,7 +266,7 @@ export const mediaMutations = {
   ) => {
     requireAuth(ctx);
 
-    const media = await ctx.prisma.media.findFirst({
+    const media = await prisma.media.findFirst({
       where: { id: mediaId, constellation: { ownerId: ctx.user!.uid } },
     });
 
@@ -268,13 +274,13 @@ export const mediaMutations = {
       throw new GraphQLError('Media not found');
     }
 
-    await ctx.prisma.mediaPerson.delete({
+    await prisma.mediaPerson.delete({
       where: {
         mediaId_personId: { mediaId, personId },
       },
     });
 
-    return ctx.prisma.media.findUnique({
+    return prisma.media.findUnique({
       where: { id: mediaId },
       include: { people: { include: { person: true } } },
     });
@@ -290,7 +296,7 @@ export const mediaFieldResolvers = {
   },
 
   people: async (media: MediaRecord, _: unknown, ctx: GraphQLContext) => {
-    const mediaPersons = await ctx.prisma.mediaPerson.findMany({
+    const mediaPersons = await prisma.mediaPerson.findMany({
       where: { mediaId: media.id },
       include: { person: true },
     });

@@ -154,6 +154,12 @@ export const typeDefs = /* GraphQL */ `
 
     """Update user preferences"""
     updatePreferences(input: UpdatePreferencesInput!): UserSettings!
+
+    """Request account deletion (14-day grace period before permanent deletion)"""
+    requestAccountDeletion: AccountDeletionResult!
+
+    """Cancel a pending account deletion request"""
+    cancelAccountDeletion: AccountDeletionResult!
   }
 
   type User {
@@ -252,7 +258,7 @@ export const typeDefs = /* GraphQL */ `
   input CreateParentChildRelationshipInput {
     parentId: ID!
     childId: ID!
-    relationshipType: ParentType!
+    relationshipType: ParentType
     isPreferred: Boolean
     startDate: JSON
     endDate: JSON
@@ -558,5 +564,15 @@ export const typeDefs = /* GraphQL */ `
     defaultPrivacy: String
     emailNotifications: Boolean
     emailDigestFrequency: String
+  }
+
+  """Result of account deletion request"""
+  type AccountDeletionResult {
+    success: Boolean!
+    message: String!
+    """Date when the account will be permanently deleted (14 days from request)"""
+    scheduledDeletionDate: DateTime
+    """Whether deletion is currently pending"""
+    isPending: Boolean!
   }
 `;

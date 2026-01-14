@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gql } from '@/lib/graphql-client';
+import { useAuthStore } from '@/store/auth-store';
 
 /**
  * Person data from the API (summary view)
@@ -161,12 +162,16 @@ export function personQueryKey(id: string | null) {
  * ```
  */
 export function usePeople() {
+  const token = useAuthStore((state) => state.token);
+
   return useQuery({
     queryKey: peopleQueryKey,
     queryFn: async () => {
       const data = await gql<{ people: PersonSummary[] }>(PEOPLE_QUERY);
       return data.people;
     },
+    // Only fetch when authenticated to avoid caching empty results
+    enabled: !!token,
   });
 }
 
@@ -189,6 +194,8 @@ export function usePeople() {
  * ```
  */
 export function usePerson(id: string | null) {
+  const token = useAuthStore((state) => state.token);
+
   return useQuery({
     queryKey: personQueryKey(id),
     queryFn: async () => {
@@ -196,7 +203,8 @@ export function usePerson(id: string | null) {
       const data = await gql<{ person: Person | null }>(PERSON_QUERY, { id });
       return data.person;
     },
-    enabled: id !== null,
+    // Only fetch when authenticated and have an ID
+    enabled: id !== null && !!token,
   });
 }
 

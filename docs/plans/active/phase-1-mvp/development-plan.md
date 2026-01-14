@@ -173,6 +173,8 @@ Phase 0 Foundation provides:
 | 1.9 | Settings | Account settings page | Forms, preferences | ~15 tests |
 | **1.X** | **Integration** | **Wire components together** | **E2E flow, state connection** | **~15 tests** |
 | **1.X.1** | **Integration Fixes** | **Fix onboarding, media, relationships** | **Data persistence, UI wiring** | **~15 tests** |
+| **1.13** | **Bug Fixes** | **Fix P0/P1 bugs from testing audit** | **Search, Notes, Media, Onboarding** | **~10 tests** |
+| **1.14** | **Missing Features** | **Complete AC10-13, AC33-34, deletion** | **Highlighting, brightness, layout, reveal** | **~20 tests** |
 | 1.10 | Subscription | LemonSqueezy billing | Webhooks, quota tracking | ~20 tests |
 | 1.11 | Export | GEDCOM/JSON export | Export logic, download | ~15 tests |
 | 1.12 | Polish | Visual enhancements | Brightness, animations | ~15 tests |
@@ -564,6 +566,8 @@ After implementation is complete:
 | 1.9 Settings | Complete | 2026-01-13 | 2026-01-13 | Profile, security, theme |
 | **1.X Integration** | **Complete** | 2026-01-13 | 2026-01-13 | Display path wired |
 | **1.X.1 Integration Fixes** | **Complete** | 2026-01-13 | 2026-01-13 | Data persistence, dialogs |
+| **1.13 Bug Fixes** | **Ready** | | | [bugfix-completion-plan.md](bugfix-completion-plan.md) |
+| **1.14 Missing Features** | **Ready** | | | [bugfix-completion-plan.md](bugfix-completion-plan.md) |
 | 1.10 Subscription | Pending | | | |
 | 1.11 Export | Pending | | | |
 | 1.12 Polish | Pending | | | |
@@ -572,5 +576,30 @@ After implementation is complete:
 
 ---
 
+## Phase 1.13-1.14 Details
+
+See **[bugfix-completion-plan.md](bugfix-completion-plan.md)** for detailed implementation plan covering:
+
+### P0 Bug Fixes (1.13.1-1.13.3)
+- **Search**: Fix `searchPeople` returning no results
+- **Notes**: Fix Tiptap SSR crash (`immediatelyRender: false`)
+- **Media**: Fix `ctx.prisma` undefined in media resolver
+
+### P1 Bug Fixes (1.13.4)
+- **Onboarding**: Fix grandparents form pre-filled with parent data
+
+### Missing Features (1.14.1-1.14.6)
+- **AC10**: Connected people highlighting
+- **AC12**: Star brightness based on content
+- **AC13**: Generation-based mandala layout
+- **AC33**: Real-time stars during onboarding
+- **AC34**: Camera reveal "aha moment"
+- **Account Deletion**: Settings page danger zone
+
+### Deferred
+- Theme switching visual apply (saves but doesn't change UI) → Phase 2
+
+---
+
 *Created: 2026-01-13*
-*Last Updated: 2026-01-13*
+*Last Updated: 2026-01-14*

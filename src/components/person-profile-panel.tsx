@@ -114,9 +114,16 @@ type TabId = 'events' | 'notes' | 'photos';
 
 export function PersonProfilePanel(): ReactElement | null {
   const { selectedPersonId, isPanelOpen, clearSelection } = useSelectionStore();
-  const { data: person, isLoading: isPersonLoading } = usePerson(selectedPersonId);
-  const { data: relationships, isLoading: isRelationshipsLoading } =
-    usePersonRelationships(selectedPersonId);
+  const {
+    data: person,
+    isLoading: isPersonLoading,
+    isError: isPersonError,
+  } = usePerson(selectedPersonId);
+  const {
+    data: relationships,
+    isLoading: isRelationshipsLoading,
+    isError: isRelationshipsError,
+  } = usePersonRelationships(selectedPersonId);
   const [activeTab, setActiveTab] = useState<TabId>('events');
   const [addingRelation, setAddingRelation] = useState<RelationshipType | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -127,11 +134,17 @@ export function PersonProfilePanel(): ReactElement | null {
   }
 
   const isLoading = isPersonLoading || isRelationshipsLoading;
+  const isError = isPersonError || isRelationshipsError;
+  const notFound = !isLoading && !isError && !person;
 
   // Build display name
   const displayName = person
     ? [person.givenName, person.surname].filter(Boolean).join(' ')
-    : 'Loading...';
+    : notFound
+      ? 'Person not found'
+      : isError
+        ? 'Error loading'
+        : 'Loading...';
 
   // Process relationships to extract family members
   const { parents, children, spouses } = processRelationships(
@@ -175,6 +188,14 @@ export function PersonProfilePanel(): ReactElement | null {
       {isLoading ? (
         <div className="p-4">
           <p className="text-muted-foreground">Loading...</p>
+        </div>
+      ) : isError ? (
+        <div className="p-4">
+          <p className="text-destructive">Failed to load person details. Please try again.</p>
+        </div>
+      ) : notFound ? (
+        <div className="p-4">
+          <p className="text-muted-foreground">This person could not be found.</p>
         </div>
       ) : person ? (
         <div className="p-4 overflow-y-auto h-[calc(100%-65px)]">

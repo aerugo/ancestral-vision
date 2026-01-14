@@ -4,29 +4,31 @@ import userEvent from '@testing-library/user-event';
 import { NoteEditor } from './note-editor';
 
 // Mock Tiptap - it doesn't work well in JSDOM
-vi.mock('@tiptap/react', () => ({
-  useEditor: vi.fn(() => ({
-    chain: () => ({
-      focus: () => ({
-        toggleBold: () => ({ run: vi.fn() }),
-        toggleItalic: () => ({ run: vi.fn() }),
-        toggleHeading: () => ({ run: vi.fn() }),
-        toggleBulletList: () => ({ run: vi.fn() }),
-        toggleOrderedList: () => ({ run: vi.fn() }),
-      }),
+const mockUseEditor = vi.fn(() => ({
+  chain: () => ({
+    focus: () => ({
+      toggleBold: () => ({ run: vi.fn() }),
+      toggleItalic: () => ({ run: vi.fn() }),
+      toggleHeading: () => ({ run: vi.fn() }),
+      toggleBulletList: () => ({ run: vi.fn() }),
+      toggleOrderedList: () => ({ run: vi.fn() }),
     }),
-    isActive: vi.fn(() => false),
-    getJSON: vi.fn(() => ({ type: 'doc', content: [] })),
-    getText: vi.fn(() => ''),
-    storage: {
-      characterCount: {
-        characters: () => 0,
-      },
+  }),
+  isActive: vi.fn(() => false),
+  getJSON: vi.fn(() => ({ type: 'doc', content: [] })),
+  getText: vi.fn(() => ''),
+  storage: {
+    characterCount: {
+      characters: () => 0,
     },
-    commands: {
-      setContent: vi.fn(),
-    },
-  })),
+  },
+  commands: {
+    setContent: vi.fn(),
+  },
+}));
+
+vi.mock('@tiptap/react', () => ({
+  useEditor: mockUseEditor,
   EditorContent: ({ editor }: { editor: unknown }) => (
     <div data-testid="editor-content" role="textbox" />
   ),
@@ -218,5 +220,22 @@ describe('NoteEditor', () => {
     await user.type(titleInput, 'Test');
 
     expect(mockOnTitleChange).toHaveBeenCalled();
+  });
+
+  it('should configure useEditor with immediatelyRender: false to prevent SSR hydration errors', () => {
+    render(
+      <NoteEditor
+        onSave={mockOnSave}
+        onTitleChange={mockOnTitleChange}
+        onPrivacyChange={mockOnPrivacyChange}
+      />
+    );
+
+    // Verify useEditor was called with immediatelyRender: false
+    expect(mockUseEditor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        immediatelyRender: false,
+      })
+    );
   });
 });

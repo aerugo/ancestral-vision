@@ -23,6 +23,7 @@ import {
   updateProfile,
   type FirebaseUser,
 } from '@/lib/firebase';
+import { useAuthStore } from '@/store/auth-store';
 
 /**
  * Simplified auth user type for components
@@ -72,17 +73,35 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Subscribe to Firebase auth state changes
+  // Subscribe to Firebase auth state changes and sync token to Zustand store
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
+    const { setUser: setStoreUser, setToken, clearUser: clearStoreUser } = useAuthStore.getState();
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      console.log('[AuthProvider] Auth state changed:', firebaseUser?.uid ?? 'null');
       if (firebaseUser) {
         setUser({
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           displayName: firebaseUser.displayName,
         });
+        // Sync user and token to Zustand store for GraphQL client
+        setStoreUser({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+        });
+        try {
+          const token = await firebaseUser.getIdToken();
+          console.log('[AuthProvider] Token obtained, length:', token?.length);
+          setToken(token);
+        } catch (err) {
+          console.error('[AuthProvider] Failed to get token:', err);
+          setToken(null);
+        }
       } else {
         setUser(null);
+        clearStoreUser();
       }
       setLoading(false);
     });
@@ -133,6 +152,8 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
     setError(null);
     try {
       await signOut(auth);
+      // Clear Zustand store on logout
+      useAuthStore.getState().clearUser();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Logout failed';
       setError(message);

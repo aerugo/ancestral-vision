@@ -35,7 +35,7 @@ const STEPS: StepType[] = ['TOUR', 'ADD_SELF', 'ADD_PARENTS', 'ADD_GRANDPARENTS'
  * OnboardingWizard - Multi-step onboarding flow
  */
 export function OnboardingWizard({ onComplete }: OnboardingWizardProps): ReactElement {
-  const { data: progress, isLoading } = useOnboarding();
+  const { data: progress, isPending } = useOnboarding();
   const completeTour = useCompleteTour();
   const skipTour = useSkipTour();
   const updateStep = useUpdateOnboardingStep();
@@ -83,8 +83,9 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps): ReactEl
 
         // Move to next step
         const nextIndex = STEPS.indexOf(currentStep) + 1;
-        if (nextIndex < STEPS.length) {
-          await updateStep.mutateAsync({ step: STEPS[nextIndex] });
+        const nextStep = STEPS[nextIndex];
+        if (nextStep) {
+          await updateStep.mutateAsync({ step: nextStep });
         }
       }
     } catch (error) {
@@ -114,8 +115,9 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps): ReactEl
         await skipTour.mutateAsync();
       } else {
         const nextIndex = STEPS.indexOf(currentStep) + 1;
-        if (nextIndex < STEPS.length) {
-          await updateStep.mutateAsync({ step: STEPS[nextIndex] });
+        const nextStep = STEPS[nextIndex];
+        if (nextStep) {
+          await updateStep.mutateAsync({ step: nextStep });
         }
       }
     } catch (error) {
@@ -138,8 +140,9 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps): ReactEl
     setGrandparentsData((prev) => ({ ...prev, [key]: data }));
   }, []);
 
-  // Loading state
-  if (isLoading) {
+  // Loading state - show spinner until we have progress data
+  // The onboardingProgress query auto-creates the record if it doesn't exist
+  if (isPending || !progress) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin" data-testid="loading-spinner" />
@@ -179,6 +182,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps): ReactEl
             continueDisabled={!selfData.givenName.trim()}
           >
             <PersonQuickForm
+              key="self"
               label="You"
               onChange={setSelfData}
               initialValues={selfData}
@@ -197,11 +201,13 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps): ReactEl
           >
             <div className="space-y-6">
               <PersonQuickForm
+                key="parent-father"
                 label="Father"
                 onChange={setFatherData}
                 initialValues={fatherData}
               />
               <PersonQuickForm
+                key="parent-mother"
                 label="Mother"
                 onChange={setMotherData}
                 initialValues={motherData}
@@ -221,23 +227,31 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps): ReactEl
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <PersonQuickForm
+                key="grandparent-paternal-grandfather"
                 label="Paternal Grandfather"
                 onChange={(data) => handleGrandparentChange('paternalGrandfather', data)}
+                initialValues={grandparentsData.paternalGrandfather}
                 compact
               />
               <PersonQuickForm
+                key="grandparent-paternal-grandmother"
                 label="Paternal Grandmother"
                 onChange={(data) => handleGrandparentChange('paternalGrandmother', data)}
+                initialValues={grandparentsData.paternalGrandmother}
                 compact
               />
               <PersonQuickForm
+                key="grandparent-maternal-grandfather"
                 label="Maternal Grandfather"
                 onChange={(data) => handleGrandparentChange('maternalGrandfather', data)}
+                initialValues={grandparentsData.maternalGrandfather}
                 compact
               />
               <PersonQuickForm
+                key="grandparent-maternal-grandmother"
                 label="Maternal Grandmother"
                 onChange={(data) => handleGrandparentChange('maternalGrandmother', data)}
+                initialValues={grandparentsData.maternalGrandmother}
                 compact
               />
             </div>

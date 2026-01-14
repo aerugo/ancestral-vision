@@ -56,6 +56,7 @@ export function NoteEditor({
     ],
     content: initialContent ? JSON.parse(initialContent) : undefined,
     editable: !disabled,
+    immediatelyRender: false, // Prevents SSR hydration errors in Next.js App Router
     onUpdate: ({ editor }) => {
       // Debounced save
       if (saveTimeoutRef.current) {

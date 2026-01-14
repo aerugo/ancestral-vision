@@ -1,4 +1,7 @@
 {
+  "env": {
+    "NODE_ENV": "development"
+  },
   "permissions": {
     "allow": [
       "Read",
@@ -32,7 +35,7 @@
       }
     ]
   },
-  "env": {
-    "NODE_ENV": "development"
+  "enabledPlugins": {
+    "playwright@claude-plugins-official": true
   }
 }

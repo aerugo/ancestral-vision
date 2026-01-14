@@ -7,6 +7,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    pool: 'vmThreads',
     setupFiles: ["./src/lib/test-setup.ts"],
     include: ["src/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}", "prisma/**/*.test.ts"],
     exclude: ["node_modules", "reference_prototypes", ".next"],

@@ -19,11 +19,60 @@ import {
   generatePlaceholderPeople,
   type PlaceholderPerson,
 } from '@/visualization/constellation';
+import {
+  createInstancedConstellation,
+  updateConstellationTime,
+  disposeInstancedConstellation,
+  type ConstellationData,
+  type InstancedConstellationResult,
+} from '@/visualization/instanced-constellation';
+import {
+  createEdgeSystem,
+  updateEdgeSystemTime,
+  disposeEdgeSystem,
+  type EdgeSystemData,
+  type EdgeSystemResult,
+} from '@/visualization/edges';
+import {
+  createBackgroundParticles,
+  updateBackgroundParticlesTime,
+  disposeBackgroundParticles,
+  createEventFireflies,
+  updateEventFirefliesTime,
+  disposeEventFireflies,
+  type BackgroundParticleResult,
+  type EventFireflyResult,
+} from '@/visualization/particles';
+import {
+  createSacredGeometryGrid,
+  disposeSacredGeometryGrid,
+  createPostProcessing,
+  updatePostProcessingSize,
+  renderWithPostProcessing,
+  disposePostProcessing,
+  type PostProcessingResult,
+} from '@/visualization/effects';
 import { ConstellationSelection } from '@/visualization/selection';
 import { CameraAnimator } from '@/visualization/camera-animation';
 import { usePeople } from '@/hooks/use-people';
 import { useSelectionStore } from '@/store/selection-store';
 import * as THREE from 'three';
+
+/**
+ * Focus indicator mesh for keyboard navigation
+ */
+function createFocusIndicator(): THREE.Mesh {
+  const geometry = new THREE.RingGeometry(3, 3.5, 32);
+  const material = new THREE.MeshBasicMaterial({
+    color: 0xffff00,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.8,
+  });
+  const ring = new THREE.Mesh(geometry, material);
+  ring.visible = false;
+  return ring;
+}
 
 /**
  * Convert API people data to PlaceholderPerson format for visualization
@@ -59,10 +108,30 @@ export function ConstellationCanvas(): React.ReactElement {
   const selectionRef = useRef<ConstellationSelection | null>(null);
   const cameraAnimatorRef = useRef<CameraAnimator | null>(null);
   const clockRef = useRef<THREE.Clock | null>(null);
+  const instancedConstellationRef = useRef<InstancedConstellationResult | null>(null);
+  const edgeSystemRef = useRef<EdgeSystemResult | null>(null);
+  const backgroundParticlesRef = useRef<BackgroundParticleResult | null>(null);
+  const eventFirefliesRef = useRef<EventFireflyResult | null>(null);
+  const sacredGeometryGridRef = useRef<THREE.Group | null>(null);
+  const postProcessingRef = useRef<PostProcessingResult | null>(null);
+  const usePostProcessingRef = useRef<boolean>(false);
 
   // Fetch real people data
-  const { data: people } = usePeople();
-  const { selectPerson } = useSelectionStore();
+  const { data: people, isLoading, isError, error } = usePeople();
+  const { selectPerson, clearSelection } = useSelectionStore();
+
+  // Keyboard navigation state (using refs to avoid re-initializing scene)
+  const focusedIndexRef = useRef<number>(-1);
+  const focusIndicatorRef = useRef<THREE.Mesh | null>(null);
+  const peoplePositionsRef = useRef<PlaceholderPerson[]>([]);
+
+  // Debug logging
+  if (isError) {
+    console.error('[ConstellationCanvas] Failed to fetch people:', error);
+  }
+  if (!isLoading && !isError) {
+    console.log('[ConstellationCanvas] People loaded:', people?.length ?? 0, 'people');
+  }
 
   const initScene = useCallback(async (): Promise<(() => void) | undefined> => {
     const container = containerRef.current;
@@ -106,13 +175,153 @@ export function ConstellationCanvas(): React.ReactElement {
     // Create clock for delta time
     clockRef.current = new THREE.Clock();
 
-    // Add constellation - use real data if available, otherwise placeholder
+    // Add constellation - use real data if available
+    // Only use placeholder data if loading fails (empty array after load)
     const constellationPeople =
       people && people.length > 0
         ? peopleToPlacelderPeople(people)
-        : generatePlaceholderPeople(10);
+        : isLoading
+          ? [] // Don't show anything while loading
+          : generatePlaceholderPeople(10); // Only show placeholder if no data after load
+
+    // Use new instanced constellation with TSL materials (Phase 1)
+    const positions: THREE.Vector3[] = [];
+    const biographyWeights: number[] = [];
+    if (constellationPeople.length > 0) {
+      const constellationData: ConstellationData = {
+        positions: constellationPeople.map(p => new THREE.Vector3(p.position.x, p.position.y, p.position.z)),
+        biographyWeights: constellationPeople.map(() => Math.random() * 0.8 + 0.2), // Random weights for demo
+        personIds: constellationPeople.map(p => p.id),
+      };
+      positions.push(...constellationData.positions);
+      biographyWeights.push(...constellationData.biographyWeights);
+      const instancedResult = createInstancedConstellation(constellationData);
+      instancedConstellationRef.current = instancedResult;
+      scene.add(instancedResult.mesh);
+    }
+
+    // Add edge system (Phase 2) - create demo edges between nodes
+    if (positions.length > 1) {
+      const edges: EdgeSystemData['edges'] = [];
+      // Create edges between consecutive nodes to demo the Bezier curves
+      for (let i = 0; i < positions.length - 1; i++) {
+        const sourcePos = positions[i];
+        const targetPos = positions[i + 1];
+        if (sourcePos && targetPos) {
+          edges.push({
+            id: `edge-${i}`,
+            sourcePosition: sourcePos,
+            targetPosition: targetPos,
+            type: 'parent-child',
+            strength: 0.8 + Math.random() * 0.2,
+          });
+        }
+      }
+      // Add an extra edge from last to first to show a loop
+      const firstPos = positions[0];
+      const lastPos = positions[positions.length - 1];
+      if (firstPos && lastPos && positions.length > 2) {
+        edges.push({
+          id: 'edge-loop',
+          sourcePosition: lastPos,
+          targetPosition: firstPos,
+          type: 'spouse',
+          strength: 0.6,
+        });
+      }
+      const edgeResult = createEdgeSystem({ edges });
+      edgeSystemRef.current = edgeResult;
+      scene.add(edgeResult.mesh);
+    }
+
+    // Add background particles (Phase 3) - atmospheric Haeckel-inspired particles
+    const particleResult = createBackgroundParticles({
+      count: 300,
+      innerRadius: 100,
+      outerRadius: 400,
+      pointSize: 3,
+    });
+    backgroundParticlesRef.current = particleResult;
+    scene.add(particleResult.mesh);
+
+    // Add event fireflies (Phase 4) - orbital particles representing life events
+    if (positions.length > 0) {
+      // Demo event types for each node
+      const demoEventTypes = [
+        ['birth', 'marriage'],
+        ['birth', 'death'],
+        ['birth', 'occupation', 'marriage'],
+        ['birth'],
+        ['birth', 'military', 'death'],
+        ['birth', 'graduation', 'marriage', 'death'],
+        ['birth', 'residence'],
+        ['birth', 'marriage', 'occupation'],
+        ['birth', 'death'],
+        ['birth', 'marriage', 'residence', 'occupation'],
+      ];
+      const fireflyResult = createEventFireflies({
+        nodePositions: positions,
+        nodeBiographyWeights: biographyWeights,
+        nodeEventTypes: positions.map((_, i) => demoEventTypes[i % demoEventTypes.length] || ['birth']),
+      });
+      eventFirefliesRef.current = fireflyResult;
+      scene.add(fireflyResult.mesh);
+    }
+
+    // Add sacred geometry grid (Phase 5) - mandala-style background reference grid
+    const gridGroup = createSacredGeometryGrid({
+      ringCount: 8,
+      ringSpacing: 50,
+      radialCount: 12,
+      opacity: 0.08,
+      yOffset: -30, // Below constellation
+    });
+    sacredGeometryGridRef.current = gridGroup;
+    scene.add(gridGroup);
+
+    // Setup post-processing (Phase 6) - bloom and vignette effects
+    // Note: EffectComposer requires WebGLRenderer, check if renderer is compatible
+    try {
+      // Only enable post-processing for WebGL renderer (WebGPU has different pipeline)
+      const isWebGL = renderer.constructor.name === 'WebGLRenderer';
+      if (isWebGL) {
+        const postProcessingResult = createPostProcessing(renderer, scene, camera, {
+          bloom: {
+            enabled: true,
+            intensity: 0.6,
+            threshold: 0.3,
+            radius: 0.5,
+          },
+          vignette: {
+            enabled: true,
+            darkness: 0.4,
+            offset: 0.3,
+          },
+        });
+        postProcessingRef.current = postProcessingResult;
+        usePostProcessingRef.current = true;
+        console.log('[ConstellationCanvas] Post-processing enabled (WebGL)');
+      } else {
+        console.log('[ConstellationCanvas] Post-processing disabled (WebGPU - not supported)');
+        usePostProcessingRef.current = false;
+      }
+    } catch (error) {
+      console.warn('[ConstellationCanvas] Post-processing setup failed:', error);
+      usePostProcessingRef.current = false;
+    }
+
+    // Also add old constellation for comparison (can be removed later)
     const constellation = createConstellationMesh(constellationPeople);
+    constellation.position.x = 100; // Offset to compare side by side
     scene.add(constellation);
+
+    // Store people positions for keyboard navigation
+    peoplePositionsRef.current = constellationPeople;
+
+    // Create focus indicator for keyboard navigation
+    const focusIndicator = createFocusIndicator();
+    focusIndicatorRef.current = focusIndicator;
+    scene.add(focusIndicator);
 
     // Click handler for selection
     const handleClick = (event: MouseEvent): void => {
@@ -148,17 +357,118 @@ export function ConstellationCanvas(): React.ReactElement {
 
     canvas.addEventListener('click', handleClick);
 
+    // Keyboard handler for navigation
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      const peopleList = peoplePositionsRef.current;
+      if (peopleList.length === 0) return;
+
+      const currentIndex = focusedIndexRef.current;
+      let newIndex = currentIndex;
+
+      switch (event.key) {
+        case 'ArrowLeft':
+          event.preventDefault();
+          // Move to previous person (wrap around)
+          newIndex = currentIndex <= 0 ? peopleList.length - 1 : currentIndex - 1;
+          break;
+        case 'ArrowRight':
+          event.preventDefault();
+          // Move to next person (wrap around)
+          newIndex = currentIndex >= peopleList.length - 1 ? 0 : currentIndex + 1;
+          break;
+        case 'ArrowUp':
+          event.preventDefault();
+          // Open drawer for focused person
+          if (currentIndex >= 0 && currentIndex < peopleList.length) {
+            const person = peopleList[currentIndex];
+            if (person) {
+              selectPerson(person.id, []);
+            }
+          }
+          return;
+        case 'ArrowDown':
+          event.preventDefault();
+          // Close drawer
+          clearSelection();
+          return;
+        default:
+          return;
+      }
+
+      // Update focus index and move focus indicator
+      focusedIndexRef.current = newIndex;
+      const focusedPerson = peopleList[newIndex];
+      if (focusedPerson && focusIndicatorRef.current) {
+        focusIndicatorRef.current.position.set(
+          focusedPerson.position.x,
+          focusedPerson.position.y,
+          focusedPerson.position.z
+        );
+        focusIndicatorRef.current.visible = true;
+
+        // Animate camera to focused person
+        if (cameraAnimatorRef.current) {
+          const cameraOffset = new THREE.Vector3(0, 10, 40);
+          const targetPosition = new THREE.Vector3(
+            focusedPerson.position.x + cameraOffset.x,
+            focusedPerson.position.y + cameraOffset.y,
+            focusedPerson.position.z + cameraOffset.z
+          );
+          const lookAtTarget = new THREE.Vector3(
+            focusedPerson.position.x,
+            focusedPerson.position.y,
+            focusedPerson.position.z
+          );
+
+          cameraAnimatorRef.current.animateTo(targetPosition, lookAtTarget, {
+            duration: 0.8,
+            easing: 'easeInOutCubic',
+          });
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
     // Animation loop - use setAnimationLoop per INV-A002
+    let elapsedTime = 0;
     renderer.setAnimationLoop(() => {
       const deltaTime = clockRef.current?.getDelta() ?? 0;
+      elapsedTime += deltaTime;
 
       // Update camera animation
       if (cameraAnimatorRef.current) {
         cameraAnimatorRef.current.update(deltaTime);
       }
 
+      // Update instanced constellation time uniform for animation
+      if (instancedConstellationRef.current) {
+        updateConstellationTime(instancedConstellationRef.current.uniforms, elapsedTime);
+      }
+
+      // Update edge system time uniform for flowing animation (Phase 2)
+      if (edgeSystemRef.current) {
+        updateEdgeSystemTime(edgeSystemRef.current.uniforms, elapsedTime);
+      }
+
+      // Update background particles time uniform for animation (Phase 3)
+      if (backgroundParticlesRef.current) {
+        updateBackgroundParticlesTime(backgroundParticlesRef.current.uniforms, elapsedTime);
+      }
+
+      // Update event fireflies time uniform for orbital animation (Phase 4)
+      if (eventFirefliesRef.current) {
+        updateEventFirefliesTime(eventFirefliesRef.current.uniforms, elapsedTime);
+      }
+
       controls.update();
-      renderer.render(scene, camera);
+
+      // Render with or without post-processing (Phase 6)
+      if (usePostProcessingRef.current && postProcessingRef.current) {
+        renderWithPostProcessing(postProcessingRef.current.composer);
+      } else {
+        renderer.render(scene, camera);
+      }
     });
 
     // Handle resize
@@ -170,6 +480,11 @@ export function ConstellationCanvas(): React.ReactElement {
         camera.aspect = newWidth / newHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(newWidth, newHeight);
+
+        // Update post-processing size (Phase 6)
+        if (postProcessingRef.current) {
+          updatePostProcessingSize(postProcessingRef.current.composer, newWidth, newHeight);
+        }
       }
     };
 
@@ -178,17 +493,49 @@ export function ConstellationCanvas(): React.ReactElement {
     // Return cleanup function (INV-A009)
     return () => {
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('keydown', handleKeyDown);
       canvas.removeEventListener('click', handleClick);
       renderer.setAnimationLoop(null);
       controls.dispose();
       selectionRef.current?.dispose();
+      focusIndicatorRef.current = null;
+      // Dispose instanced constellation (Phase 1 resources)
+      if (instancedConstellationRef.current) {
+        disposeInstancedConstellation(instancedConstellationRef.current.mesh);
+        instancedConstellationRef.current = null;
+      }
+      // Dispose edge system (Phase 2 resources)
+      if (edgeSystemRef.current) {
+        disposeEdgeSystem(edgeSystemRef.current.mesh);
+        edgeSystemRef.current = null;
+      }
+      // Dispose background particles (Phase 3 resources)
+      if (backgroundParticlesRef.current) {
+        disposeBackgroundParticles(backgroundParticlesRef.current.mesh);
+        backgroundParticlesRef.current = null;
+      }
+      // Dispose event fireflies (Phase 4 resources)
+      if (eventFirefliesRef.current) {
+        disposeEventFireflies(eventFirefliesRef.current.mesh);
+        eventFirefliesRef.current = null;
+      }
+      // Dispose sacred geometry grid (Phase 5 resources)
+      if (sacredGeometryGridRef.current) {
+        disposeSacredGeometryGrid(sacredGeometryGridRef.current);
+        sacredGeometryGridRef.current = null;
+      }
+      // Dispose post-processing (Phase 6 resources)
+      if (postProcessingRef.current) {
+        disposePostProcessing(postProcessingRef.current.composer);
+        postProcessingRef.current = null;
+      }
       disposeScene(scene);
       renderer.dispose();
       if (canvas.parentNode) {
         canvas.parentNode.removeChild(canvas);
       }
     };
-  }, [people, selectPerson]);
+  }, [people, selectPerson, clearSelection, isLoading]);
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;

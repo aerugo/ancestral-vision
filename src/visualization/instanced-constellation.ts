@@ -18,6 +18,8 @@ export interface ConstellationConfig {
   baseScale?: number;
   /** Scale multiplier for biography weight (default: 2.5) */
   scaleMultiplier?: number;
+  /** Enable enhanced visual effects (inner glow, SSS, mandala) */
+  enhancedMode?: boolean;
 }
 
 export interface ConstellationData {
@@ -43,6 +45,7 @@ const DEFAULT_CONFIG: Required<ConstellationConfig> = {
   sphereSegments: 32,
   baseScale: 1.0,
   scaleMultiplier: 2.5,
+  enhancedMode: true, // Enable enhanced visuals by default
 };
 
 /**
@@ -60,6 +63,7 @@ export function createInstancedConstellation(
     sphereSegments,
     baseScale,
     scaleMultiplier,
+    enhancedMode,
   } = { ...DEFAULT_CONFIG, ...config };
 
   const { positions, biographyWeights, personIds } = data;
@@ -76,8 +80,8 @@ export function createInstancedConstellation(
   const biographyWeightAttribute = new THREE.InstancedBufferAttribute(biographyWeightArray, 1);
   geometry.setAttribute('aBiographyWeight', biographyWeightAttribute);
 
-  // Create material
-  const { material, uniforms } = createNodeMaterial();
+  // Create material with enhanced visual effects
+  const { material, uniforms } = createNodeMaterial({ enhancedMode });
 
   // Create instanced mesh
   const mesh = new THREE.InstancedMesh(geometry, material, count);

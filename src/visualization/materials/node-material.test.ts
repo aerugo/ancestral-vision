@@ -64,6 +64,7 @@ vi.mock('three/tsl', () => {
       return node;
     }),
     sin: vi.fn(() => createMockNode()),
+    cos: vi.fn(() => createMockNode()),
     mul: vi.fn(() => createMockNode()),
     add: vi.fn(() => createMockNode()),
     sub: vi.fn(() => createMockNode()),
@@ -74,9 +75,16 @@ vi.mock('three/tsl', () => {
     mix: vi.fn(() => createMockNode()),
     floor: vi.fn(() => createMockNode()),
     fract: vi.fn(() => createMockNode()),
+    smoothstep: vi.fn(() => createMockNode()),
+    negate: vi.fn(() => createMockNode()),
+    length: vi.fn(() => createMockNode()),
+    vec2: vi.fn(() => createMockNode()),
+    atan2: vi.fn(() => createMockNode()),
     cameraPosition: createMockNode(),
     positionWorld: createMockNode(),
+    positionLocal: createMockNode(),
     normalWorld: createMockNode(),
+    normalLocal: createMockNode(),
     ShaderNodeObject: {},
     Node: {},
   };
@@ -166,6 +174,85 @@ describe('node-material module', () => {
       const disposeSpy = vi.spyOn(material, 'dispose');
       disposeNodeMaterial(material);
       expect(disposeSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('Enhanced visual effects (Phase 9.1)', () => {
+    it('should support enhanced mode config option', () => {
+      const config: NodeMaterialConfig = {
+        enhancedMode: true,
+      };
+      const result = createNodeMaterial(config);
+      expect(result).toHaveProperty('material');
+      expect(result).toHaveProperty('uniforms');
+    });
+
+    it('should create inner glow intensity uniform when enhanced', () => {
+      const { uniforms } = createNodeMaterial({ enhancedMode: true });
+      expect(uniforms.uInnerGlowIntensity).toBeDefined();
+    });
+
+    it('should create subsurface scattering strength uniform when enhanced', () => {
+      const { uniforms } = createNodeMaterial({ enhancedMode: true });
+      expect(uniforms.uSSSStrength).toBeDefined();
+    });
+
+    it('should create mandala pattern intensity uniform when enhanced', () => {
+      const { uniforms } = createNodeMaterial({ enhancedMode: true });
+      expect(uniforms.uMandalaIntensity).toBeDefined();
+    });
+
+    it('should default inner glow intensity to 0.8', () => {
+      const { uniforms } = createNodeMaterial({ enhancedMode: true });
+      expect(uniforms.uInnerGlowIntensity.value).toBe(0.8);
+    });
+
+    it('should default SSS strength to 0.3', () => {
+      const { uniforms } = createNodeMaterial({ enhancedMode: true });
+      expect(uniforms.uSSSStrength.value).toBe(0.3);
+    });
+
+    it('should default mandala intensity to 0.3', () => {
+      const { uniforms } = createNodeMaterial({ enhancedMode: true });
+      expect(uniforms.uMandalaIntensity.value).toBe(0.3);
+    });
+
+    it('should accept custom inner glow intensity', () => {
+      const { uniforms } = createNodeMaterial({
+        enhancedMode: true,
+        innerGlowIntensity: 1.2,
+      });
+      expect(uniforms.uInnerGlowIntensity.value).toBe(1.2);
+    });
+
+    it('should accept custom SSS strength', () => {
+      const { uniforms } = createNodeMaterial({
+        enhancedMode: true,
+        sssStrength: 0.5,
+      });
+      expect(uniforms.uSSSStrength.value).toBe(0.5);
+    });
+
+    it('should accept custom mandala intensity', () => {
+      const { uniforms } = createNodeMaterial({
+        enhancedMode: true,
+        mandalaIntensity: 0.6,
+      });
+      expect(uniforms.uMandalaIntensity.value).toBe(0.6);
+    });
+
+    it('should not create enhanced uniforms when enhancedMode is false', () => {
+      const { uniforms } = createNodeMaterial({ enhancedMode: false });
+      expect(uniforms.uInnerGlowIntensity).toBeUndefined();
+      expect(uniforms.uSSSStrength).toBeUndefined();
+      expect(uniforms.uMandalaIntensity).toBeUndefined();
+    });
+
+    it('should not create enhanced uniforms by default', () => {
+      const { uniforms } = createNodeMaterial();
+      expect(uniforms.uInnerGlowIntensity).toBeUndefined();
+      expect(uniforms.uSSSStrength).toBeUndefined();
+      expect(uniforms.uMandalaIntensity).toBeUndefined();
     });
   });
 });

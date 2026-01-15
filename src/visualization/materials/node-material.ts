@@ -11,6 +11,7 @@ import {
   attribute,
   float,
   sin,
+  cos,
   mul,
   add,
   sub,
@@ -19,9 +20,16 @@ import {
   dot,
   normalize,
   mix,
+  smoothstep,
+  negate,
+  length,
+  vec2,
+  atan2,
   cameraPosition,
   positionWorld,
+  positionLocal,
   normalWorld,
+  normalLocal,
 } from 'three/tsl';
 import { createNoiseFunction } from '../shaders/noise';
 
@@ -36,6 +44,14 @@ export interface NodeMaterialConfig {
   pulseSpeed?: number;
   /** Pulsing amplitude (default: 0.05) */
   pulseAmplitude?: number;
+  /** Enable enhanced visual effects (Phase 9.1) */
+  enhancedMode?: boolean;
+  /** Inner glow intensity (default: 0.8, requires enhancedMode) */
+  innerGlowIntensity?: number;
+  /** Subsurface scattering strength (default: 0.3, requires enhancedMode) */
+  sssStrength?: number;
+  /** Mandala pattern intensity (default: 0.3, requires enhancedMode) */
+  mandalaIntensity?: number;
 }
 
 export interface NodeMaterialUniforms {
@@ -45,6 +61,10 @@ export interface NodeMaterialUniforms {
   uGlowIntensity: { value: number };
   uPulseSpeed: { value: number };
   uPulseAmplitude: { value: number };
+  /** Enhanced mode uniforms (only present when enhancedMode=true) */
+  uInnerGlowIntensity?: { value: number };
+  uSSSStrength?: { value: number };
+  uMandalaIntensity?: { value: number };
 }
 
 export interface NodeMaterialResult {
@@ -68,15 +88,24 @@ export function createNodeMaterial(config: NodeMaterialConfig = {}): NodeMateria
     glowIntensity = 1.5,
     pulseSpeed = 2.0,
     pulseAmplitude = 0.05,
+    enhancedMode = false,
+    innerGlowIntensity = 0.8,
+    sssStrength = 0.3,
+    mandalaIntensity = 0.3,
   } = config;
 
-  // Create uniforms
+  // Create base uniforms
   const uTime = uniform(0);
   const uColorPrimary = uniform(colorPrimary);
   const uColorSecondary = uniform(colorSecondary);
   const uGlowIntensity = uniform(glowIntensity);
   const uPulseSpeed = uniform(pulseSpeed);
   const uPulseAmplitude = uniform(pulseAmplitude);
+
+  // Create enhanced mode uniforms (only when enabled)
+  const uInnerGlowIntensity = enhancedMode ? uniform(innerGlowIntensity) : null;
+  const uSSSStrength = enhancedMode ? uniform(sssStrength) : null;
+  const uMandalaIntensity = enhancedMode ? uniform(mandalaIntensity) : null;
 
   // Instance attribute for biography weight (set per-instance)
   const biographyWeight = attribute('aBiographyWeight');
@@ -101,10 +130,61 @@ export function createNodeMaterial(config: NodeMaterialConfig = {}): NodeMateria
   const glowPulse = add(mul(mul(sin(add(mul(uTime, 3), mul(biographyWeight, 10))), 0.15), biographyWeight), 1);
   const rimGlow = mul(mul(mul(fresnel, add(mul(biographyWeight, 2), 1)), uGlowIntensity), glowPulse);
 
+  // Enhanced visual effects (Phase 9.1)
+  let enhancedColorContrib = float(0);
+  let enhancedEmissiveContrib = float(0);
+
+  if (enhancedMode && uInnerGlowIntensity && uSSSStrength && uMandalaIntensity) {
+    // Inner glow: inverse fresnel for soft internal brightness
+    // smoothstep(0.0, 0.8, 1.0 - fresnel) creates glow from center
+    const innerGlow = smoothstep(float(0), float(0.8), sub(float(1), fresnel));
+    const innerGlowEffect = mul(innerGlow, uInnerGlowIntensity);
+
+    // Subsurface scattering: backlit effect
+    // pow(max(dot(viewDir, -normal), 0.0), 2.0) simulates light passing through
+    const backDot = max(dot(viewDir, negate(normalWorld)), float(0));
+    const sss = mul(pow(backDot, float(2)), uSSSStrength);
+
+    // Mandala pattern: concentric rings based on local normal
+    // sin(ringDist * 15.0 - time * 0.8) creates animated rings
+    const ringDist = length(vec2(normalLocal.x, normalLocal.y));
+    const rings = mul(
+      add(mul(sin(sub(mul(ringDist, float(15)), mul(uTime, float(0.8)))), float(0.5)), float(0.5)),
+      uMandalaIntensity
+    );
+
+    // Golden spiral pattern overlay
+    // sin(angle * 6.0 + ringDist * 25.0 - time * 0.5) creates rotating spiral
+    const angle = atan2(normalLocal.y, normalLocal.x);
+    const spiral = mul(
+      smoothstep(
+        float(0.6),
+        float(0.8),
+        sin(add(mul(angle, float(6)), sub(mul(ringDist, float(25)), mul(uTime, float(0.5)))))
+      ),
+      mul(uMandalaIntensity, float(0.5))
+    );
+
+    // Combine enhanced effects
+    enhancedColorContrib = mul(add(rings, spiral), biographyWeight);
+    enhancedEmissiveContrib = mul(add(innerGlowEffect, sss), biographyWeight);
+  }
+
   // Create material
   const material = new MeshStandardNodeMaterial();
-  material.colorNode = baseColor;
-  material.emissiveNode = mul(baseColor, mul(rimGlow, 1.5));
+
+  // Apply color with optional enhanced patterns
+  const finalColor = enhancedMode
+    ? add(baseColor, mul(baseColor, enhancedColorContrib))
+    : baseColor;
+  material.colorNode = finalColor;
+
+  // Apply emissive with optional enhanced glow
+  const baseEmissive = mul(baseColor, mul(rimGlow, float(1.5)));
+  const finalEmissive = enhancedMode
+    ? add(baseEmissive, mul(baseColor, enhancedEmissiveContrib))
+    : baseEmissive;
+  material.emissiveNode = finalEmissive;
   material.metalness = 0.3;
   material.roughness = 0.7;
   material.transparent = true;
@@ -118,6 +198,16 @@ export function createNodeMaterial(config: NodeMaterialConfig = {}): NodeMateria
     uGlowIntensity: uGlowIntensity as unknown as { value: number },
     uPulseSpeed: uPulseSpeed as unknown as { value: number },
     uPulseAmplitude: uPulseAmplitude as unknown as { value: number },
+    // Add enhanced uniforms only when enabled
+    ...(enhancedMode && uInnerGlowIntensity && {
+      uInnerGlowIntensity: uInnerGlowIntensity as unknown as { value: number },
+    }),
+    ...(enhancedMode && uSSSStrength && {
+      uSSSStrength: uSSSStrength as unknown as { value: number },
+    }),
+    ...(enhancedMode && uMandalaIntensity && {
+      uMandalaIntensity: uMandalaIntensity as unknown as { value: number },
+    }),
   };
 
   return { material, uniforms };

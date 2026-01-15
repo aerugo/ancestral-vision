@@ -79,6 +79,19 @@ export {
   type VignetteConfig,
 } from './effects/post-processing';
 
+// TSL Post-Processing (WebGPU-compatible, Phase 9.3)
+export {
+  createTSLPostProcessing,
+  updateTSLPostProcessingSize,
+  renderWithTSLPostProcessing,
+  disposeTSLPostProcessing,
+  type TSLPostProcessingConfig,
+  type TSLPostProcessingResult,
+  type TSLBloomConfig,
+  type TSLVignetteConfig,
+  type TSLPostProcessingUniforms,
+} from './effects/webgpu-post-processing';
+
 // Instanced constellation (advanced)
 export {
   createInstancedConstellation,

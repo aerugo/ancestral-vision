@@ -635,4 +635,78 @@ Successfully ported rich 3D visual effects from the `family-constellations` WebG
 
 ---
 
+## Visual Comparison Session: 2026-01-15
+
+### Session Context
+
+User requested visual comparison between Ancestral Vision and the prototype using Playwright, followed by creating a continuation plan to align visuals.
+
+### Screenshots Captured
+
+1. **Prototype** (`reference_prototypes/family-constellations` on port 8081):
+   - 119 nodes, 151 edges loaded
+   - Rich organic swirling internal patterns in nodes
+   - Bright luminous glow emanating from nodes
+   - Curved Bezier edges with flowing energy animation
+   - Event fireflies with mandala shapes orbiting nodes
+   - Post-processing bloom creating atmospheric glow
+
+2. **Ancestral Vision** (localhost:3000 in template mode):
+   - 119 people loaded via template mode
+   - WebGPU renderer active
+   - Solid colored spheres with fresnel rim glow
+   - Straight yellow edges (Bezier not visually apparent)
+   - Post-processing disabled (WebGPU incompatible)
+   - Less atmospheric depth
+
+### Major Visual Gaps Identified
+
+| Gap | Severity | Root Cause |
+|-----|----------|------------|
+| No internal swirling patterns | MAJOR | Node material missing dual-noise, mandala overlays |
+| No inner glow | MAJOR | Missing inverse-fresnel inner glow calculation |
+| Edges appear straight | MAJOR | Bezier implemented but not creating visible curves |
+| No bloom/glow halos | MAJOR | Post-processing disabled for WebGPU |
+| **Node layout completely different** | **MAJOR** | Simple spiral vs force-directed with golden angle |
+| No prayer bead energy nodes | MEDIUM | Edge material missing Byzantine patterns |
+| Particles basic circles | MEDIUM | Missing hexagonal Haeckel shapes |
+| Fireflies small/basic | MEDIUM | Missing star/mandala shape, divine spark |
+
+### Continuation Plan Created
+
+**Phase 9: Visual Alignment** created at `phases/phase-9.md` with sub-phases:
+
+1. **9.1 Enhanced Node Material** - Add inner glow, SSS, mandala patterns, bright spots
+2. **9.2 Enhanced Edge Material** - Add prayer beads, Byzantine patterns, gold shimmer
+3. **9.3 WebGPU Post-Processing** - Build TSL-based bloom/vignette for WebGPU
+4. **9.4 Enhanced Particles** - Hexagonal shapes, inner rings, divine spark flash
+5. **9.5 Force-Directed Layout** - Replace spiral with golden angle + force simulation
+
+### Key Technical Insights from Prototype Analysis
+
+The prototype's shaders (`reference_prototypes/family-constellations/src/shaders/index.ts`) reveal:
+
+1. **Node inner glow**: `smoothstep(0.0, 0.8, 1.0 - fresnel)` creates soft internal brightness
+2. **Subsurface scattering**: `pow(max(dot(viewDir, -normal), 0.0), 2.0)` for backlit effect
+3. **Mandala patterns**: `hilmaMandala()` function with concentric rings, golden spiral
+4. **Prayer beads on edges**: `fract(progress * 8.0 - time * 0.4)` creates energy nodes
+5. **Hexagonal particles**: `cos(angle * 6.0) * 0.08 + 0.42` for Haeckel radiolarian shape
+
+The prototype's layout (`reference_prototypes/family-constellations/src/core/layout.ts`) reveals:
+
+6. **Golden angle distribution**: `Math.PI * (3 - Math.sqrt(5))` (~137.5°) for organic spacing
+7. **Generation rings**: Concentric mandala with `ringRadius = |gen| * generationSpacing`
+8. **Force simulation**: Repulsion, attraction, center gravity, generation layer forces
+9. **Barnes-Hut optimization**: Quadtree for O(n log n) at 100+ nodes
+10. **Current Ancestral Vision**: Simple spiral `angle = (index / people.length) * Math.PI * 4`
+
+### Next Steps
+
+1. Implement Phase 9.1 (Enhanced Node Material) with TDD
+2. Implement Phase 9.3 (WebGPU Post-Processing) - critical for bloom
+3. Run visual comparison again after enhancements
+4. Iterate until visual parity achieved
+
+---
+
 *Template version: 1.0*

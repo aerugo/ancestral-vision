@@ -325,14 +325,38 @@ After implementation is complete:
 
 | Phase | Status | Started | Completed | Notes |
 |-------|--------|---------|-----------|-------|
-| Phase 1 | Pending | | | Core node rendering |
-| Phase 2 | Pending | | | Edge connections |
-| Phase 3 | Pending | | | Background particles |
-| Phase 4 | Pending | | | Event fireflies |
-| Phase 5 | Pending | | | Sacred geometry grid |
-| Phase 6 | Pending | | | Post-processing |
-| Phase 7 | Pending | | | Theme support |
-| Phase 8 | Pending | | | Integration & polish |
+| Phase 1 | Complete | 2026-01-14 | 2026-01-14 | Core node rendering (34 tests) |
+| Phase 2 | Complete | 2026-01-14 | 2026-01-14 | Edge connections (32 tests) |
+| Phase 3 | Complete | 2026-01-14 | 2026-01-14 | Background particles (16 tests) |
+| Phase 4 | Complete | 2026-01-14 | 2026-01-14 | Event fireflies (19 tests) |
+| Phase 5 | Complete | 2026-01-14 | 2026-01-14 | Sacred geometry grid (18 tests) |
+| Phase 6 | Complete | 2026-01-14 | 2026-01-14 | Post-processing (19 tests) |
+| Phase 7 | Skipped | - | - | Theme support (deferred) |
+| Phase 8 | Complete | 2026-01-14 | 2026-01-14 | Integration engine (21 tests) |
+| Phase 9 | NOT STARTED | - | - | Visual alignment with prototype |
+
+**Total Tests**: 159 passing (Phases 1-6, 8)
+
+---
+
+## Phase 9: Visual Alignment with Prototype
+
+**Goal**: Achieve visual parity with `reference_prototypes/family-constellations`
+**Detailed Plan**: [phases/phase-9.md](phases/phase-9.md)
+
+### Context
+
+Visual comparison (2026-01-15) revealed significant gaps between current implementation and prototype:
+- Nodes lack internal swirling patterns and inner glow
+- Post-processing disabled for WebGPU (no bloom)
+- Particles/fireflies missing organic shapes
+
+### Sub-Phases
+
+1. **9.1 Enhanced Node Material** - Inner glow, SSS, mandala patterns
+2. **9.2 Enhanced Edge Material** - Prayer beads, Byzantine patterns
+3. **9.3 WebGPU Post-Processing** - TSL-based bloom/vignette
+4. **9.4 Enhanced Particles** - Hexagonal shapes, divine spark
 
 ---
 

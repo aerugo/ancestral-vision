@@ -146,4 +146,56 @@ describe('edge-material module', () => {
       expect(disposeSpy).toHaveBeenCalled();
     });
   });
+
+  describe('Enhanced edge material visual effects (Phase 9.2)', () => {
+    it('should support enhanced mode config option', () => {
+      const config: EdgeMaterialConfig = { enhancedMode: true };
+      const result = createEdgeMaterial(config);
+      expect(result).toHaveProperty('material');
+    });
+
+    it('should create prayer bead intensity uniform when enhanced', () => {
+      const { uniforms } = createEdgeMaterial({ enhancedMode: true });
+      expect(uniforms.uPrayerBeadIntensity).toBeDefined();
+    });
+
+    it('should create byzantine pattern intensity uniform when enhanced', () => {
+      const { uniforms } = createEdgeMaterial({ enhancedMode: true });
+      expect(uniforms.uByzantineIntensity).toBeDefined();
+    });
+
+    it('should use default prayer bead intensity of 0.4 when enhanced', () => {
+      const { uniforms } = createEdgeMaterial({ enhancedMode: true });
+      expect(uniforms.uPrayerBeadIntensity?.value).toBe(0.4);
+    });
+
+    it('should use default byzantine intensity of 0.2 when enhanced', () => {
+      const { uniforms } = createEdgeMaterial({ enhancedMode: true });
+      expect(uniforms.uByzantineIntensity?.value).toBe(0.2);
+    });
+
+    it('should accept custom prayer bead intensity', () => {
+      const config: EdgeMaterialConfig = {
+        enhancedMode: true,
+        prayerBeadIntensity: 0.6,
+      };
+      const { uniforms } = createEdgeMaterial(config);
+      expect(uniforms.uPrayerBeadIntensity?.value).toBe(0.6);
+    });
+
+    it('should accept custom byzantine intensity', () => {
+      const config: EdgeMaterialConfig = {
+        enhancedMode: true,
+        byzantineIntensity: 0.3,
+      };
+      const { uniforms } = createEdgeMaterial(config);
+      expect(uniforms.uByzantineIntensity?.value).toBe(0.3);
+    });
+
+    it('should not create enhanced uniforms when enhancedMode is false', () => {
+      const { uniforms } = createEdgeMaterial({ enhancedMode: false });
+      expect(uniforms.uPrayerBeadIntensity).toBeUndefined();
+      expect(uniforms.uByzantineIntensity).toBeUndefined();
+    });
+  });
 });

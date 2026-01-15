@@ -28,6 +28,12 @@ export interface EdgeMaterialConfig {
   flowSpeed?: number;
   /** Base opacity (default: 0.7) */
   baseOpacity?: number;
+  /** Enable enhanced visual effects (Phase 9.2) */
+  enhancedMode?: boolean;
+  /** Prayer bead intensity (default: 0.4, requires enhancedMode) */
+  prayerBeadIntensity?: number;
+  /** Byzantine pattern intensity (default: 0.2, requires enhancedMode) */
+  byzantineIntensity?: number;
 }
 
 export interface EdgeMaterialUniforms {
@@ -36,6 +42,9 @@ export interface EdgeMaterialUniforms {
   uColorSecondary: { value: THREE.Color };
   uFlowSpeed: { value: number };
   uBaseOpacity: { value: number };
+  /** Enhanced mode uniforms (only present when enhancedMode=true) */
+  uPrayerBeadIntensity?: { value: number };
+  uByzantineIntensity?: { value: number };
 }
 
 export interface EdgeMaterialResult {
@@ -58,14 +67,21 @@ export function createEdgeMaterial(config: EdgeMaterialConfig = {}): EdgeMateria
     colorSecondary = DEFAULT_COLOR_SECONDARY.clone(),
     flowSpeed = 0.5,
     baseOpacity = 0.7,
+    enhancedMode = false,
+    prayerBeadIntensity = 0.4,
+    byzantineIntensity = 0.2,
   } = config;
 
-  // Create uniforms
+  // Create base uniforms
   const uTime = uniform(0);
   const uColorPrimary = uniform(colorPrimary);
   const uColorSecondary = uniform(colorSecondary);
   const uFlowSpeed = uniform(flowSpeed);
   const uBaseOpacity = uniform(baseOpacity);
+
+  // Create enhanced mode uniforms (only when enabled)
+  const uPrayerBeadIntensity = enhancedMode ? uniform(prayerBeadIntensity) : null;
+  const uByzantineIntensity = enhancedMode ? uniform(byzantineIntensity) : null;
 
   // Vertex attributes
   const progress = attribute('aProgress');
@@ -84,8 +100,39 @@ export function createEdgeMaterial(config: EdgeMaterialConfig = {}): EdgeMateria
   // Color mixing along edge
   const edgeColor = mix(uColorPrimary, uColorSecondary, mul(progress, 0.3));
 
+  // Enhanced visual effects (Phase 9.2)
+  let enhancedOpacityContrib = float(0);
+
+  if (enhancedMode && uPrayerBeadIntensity && uByzantineIntensity) {
+    // Prayer bead energy nodes: discrete glowing beads along edge
+    // nodePos = fract(progress * 8.0 - time * 0.4) creates 8 beads
+    const beadPos = fract(sub(mul(progress, float(8)), mul(uTime, float(0.4))));
+    // smoothstep to create soft bead shapes
+    const beadShape = mul(
+      smoothstep(float(0.4), float(0.5), beadPos),
+      smoothstep(float(0.6), float(0.5), beadPos)
+    );
+    const prayerBeads = mul(beadShape, uPrayerBeadIntensity);
+
+    // Byzantine pattern: interlocking wave pattern
+    // sin(progress * 40.0) * sin(time * 2.0 + progress * 15.0)
+    const byzantine = mul(
+      mul(
+        sin(mul(progress, float(40))),
+        sin(add(mul(uTime, float(2)), mul(progress, float(15))))
+      ),
+      uByzantineIntensity
+    );
+
+    // Combine enhanced effects
+    enhancedOpacityContrib = add(prayerBeads, mul(add(byzantine, float(1)), float(0.5)));
+  }
+
   // Final opacity combining all effects
-  const finalOpacity = mul(mul(mul(endFade, add(mul(flowPulse, 0.5), 0.5)), shimmer), mul(strength, uBaseOpacity));
+  const baseOpacityCalc = mul(mul(mul(endFade, add(mul(flowPulse, 0.5), 0.5)), shimmer), mul(strength, uBaseOpacity));
+  const finalOpacity = enhancedMode
+    ? add(baseOpacityCalc, mul(enhancedOpacityContrib, endFade))
+    : baseOpacityCalc;
 
   // Create material
   const material = new LineBasicNodeMaterial();
@@ -102,6 +149,13 @@ export function createEdgeMaterial(config: EdgeMaterialConfig = {}): EdgeMateria
     uColorSecondary: uColorSecondary as unknown as { value: THREE.Color },
     uFlowSpeed: uFlowSpeed as unknown as { value: number },
     uBaseOpacity: uBaseOpacity as unknown as { value: number },
+    // Add enhanced uniforms only when enabled
+    ...(enhancedMode && uPrayerBeadIntensity && {
+      uPrayerBeadIntensity: uPrayerBeadIntensity as unknown as { value: number },
+    }),
+    ...(enhancedMode && uByzantineIntensity && {
+      uByzantineIntensity: uByzantineIntensity as unknown as { value: number },
+    }),
   };
 
   return { material, uniforms };

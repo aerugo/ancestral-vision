@@ -258,7 +258,7 @@ export function ConstellationCanvas(): React.ReactElement {
           strength: 0.6,
         });
       }
-      const edgeResult = createEdgeSystem({ edges });
+      const edgeResult = createEdgeSystem({ edges }, { material: { enhancedMode: true } });
       edgeSystemRef.current = edgeResult;
       scene.add(edgeResult.mesh);
     }

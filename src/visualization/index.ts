@@ -105,3 +105,13 @@ export {
   type LODMetrics,
   type PerformanceMode,
 } from './performance';
+
+// Layout System
+export {
+  ForceLayout,
+  GOLDEN_ANGLE,
+  type LayoutNode,
+  type LayoutEdge,
+  type Vector3,
+  type ForceLayoutConfig,
+} from './layout';

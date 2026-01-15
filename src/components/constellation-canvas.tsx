@@ -54,6 +54,7 @@ import {
 } from '@/visualization/effects';
 import { ConstellationSelection } from '@/visualization/selection';
 import { CameraAnimator } from '@/visualization/camera-animation';
+import { ForceLayout, type LayoutNode } from '@/visualization/layout';
 import { usePeople } from '@/hooks/use-people';
 import { useSelectionStore } from '@/store/selection-store';
 import * as THREE from 'three';
@@ -76,23 +77,51 @@ function createFocusIndicator(): THREE.Mesh {
 
 /**
  * Convert API people data to PlaceholderPerson format for visualization
+ * Uses force-directed layout with golden angle distribution
  */
 function peopleToPlacelderPeople(
   people: Array<{ id: string; givenName: string | null; surname: string | null; generation: number }>
 ): PlaceholderPerson[] {
-  return people.map((person, index) => {
-    // Arrange in a spiral pattern based on generation
-    const angle = (index / Math.max(people.length, 1)) * Math.PI * 4;
-    const radius = 20 + Math.abs(person.generation) * 15;
-    const height = person.generation * 20;
+  if (people.length === 0) return [];
 
+  // Create layout nodes from people data
+  const layoutNodes: LayoutNode[] = people.map(person => ({
+    id: person.id,
+    generation: person.generation,
+    position: { x: 0, y: 0, z: 0 },
+    velocity: { x: 0, y: 0, z: 0 },
+  }));
+
+  // Initialize force-directed layout with golden angle distribution
+  const layout = new ForceLayout(layoutNodes, {
+    generationSpacing: 60,      // Distance between generation rings
+    repulsionStrength: 80,      // Push nodes apart
+    centerStrength: 0.03,       // Keep centered
+    generationStrength: 0.15,   // Maintain ring structure
+    damping: 0.85,              // Velocity decay
+  });
+
+  // Initialize positions using golden angle
+  layout.initialize();
+
+  // Run simulation until stable (max 150 iterations)
+  for (let i = 0; i < 150; i++) {
+    layout.step();
+    if (layout.isStable()) break;
+  }
+
+  // Get final positions from layout
+  const positionMap = layout.getPositionMap();
+
+  return people.map(person => {
+    const layoutPos = positionMap.get(person.id) || { x: 0, y: 0, z: 0 };
     return {
       id: person.id,
       givenName: person.givenName || person.surname || 'Unknown',
       position: {
-        x: Math.cos(angle) * radius,
-        y: height,
-        z: Math.sin(angle) * radius,
+        x: layoutPos.x,
+        y: layoutPos.y, // Layout keeps y=0, can add variation if desired
+        z: layoutPos.z,
       },
     };
   });

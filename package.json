@@ -23,7 +23,10 @@
     "db:seed": "prisma db seed",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f"
+    "docker:logs": "docker compose logs -f",
+    "dev:template": "bash scripts/dev-template.sh",
+    "seed:template": "tsx prisma/seed-template.ts",
+    "seed:template:force": "FORCE_RESEED=true tsx prisma/seed-template.ts"
   },
   "dependencies": {
     "@graphql-tools/schema": "^10.0.31",

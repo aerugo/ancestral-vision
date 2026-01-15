@@ -24,6 +24,7 @@ import {
   type FirebaseUser,
 } from '@/lib/firebase';
 import { useAuthStore } from '@/store/auth-store';
+import { isTemplateMode, getTemplateUser, getTemplateToken } from '@/lib/template-mode';
 
 /**
  * Simplified auth user type for components
@@ -76,6 +77,25 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
   // Subscribe to Firebase auth state changes and sync token to Zustand store
   useEffect(() => {
     const { setUser: setStoreUser, setToken, clearUser: clearStoreUser } = useAuthStore.getState();
+
+    // Check for template mode first - bypass Firebase entirely
+    if (isTemplateMode()) {
+      console.log('[AuthProvider] Template mode detected - using mock user');
+      const templateUser = getTemplateUser();
+      setUser({
+        uid: templateUser.uid,
+        email: templateUser.email,
+        displayName: templateUser.displayName,
+      });
+      setStoreUser({
+        uid: templateUser.uid,
+        email: templateUser.email,
+        displayName: templateUser.displayName,
+      });
+      setToken(getTemplateToken());
+      setLoading(false);
+      return; // Skip Firebase subscription in template mode
+    }
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       console.log('[AuthProvider] Auth state changed:', firebaseUser?.uid ?? 'null');
@@ -162,9 +182,13 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
   }, []);
 
   /**
-   * Get the current user's Firebase ID token
+   * Get the current user's Firebase ID token (or template token in template mode)
    */
   const getIdToken = useCallback(async (): Promise<string | null> => {
+    // Return template token if in template mode
+    if (isTemplateMode()) {
+      return getTemplateToken();
+    }
     const currentUser = auth.currentUser;
     if (!currentUser) return null;
     return currentUser.getIdToken();

@@ -7,6 +7,7 @@
 import { getFirebaseAdmin } from './firebase-admin';
 import { prisma } from './prisma';
 import type { User } from '@prisma/client';
+import { isTemplateMode, TEMPLATE_USER_ID } from './template-mode';
 
 /**
  * Decoded token data from Firebase
@@ -119,6 +120,14 @@ export async function getCurrentUser(authHeader: string | null): Promise<User | 
   if (!token) {
     console.log('[Auth] Empty token');
     return null;
+  }
+
+  // Check for template mode token
+  if (isTemplateMode() && token === 'template-mode-token') {
+    console.log('[Auth] Template mode - returning template user');
+    return prisma.user.findUnique({
+      where: { id: TEMPLATE_USER_ID },
+    });
   }
 
   console.log('[Auth] Verifying token...');

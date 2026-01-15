@@ -68,6 +68,7 @@ vi.mock('three/tsl', () => {
     mul: vi.fn(() => createMockNode()),
     add: vi.fn(() => createMockNode()),
     sub: vi.fn(() => createMockNode()),
+    pow: vi.fn(() => createMockNode()),
     smoothstep: vi.fn(() => createMockNode()),
     positionLocal: {
       z: { negate: vi.fn(() => createMockNode()) },
@@ -216,6 +217,38 @@ describe('background-particles module', () => {
 
       expect(geoSpy).toHaveBeenCalled();
       expect(matSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('Enhanced visual effects (Phase 9.4)', () => {
+    it('should support enhanced mode config option', () => {
+      const config: BackgroundParticleConfig = { enhancedMode: true };
+      const result = createBackgroundParticles(config);
+      expect(result).toHaveProperty('mesh');
+    });
+
+    it('should create divine spark intensity uniform when enhanced', () => {
+      const { uniforms } = createBackgroundParticles({ enhancedMode: true });
+      expect(uniforms.uDivineSparkIntensity).toBeDefined();
+    });
+
+    it('should use default divine spark intensity of 0.6 when enhanced', () => {
+      const { uniforms } = createBackgroundParticles({ enhancedMode: true });
+      expect(uniforms.uDivineSparkIntensity?.value).toBe(0.6);
+    });
+
+    it('should accept custom divine spark intensity', () => {
+      const config: BackgroundParticleConfig = {
+        enhancedMode: true,
+        divineSparkIntensity: 0.9,
+      };
+      const { uniforms } = createBackgroundParticles(config);
+      expect(uniforms.uDivineSparkIntensity?.value).toBe(0.9);
+    });
+
+    it('should not create enhanced uniforms when enhancedMode is false', () => {
+      const { uniforms } = createBackgroundParticles({ enhancedMode: false });
+      expect(uniforms.uDivineSparkIntensity).toBeUndefined();
     });
   });
 });

@@ -9,6 +9,7 @@ import {
   disposeEventFireflies,
   getEventColor,
   type EventFireflyData,
+  type EventFireflyConfig,
 } from './event-fireflies';
 
 // Mock Three.js TSL modules
@@ -56,6 +57,7 @@ vi.mock('three/tsl', () => {
     mul: vi.fn(() => createMockNode()),
     add: vi.fn(() => createMockNode()),
     sub: vi.fn(() => createMockNode()),
+    pow: vi.fn(() => createMockNode()),
     positionLocal: createMockNode(),
   };
 });
@@ -283,6 +285,47 @@ describe('event-fireflies module', () => {
 
       expect(geoSpy).toHaveBeenCalled();
       expect(matSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('Enhanced visual effects (Phase 9.4)', () => {
+    const baseData: EventFireflyData = {
+      nodePositions: [new THREE.Vector3(0, 0, 0)],
+      nodeBiographyWeights: [0.5],
+      nodeEventTypes: [['birth']],
+    };
+
+    it('should support enhanced mode config option', () => {
+      const config: EventFireflyConfig = { enhancedMode: true };
+      const result = createEventFireflies(baseData, config);
+      expect(result).toHaveProperty('mesh');
+    });
+
+    it('should create divine spark intensity uniform when enhanced', () => {
+      const config: EventFireflyConfig = { enhancedMode: true };
+      const { uniforms } = createEventFireflies(baseData, config);
+      expect(uniforms.uDivineSparkIntensity).toBeDefined();
+    });
+
+    it('should use default divine spark intensity of 0.8 when enhanced', () => {
+      const config: EventFireflyConfig = { enhancedMode: true };
+      const { uniforms } = createEventFireflies(baseData, config);
+      expect(uniforms.uDivineSparkIntensity?.value).toBe(0.8);
+    });
+
+    it('should accept custom divine spark intensity', () => {
+      const config: EventFireflyConfig = {
+        enhancedMode: true,
+        divineSparkIntensity: 1.0,
+      };
+      const { uniforms } = createEventFireflies(baseData, config);
+      expect(uniforms.uDivineSparkIntensity?.value).toBe(1.0);
+    });
+
+    it('should not create enhanced uniforms when enhancedMode is false', () => {
+      const config: EventFireflyConfig = { enhancedMode: false };
+      const { uniforms } = createEventFireflies(baseData, config);
+      expect(uniforms.uDivineSparkIntensity).toBeUndefined();
     });
   });
 });

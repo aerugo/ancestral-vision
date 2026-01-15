@@ -10,11 +10,13 @@ import { PointsNodeMaterial } from 'three/webgpu';
 import {
   uniform,
   attribute,
+  float,
   vec3,
   sin,
   cos,
   mul,
   add,
+  pow,
   positionLocal,
 } from 'three/tsl';
 
@@ -42,6 +44,10 @@ export interface EventFireflyConfig {
   orbitRadius?: number;
   /** Point size (default: 3) */
   pointSize?: number;
+  /** Enable enhanced visual effects (Phase 9.4) */
+  enhancedMode?: boolean;
+  /** Divine spark flash intensity (default: 0.8, requires enhancedMode) */
+  divineSparkIntensity?: number;
 }
 
 export interface EventFireflyData {
@@ -56,6 +62,8 @@ export interface EventFireflyData {
 export interface EventFireflyUniforms {
   uTime: { value: number };
   uPointSize: { value: number };
+  /** Enhanced mode uniforms (only present when enhancedMode=true) */
+  uDivineSparkIntensity?: { value: number };
 }
 
 export interface EventFireflyResult {
@@ -68,6 +76,8 @@ const DEFAULT_CONFIG: Required<EventFireflyConfig> = {
   weightMultiplier: 20,
   orbitRadius: 6,
   pointSize: 3,
+  enhancedMode: false,
+  divineSparkIntensity: 0.8,
 };
 
 /**
@@ -92,7 +102,14 @@ export function createEventFireflies(
   data: EventFireflyData,
   config: EventFireflyConfig = {}
 ): EventFireflyResult {
-  const { baseCount, weightMultiplier, orbitRadius, pointSize } = {
+  const {
+    baseCount,
+    weightMultiplier,
+    orbitRadius,
+    pointSize,
+    enhancedMode,
+    divineSparkIntensity,
+  } = {
     ...DEFAULT_CONFIG,
     ...config,
   };
@@ -173,9 +190,12 @@ export function createEventFireflies(
   geometry.setAttribute('aOrbitParams', new THREE.BufferAttribute(orbitParams, 4));
   geometry.setAttribute('aNodeCenter', new THREE.BufferAttribute(nodeCenters, 3));
 
-  // Create uniforms
+  // Create base uniforms
   const uTime = uniform(0);
   const uPointSize = uniform(pointSize);
+
+  // Create enhanced mode uniforms (only when enabled)
+  const uDivineSparkIntensity = enhancedMode ? uniform(divineSparkIntensity) : null;
 
   // Vertex attributes for TSL shader
   const orbitParamsAttr = attribute('aOrbitParams');
@@ -201,7 +221,17 @@ export function createEventFireflies(
   const finalPosition = add(nodeCenterAttr, orbitalOffset);
 
   // Flickering effect (fast oscillation for firefly-like behavior)
-  const flicker = add(mul(sin(add(mul(uTime, 8), mul(phase, 12.56))), 0.2), 0.8);
+  let flicker = add(mul(sin(add(mul(uTime, 8), mul(phase, 12.56))), 0.2), 0.8);
+
+  // Enhanced divine spark flash effect (Phase 9.4)
+  if (enhancedMode && uDivineSparkIntensity) {
+    // Divine spark: pow(sin(...) * 0.5 + 0.5, 6.0) creates sharp flash peaks
+    // flash = pow((sin(time * 2 + phase * 6.28) * 0.5 + 0.5), 6.0) * intensity
+    const sparkBase = add(mul(sin(add(mul(uTime, float(2)), mul(phase, float(6.28)))), float(0.5)), float(0.5));
+    const divineSpark = mul(pow(sparkBase, float(6)), uDivineSparkIntensity);
+    // Add divine spark to base flicker
+    flicker = add(flicker, divineSpark);
+  }
 
   // Create material using PointsNodeMaterial (INV-A008)
   const material = new PointsNodeMaterial();
@@ -220,6 +250,10 @@ export function createEventFireflies(
   const uniforms: EventFireflyUniforms = {
     uTime: uTime as unknown as { value: number },
     uPointSize: uPointSize as unknown as { value: number },
+    // Add enhanced uniforms only when enabled
+    ...(enhancedMode && uDivineSparkIntensity && {
+      uDivineSparkIntensity: uDivineSparkIntensity as unknown as { value: number },
+    }),
   };
 
   return { mesh, uniforms };

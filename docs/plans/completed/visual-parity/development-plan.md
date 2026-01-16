@@ -364,5 +364,5 @@ After implementation is complete:
 | Phase 3 | Complete | 2026-01-16 | 2026-01-16 | Edge enhanced mode enabled by default (TDD) |
 | Phase 4 | Complete | 2026-01-16 | 2026-01-16 | Particle divine spark enabled by default (TDD) |
 | Phase 5 | Complete | 2026-01-16 | 2026-01-16 | Fog added, grid animation implemented |
-| Phase 6 | Complete | 2026-01-16 | 2026-01-16 | All parameters tuned to prototype values |
+| Phase 6 | Complete | 2026-01-16 | 2026-01-16 | Parameters tuned: bloom (0.8/0.4), node glow (2.0), inner glow (1.2), mandala (0.6), particles (15), fog (0.0008) |
 | Phase 7 | In Progress | 2026-01-16 | | Visual verification pending |

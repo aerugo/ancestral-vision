@@ -36,3 +36,22 @@ export {
   type EdgeMaterialUniforms,
   type EdgeMaterialResult,
 } from './edge-material';
+
+export {
+  createGhostNodeMaterial,
+  updateGhostNodeMaterialTime,
+  disposeGhostNodeMaterial,
+  type GhostNodeMaterialConfig,
+  type GhostNodeMaterialUniforms,
+  type GhostNodeMaterialResult,
+} from './ghost-node-material';
+
+export {
+  SCIFI_PALETTE,
+  PALETTE_SIZE,
+  GHOST_COLOR,
+  SELECTION_STATE,
+  getRandomColorIndex,
+  getPaletteColor,
+  type SelectionStateValue,
+} from './palette';

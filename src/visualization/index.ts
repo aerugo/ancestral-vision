@@ -91,16 +91,48 @@ export {
   createInstancedConstellation,
   updateConstellationTime,
   updateInstanceBiographyWeight,
+  updateSelectionState,
   disposeInstancedConstellation,
+  createGhostConstellation,
+  createBiographyConstellation,
+  updateAnyConstellationTime,
   type MaterialMode,
   type ConstellationConfig,
   type ConstellationData,
   type ConstellationUniforms,
   type InstancedConstellationResult,
+  type GhostConstellationConfig,
+  type BiographyConstellationConfig,
 } from './instanced-constellation';
 
 // Selection
-export { ConstellationSelection } from './selection';
+export {
+  ConstellationSelection,
+  getConnectedPersonIds,
+  type ParentChildRelation,
+  type SpouseRelation,
+} from './selection';
+
+// Ghost node material
+export {
+  createGhostNodeMaterial,
+  updateGhostNodeMaterialTime,
+  disposeGhostNodeMaterial,
+  type GhostNodeMaterialConfig,
+  type GhostNodeMaterialUniforms,
+  type GhostNodeMaterialResult,
+} from './materials/ghost-node-material';
+
+// Color palette
+export {
+  SCIFI_PALETTE,
+  PALETTE_SIZE,
+  GHOST_COLOR,
+  SELECTION_STATE,
+  getRandomColorIndex,
+  getPaletteColor,
+  type SelectionStateValue,
+} from './materials/palette';
 
 // Camera animation
 export { CameraAnimator } from './camera-animation';

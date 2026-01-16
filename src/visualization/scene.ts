@@ -19,9 +19,9 @@ const COLORS = {
 
 /**
  * Fog configuration for atmospheric depth
- * Phase 5: Visual parity with prototype
+ * Phase 5/6: Visual parity with prototype
  */
-const FOG_DENSITY = 0.001; // Moderate density (prototype uses 0.0008-0.0012)
+const FOG_DENSITY = 0.0008; // Matched to prototype value
 
 /**
  * Create a new Three.js scene with cosmic styling

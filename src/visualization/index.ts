@@ -35,6 +35,18 @@ export { createFresnelNode, defaultFresnel, type FresnelConfig } from './shaders
 export { createNodeMaterial, disposeNodeMaterial, type NodeMaterialConfig } from './materials/node-material';
 export { createEdgeMaterial, disposeEdgeMaterial, type EdgeMaterialConfig } from './materials/edge-material';
 
+// Custom GLSL Materials (for visual parity with prototype)
+export {
+  createCustomNodeMaterial,
+  updateCustomNodeMaterialTime,
+  updateCustomNodeMaterialColors,
+  updateCustomNodeMaterialTheme,
+  disposeCustomNodeMaterial,
+  type CustomNodeMaterialConfig,
+  type CustomNodeMaterialUniforms,
+  type CustomNodeMaterialResult,
+} from './materials/custom-node-material';
+
 // Edges
 export {
   createEdgeSystem,
@@ -98,8 +110,10 @@ export {
   updateConstellationTime,
   updateInstanceBiographyWeight,
   disposeInstancedConstellation,
+  type MaterialMode,
   type ConstellationConfig,
   type ConstellationData,
+  type ConstellationUniforms,
   type InstancedConstellationResult,
 } from './instanced-constellation';
 

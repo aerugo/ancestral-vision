@@ -4,8 +4,8 @@
  *
  * INV-A008: Use three/webgpu for material classes, three/tsl for shader nodes
  */
-import * as THREE from 'three';
-import { MeshStandardNodeMaterial } from 'three/webgpu';
+import * as THREE from "three";
+import { MeshStandardNodeMaterial } from "three/webgpu";
 import {
   uniform,
   attribute,
@@ -24,21 +24,23 @@ import {
   negate,
   length,
   vec2,
-  atan2,
+  vec3,
+  abs,
+  atan,
   cameraPosition,
   positionWorld,
   positionLocal,
   normalWorld,
   normalLocal,
-} from 'three/tsl';
-import { createNoiseFunction } from '../shaders/noise';
+} from "three/tsl";
+import { createNoiseFunction } from "../shaders/noise";
 
 export interface NodeMaterialConfig {
   /** Primary glow color (default: violet 0x9966cc) */
   colorPrimary?: THREE.Color;
   /** Secondary accent color (default: gold 0xd4a84b) */
   colorSecondary?: THREE.Color;
-  /** Glow intensity multiplier (default: 1.5) */
+  /** Glow intensity multiplier (default: 2.5) */
   glowIntensity?: number;
   /** Pulsing animation speed (default: 2.0) */
   pulseSpeed?: number;
@@ -46,11 +48,11 @@ export interface NodeMaterialConfig {
   pulseAmplitude?: number;
   /** Enable enhanced visual effects (Phase 9.1) */
   enhancedMode?: boolean;
-  /** Inner glow intensity (default: 0.8, requires enhancedMode) */
+  /** Inner glow intensity (default: 2.0, requires enhancedMode) */
   innerGlowIntensity?: number;
-  /** Subsurface scattering strength (default: 0.3, requires enhancedMode) */
+  /** Subsurface scattering strength (default: 0.5, requires enhancedMode) */
   sssStrength?: number;
-  /** Mandala pattern intensity (default: 0.3, requires enhancedMode) */
+  /** Mandala pattern intensity (default: 1.0, requires enhancedMode) */
   mandalaIntensity?: number;
 }
 
@@ -73,7 +75,7 @@ export interface NodeMaterialResult {
 }
 
 // Default colors from prototype
-const DEFAULT_COLOR_PRIMARY = new THREE.Color(0x9966cc);  // Luminous Violet
+const DEFAULT_COLOR_PRIMARY = new THREE.Color(0x9966cc); // Luminous Violet
 const DEFAULT_COLOR_SECONDARY = new THREE.Color(0xd4a84b); // Sacred Gold
 
 /**
@@ -85,13 +87,13 @@ export function createNodeMaterial(config: NodeMaterialConfig = {}): NodeMateria
   const {
     colorPrimary = DEFAULT_COLOR_PRIMARY.clone(),
     colorSecondary = DEFAULT_COLOR_SECONDARY.clone(),
-    glowIntensity = 1.5,
+    glowIntensity = 0.7, // Match prototype glow intensity
     pulseSpeed = 2.0,
     pulseAmplitude = 0.05,
-    enhancedMode = true, // Phase 2: Enable enhanced visual effects by default
-    innerGlowIntensity = 0.8,
-    sssStrength = 0.3,
-    mandalaIntensity = 0.4, // Phase 6: Tuned to prototype value
+    enhancedMode = true,
+    innerGlowIntensity = 1.0, // Prototype: smoothstep(0.0, 0.8, 1.0 - fresnel)
+    sssStrength = 0.3, // Prototype: pow(backDot, 2.0) * 0.3
+    mandalaIntensity = 1.0, // Scale for pattern visibility
   } = config;
 
   // Create base uniforms
@@ -108,7 +110,7 @@ export function createNodeMaterial(config: NodeMaterialConfig = {}): NodeMateria
   const uMandalaIntensity = enhancedMode ? uniform(mandalaIntensity) : null;
 
   // Instance attribute for biography weight (set per-instance)
-  const biographyWeight = attribute('aBiographyWeight');
+  const biographyWeight = attribute("aBiographyWeight");
 
   // Pulsing animation: sin(time * speed + weight * 2pi) * amplitude * weight
   const pulsePhase = add(mul(uTime, uPulseSpeed), mul(biographyWeight, 6.28));
@@ -119,16 +121,23 @@ export function createNodeMaterial(config: NodeMaterialConfig = {}): NodeMateria
   const fresnel = pow(sub(float(1), max(dot(viewDir, normalWorld), 0)), 3);
 
   // Noise-based color variation
-  const noiseFn = createNoiseFunction({ scale: 0.1, octaves: 2 });
-  const noiseValue = noiseFn(add(positionWorld, mul(uTime, 0.2)));
+  const noiseFn = createNoiseFunction({ scale: 0.15, octaves: 3 });
+  const noiseValue = noiseFn(add(positionWorld, mul(uTime, 0.15)));
 
-  // Mix colors based on noise and biography weight
-  const colorMix = mul(mul(add(noiseValue, 1), 0.5), biographyWeight);
+  // Mix colors based on noise and biography weight - stronger gold presence
+  // Use higher multiplier for more visible gold swirls in biography-rich nodes
+  const colorMix = mul(mul(add(noiseValue, 1), 0.7), biographyWeight);
   const baseColor = mix(uColorPrimary, uColorSecondary, colorMix);
 
   // Glow intensity based on fresnel and biography weight
-  const glowPulse = add(mul(mul(sin(add(mul(uTime, 3), mul(biographyWeight, 10))), 0.15), biographyWeight), 1);
-  const rimGlow = mul(mul(mul(fresnel, add(mul(biographyWeight, 2), 1)), uGlowIntensity), glowPulse);
+  const glowPulse = add(
+    mul(mul(sin(add(mul(uTime, 3), mul(biographyWeight, 10))), 0.15), biographyWeight),
+    1
+  );
+  const rimGlow = mul(
+    mul(mul(fresnel, add(mul(biographyWeight, 2), 1)), uGlowIntensity),
+    glowPulse
+  );
 
   // Enhanced visual effects (Phase 9.1)
   let enhancedColorContrib = float(0);
@@ -145,50 +154,127 @@ export function createNodeMaterial(config: NodeMaterialConfig = {}): NodeMateria
     const backDot = max(dot(viewDir, negate(normalWorld)), float(0));
     const sss = mul(pow(backDot, float(2)), uSSSStrength);
 
-    // Mandala pattern: concentric rings based on local normal
-    // sin(ringDist * 15.0 - time * 0.8) creates animated rings
-    const ringDist = length(vec2(normalLocal.x, normalLocal.y));
-    const rings = mul(
-      add(mul(sin(sub(mul(ringDist, float(15)), mul(uTime, float(0.8)))), float(0.5)), float(0.5)),
-      uMandalaIntensity
+    // ========== HILMA AF KLINT MANDALA PATTERNS ==========
+    // Based on prototype's instancedNodeFragmentShader - uses NORMAL coordinates
+    // Creates the distinctive swirling marble effect
+
+    // UV coordinates from normal (sphere surface mapping)
+    const uvX = normalLocal.x;
+    const uvY = normalLocal.y;
+    const r = length(vec2(uvX, uvY));
+    const theta = atan(uvY, uvX);
+
+    // --- Concentric breathing circles ---
+    const circlesPhase = sub(mul(r, float(20)), mul(uTime, float(0.6)));
+    const circlesRaw = mul(add(sin(circlesPhase), 1), 0.5); // Normalize to 0-1
+    const circles = smoothstep(float(0.4), float(0.6), circlesRaw);
+
+    // --- 7-fold rotational petals (sacred geometry) ---
+    const petalsPhase = add(mul(theta, float(7)), mul(uTime, float(0.3)));
+    const petals = smoothstep(float(0), float(0.8), sin(petalsPhase));
+
+    // --- Golden spiral (phi-based) - key to marble swirl effect ---
+    const goldenAngle = float(2.39996); // Golden angle in radians
+    const spiralPhase = sub(
+      mul(r, float(15)),
+      add(mul(theta, goldenAngle), mul(uTime, float(0.4)))
+    );
+    const spiral = smoothstep(float(0.5), float(0.9), sin(spiralPhase));
+
+    // Combine mandala patterns
+    const mandalaBase = add(add(mul(circles, 0.4), mul(petals, 0.3)), mul(spiral, 0.3));
+    const mandalaIntensityVal = mul(mandalaBase, uMandalaIntensity);
+
+    // --- Ring pattern overlay (prototype lines 493-495) ---
+    const ringDist = r;
+    const ringsPhase = sub(mul(ringDist, float(15)), mul(uTime, float(0.8)));
+    const ringsRaw = mul(add(sin(ringsPhase), 1), 0.5);
+    const ringPattern = mul(
+      smoothstep(float(0.3), float(0.6), ringsRaw),
+      mul(biographyWeight, float(0.3))
     );
 
-    // Golden spiral pattern overlay
-    // sin(angle * 6.0 + ringDist * 25.0 - time * 0.5) creates rotating spiral
-    const angle = atan2(normalLocal.y, normalLocal.x);
-    const spiral = mul(
-      smoothstep(
-        float(0.6),
-        float(0.8),
-        sin(add(mul(angle, float(6)), sub(mul(ringDist, float(25)), mul(uTime, float(0.5)))))
-      ),
-      mul(uMandalaIntensity, float(0.5))
+    // --- Sacred geometry spiral overlay (prototype lines 498-500) ---
+    const spiralAngle = theta;
+    const spiralOverlayPhase = add(
+      mul(spiralAngle, float(6)),
+      sub(mul(ringDist, float(25)), mul(uTime, float(0.5)))
+    );
+    const spiralPattern = mul(
+      smoothstep(float(0.6), float(0.8), sin(spiralOverlayPhase)),
+      mul(biographyWeight, float(0.25))
     );
 
-    // Combine enhanced effects
-    enhancedColorContrib = mul(add(rings, spiral), biographyWeight);
-    enhancedEmissiveContrib = mul(add(innerGlowEffect, sss), biographyWeight);
+    // --- Haeckel radiolarian hexagonal structure (prototype lines 502-505) ---
+    const hexBase = abs(cos(mul(theta, float(3))));
+    const hexMask = mul(
+      smoothstep(float(0.2), float(0.5), ringDist),
+      smoothstep(float(0.7), float(0.4), ringDist)
+    );
+    const hexPattern = mul(mul(hexBase, hexMask), mul(biographyWeight, float(0.15)));
+
+    // --- Bioluminescent spots from noise (prototype lines 512-513) ---
+    const spotNoise = createNoiseFunction({ scale: 0.3, octaves: 2 });
+    const spotValue = spotNoise(sub(positionWorld, mul(uTime, float(0.15))));
+    const bioSpots = mul(
+      smoothstep(float(0.6), float(0.8), spotValue),
+      mul(biographyWeight, float(0.4))
+    );
+
+    // Combine all patterns
+    const totalPattern = add(add(add(mandalaIntensityVal, ringPattern), spiralPattern), hexPattern);
+    enhancedColorContrib = mul(add(totalPattern, bioSpots), biographyWeight);
+    enhancedEmissiveContrib = mul(
+      add(add(innerGlowEffect, sss), mul(bioSpots, float(0.5))),
+      biographyWeight
+    );
   }
 
   // Create material
   const material = new MeshStandardNodeMaterial();
 
-  // Apply color with optional enhanced patterns
-  const finalColor = enhancedMode
-    ? add(baseColor, mul(baseColor, enhancedColorContrib))
-    : baseColor;
+  // Sacred geometry colors (prototype lines 483-486)
+  const sacredGold = vec3(0.83, 0.66, 0.29);
+  const etherealRose = vec3(0.79, 0.55, 0.55);
+  const mysticTeal = vec3(0.29, 0.49, 0.44);
+
+  // Prototype approach: finalColor = baseColor * innerGlow + rimGlow * 1.5
+  // Inner glow: smoothstep(0.0, 0.8, 1.0 - fresnel) - bright at center
+  const innerGlow = smoothstep(float(0), float(0.8), sub(float(1), fresnel));
+
+  // Start with base color scaled by inner glow (prototype line 479)
+  let finalColor = mul(baseColor, innerGlow);
+
+  // Add sacred geometry pattern colors - ALL scaled by biographyWeight (prototype approach)
+  if (enhancedMode) {
+    // Mandala patterns - scaled by biographyWeight (prototype lines 508-510)
+    finalColor = add(finalColor, mul(sacredGold, mul(enhancedColorContrib, float(0.3))));
+    finalColor = add(finalColor, mul(etherealRose, mul(enhancedColorContrib, float(0.25))));
+    finalColor = add(finalColor, mul(mysticTeal, mul(enhancedColorContrib, float(0.15))));
+  }
   material.colorNode = finalColor;
 
-  // Apply emissive with optional enhanced glow
+  // Emissive: rim glow + sss effects (prototype lines 480-481)
+  // Prototype uses: finalColor += baseColor * rimGlow * 1.5 + uColorSecondary * sss
   const baseEmissive = mul(baseColor, mul(rimGlow, float(1.5)));
-  const finalEmissive = enhancedMode
-    ? add(baseEmissive, mul(baseColor, enhancedEmissiveContrib))
-    : baseEmissive;
+  let finalEmissive = baseEmissive;
+  if (enhancedMode) {
+    // Add SSS effect scaled by biography weight (prototype line 481)
+    finalEmissive = add(
+      finalEmissive,
+      mul(uColorSecondary, mul(enhancedEmissiveContrib, float(0.3)))
+    );
+    // Add bioluminescent spots (prototype lines 512-513)
+    finalEmissive = add(finalEmissive, mul(sacredGold, mul(enhancedEmissiveContrib, float(0.4))));
+  }
   material.emissiveNode = finalEmissive;
-  material.metalness = 0.3;
-  material.roughness = 0.7;
+  material.metalness = 0.0; // No metalness for soft, organic look
+  material.roughness = 0.4; // Lower roughness for brighter appearance
   material.transparent = true;
-  material.opacity = 0.9;
+  // Prototype alpha: 0.7 + vBioWeight * 0.3 - using 0.85 as middle ground
+  material.opacity = 0.85;
+  // Use normal blending to preserve patterns, emissive provides the glow
+  material.blending = THREE.NormalBlending;
 
   // Return material and uniforms for external control
   const uniforms: NodeMaterialUniforms = {
@@ -199,15 +285,18 @@ export function createNodeMaterial(config: NodeMaterialConfig = {}): NodeMateria
     uPulseSpeed: uPulseSpeed as unknown as { value: number },
     uPulseAmplitude: uPulseAmplitude as unknown as { value: number },
     // Add enhanced uniforms only when enabled
-    ...(enhancedMode && uInnerGlowIntensity && {
-      uInnerGlowIntensity: uInnerGlowIntensity as unknown as { value: number },
-    }),
-    ...(enhancedMode && uSSSStrength && {
-      uSSSStrength: uSSSStrength as unknown as { value: number },
-    }),
-    ...(enhancedMode && uMandalaIntensity && {
-      uMandalaIntensity: uMandalaIntensity as unknown as { value: number },
-    }),
+    ...(enhancedMode &&
+      uInnerGlowIntensity && {
+        uInnerGlowIntensity: uInnerGlowIntensity as unknown as { value: number },
+      }),
+    ...(enhancedMode &&
+      uSSSStrength && {
+        uSSSStrength: uSSSStrength as unknown as { value: number },
+      }),
+    ...(enhancedMode &&
+      uMandalaIntensity && {
+        uMandalaIntensity: uMandalaIntensity as unknown as { value: number },
+      }),
   };
 
   return { material, uniforms };

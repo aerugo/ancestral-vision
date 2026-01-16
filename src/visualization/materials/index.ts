@@ -13,6 +13,17 @@ export {
 } from './node-material';
 
 export {
+  createCustomNodeMaterial,
+  updateCustomNodeMaterialTime,
+  updateCustomNodeMaterialColors,
+  updateCustomNodeMaterialTheme,
+  disposeCustomNodeMaterial,
+  type CustomNodeMaterialConfig,
+  type CustomNodeMaterialUniforms,
+  type CustomNodeMaterialResult,
+} from './custom-node-material';
+
+export {
   createEdgeMaterial,
   updateEdgeMaterialTime,
   disposeEdgeMaterial,

@@ -17,12 +17,9 @@ import {
   mul,
   add,
   sub,
-  pow,
-  max,
   smoothstep,
   length,
   pass,
-  bloom,
   output,
   screenUV,
 } from 'three/tsl';
@@ -65,9 +62,9 @@ export interface TSLPostProcessingResult {
 
 const DEFAULT_BLOOM: TSLBloomConfig = {
   enabled: true,
-  intensity: 0.6,
-  threshold: 0.8, // Phase 6: Tuned to prototype value
-  radius: 0.5,
+  intensity: 1.5,  // Phase 6: Significantly increased for prototype-matching ethereal halos
+  threshold: 0.2,  // Phase 6: Lowered significantly to capture more glow
+  radius: 0.6,
 };
 
 const DEFAULT_VIGNETTE: TSLVignetteConfig = {
@@ -108,12 +105,11 @@ export function createTSLPostProcessing(
   const scenePass = pass(scene, camera);
   let outputNode = scenePass.getTextureNode();
 
-  // Apply bloom effect if enabled
-  if (resolvedConfig.bloom.enabled) {
-    // Use Three.js built-in bloom node for TSL
-    const bloomNode = bloom(outputNode, uBloomIntensity, uBloomThreshold);
-    outputNode = add(outputNode, bloomNode);
-  }
+  // Note: Three.js TSL doesn't have a built-in bloom function
+  // The bloom effect is achieved through:
+  // 1. Additive blending on emissive materials (node-material.ts)
+  // 2. WebGL EffectComposer bloom when using WebGLRenderer
+  // For WebGPU, we rely on the additive blending for glow effect
 
   // Apply vignette effect if enabled
   if (resolvedConfig.vignette.enabled) {

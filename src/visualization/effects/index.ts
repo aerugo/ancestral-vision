@@ -22,3 +22,14 @@ export {
   type BloomConfig,
   type VignetteConfig,
 } from './post-processing';
+
+export {
+  createTSLPostProcessing,
+  updateTSLPostProcessingSize,
+  renderWithTSLPostProcessing,
+  disposeTSLPostProcessing,
+  type TSLPostProcessingConfig,
+  type TSLPostProcessingResult,
+  type TSLBloomConfig,
+  type TSLVignetteConfig,
+} from './webgpu-post-processing';

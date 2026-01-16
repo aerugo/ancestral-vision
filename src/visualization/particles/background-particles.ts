@@ -48,12 +48,12 @@ export interface BackgroundParticleResult {
 }
 
 const DEFAULT_CONFIG: Required<BackgroundParticleConfig> = {
-  count: 300,
-  innerRadius: 100,
-  outerRadius: 500,
-  pointSize: 4,
-  enhancedMode: true,  // Phase 4: Enable divine spark by default
-  divineSparkIntensity: 0.6,
+  count: 500,  // Increased for denser starfield like prototype
+  innerRadius: 80,   // Closer particles for depth
+  outerRadius: 600,  // Extended range
+  pointSize: 18,  // Larger for more prominent stars
+  enhancedMode: true,
+  divineSparkIntensity: 0.9,  // Stronger divine spark for twinkling effect
 };
 
 /**
@@ -162,7 +162,7 @@ export function createBackgroundParticles(
   material.colorNode = mul(vertexColor, glow);
   material.sizeNode = finalSize;
   material.transparent = true;
-  material.opacity = 0.6;
+  material.opacity = 0.8;  // Increased for more visible stars
   material.blending = THREE.AdditiveBlending;
   material.depthWrite = false;
 

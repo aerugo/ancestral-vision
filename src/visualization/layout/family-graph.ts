@@ -340,4 +340,55 @@ export class FamilyGraph {
   public getNodesArray(): GraphNode[] {
     return Array.from(this.nodes.values());
   }
+
+  /**
+   * Find shortest path between two nodes using BFS
+   * Uses the bidirectional connections array for traversal.
+   *
+   * @param startId - Source node ID
+   * @param endId - Target node ID
+   * @returns Array of node IDs from start to end (inclusive), or null if no path exists
+   */
+  public findPath(startId: string, endId: string): string[] | null {
+    // Same node - return single-element path
+    if (startId === endId) {
+      return this.nodes.has(startId) ? [startId] : null;
+    }
+
+    // Check both nodes exist
+    if (!this.nodes.has(startId) || !this.nodes.has(endId)) {
+      return null;
+    }
+
+    const visited = new Set<string>();
+    const queue: { id: string; path: string[] }[] = [];
+
+    visited.add(startId);
+    queue.push({ id: startId, path: [startId] });
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const node = this.nodes.get(current.id);
+      if (!node) continue;
+
+      for (const neighborId of node.connections) {
+        // Found the target - return complete path
+        if (neighborId === endId) {
+          return [...current.path, neighborId];
+        }
+
+        // Add unvisited neighbors to queue
+        if (!visited.has(neighborId)) {
+          visited.add(neighborId);
+          queue.push({
+            id: neighborId,
+            path: [...current.path, neighborId],
+          });
+        }
+      }
+    }
+
+    // No path found (disconnected graph)
+    return null;
+  }
 }

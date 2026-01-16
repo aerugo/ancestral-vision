@@ -384,4 +384,168 @@ describe('FamilyGraph', () => {
       expect(spouseEdges.length).toBe(1);
     });
   });
+
+  describe('findPath', () => {
+    it('should return null for empty graph', () => {
+      const graph = new FamilyGraph([], []);
+      expect(graph.findPath('a', 'b')).toBeNull();
+    });
+
+    it('should return single-element path for same start and end', () => {
+      const people: PersonInput[] = [
+        { id: 'person1', name: 'Alice' },
+      ];
+      const graph = new FamilyGraph(people, []);
+
+      const path = graph.findPath('person1', 'person1');
+      expect(path).toEqual(['person1']);
+    });
+
+    it('should return null when start node does not exist', () => {
+      const people: PersonInput[] = [
+        { id: 'person1', name: 'Alice' },
+      ];
+      const graph = new FamilyGraph(people, []);
+
+      expect(graph.findPath('nonexistent', 'person1')).toBeNull();
+    });
+
+    it('should return null when end node does not exist', () => {
+      const people: PersonInput[] = [
+        { id: 'person1', name: 'Alice' },
+      ];
+      const graph = new FamilyGraph(people, []);
+
+      expect(graph.findPath('person1', 'nonexistent')).toBeNull();
+    });
+
+    it('should find path between direct neighbors', () => {
+      const people: PersonInput[] = [
+        { id: 'parent', name: 'Parent' },
+        { id: 'child', name: 'Child' },
+      ];
+      const parentChild: ParentChildInput[] = [
+        { parentId: 'parent', childId: 'child' },
+      ];
+      const graph = new FamilyGraph(people, parentChild);
+
+      const path = graph.findPath('parent', 'child');
+      expect(path).toEqual(['parent', 'child']);
+    });
+
+    it('should find path in reverse direction', () => {
+      const people: PersonInput[] = [
+        { id: 'parent', name: 'Parent' },
+        { id: 'child', name: 'Child' },
+      ];
+      const parentChild: ParentChildInput[] = [
+        { parentId: 'parent', childId: 'child' },
+      ];
+      const graph = new FamilyGraph(people, parentChild);
+
+      const path = graph.findPath('child', 'parent');
+      expect(path).toEqual(['child', 'parent']);
+    });
+
+    it('should find shortest path across multiple hops', () => {
+      const people: PersonInput[] = [
+        { id: 'grandparent', name: 'Grandparent' },
+        { id: 'parent', name: 'Parent' },
+        { id: 'child', name: 'Child' },
+      ];
+      const parentChild: ParentChildInput[] = [
+        { parentId: 'grandparent', childId: 'parent' },
+        { parentId: 'parent', childId: 'child' },
+      ];
+      const graph = new FamilyGraph(people, parentChild);
+
+      const path = graph.findPath('grandparent', 'child');
+      expect(path).toEqual(['grandparent', 'parent', 'child']);
+    });
+
+    it('should return null for disconnected nodes', () => {
+      const people: PersonInput[] = [
+        { id: 'person1', name: 'Alice' },
+        { id: 'person2', name: 'Bob' },
+        { id: 'unconnected', name: 'Unconnected' },
+      ];
+      const parentChild: ParentChildInput[] = [
+        { parentId: 'person1', childId: 'person2' },
+      ];
+      const graph = new FamilyGraph(people, parentChild);
+
+      expect(graph.findPath('person1', 'unconnected')).toBeNull();
+    });
+
+    it('should find path through spouse connection', () => {
+      const people: PersonInput[] = [
+        { id: 'husband', name: 'Husband' },
+        { id: 'wife', name: 'Wife' },
+        { id: 'child', name: 'Child' },
+      ];
+      const parentChild: ParentChildInput[] = [
+        { parentId: 'husband', childId: 'child' },
+      ];
+      const spouse: SpouseInput[] = [
+        { person1Id: 'husband', person2Id: 'wife' },
+      ];
+      const graph = new FamilyGraph(people, parentChild, undefined, spouse);
+
+      // Path from wife to child goes through husband
+      const path = graph.findPath('wife', 'child');
+      expect(path).toEqual(['wife', 'husband', 'child']);
+    });
+
+    it('should find shortest path when multiple paths exist', () => {
+      // Diamond graph: A connects to B and C, both B and C connect to D
+      const people: PersonInput[] = [
+        { id: 'A', name: 'A' },
+        { id: 'B', name: 'B' },
+        { id: 'C', name: 'C' },
+        { id: 'D', name: 'D' },
+      ];
+      const parentChild: ParentChildInput[] = [
+        { parentId: 'A', childId: 'B' },
+        { parentId: 'A', childId: 'C' },
+        { parentId: 'B', childId: 'D' },
+        { parentId: 'C', childId: 'D' },
+      ];
+      const graph = new FamilyGraph(people, parentChild);
+
+      const path = graph.findPath('A', 'D');
+      // Should be length 3 (A -> B/C -> D), BFS finds one of the shortest paths
+      expect(path).toHaveLength(3);
+      expect(path![0]).toBe('A');
+      expect(path![2]).toBe('D');
+    });
+
+    it('should handle large family tree', () => {
+      // Build a tree with multiple generations
+      const people: PersonInput[] = [];
+      const parentChild: ParentChildInput[] = [];
+
+      // Create 4 generations of people
+      for (let gen = 0; gen < 4; gen++) {
+        for (let i = 0; i < 3; i++) {
+          people.push({ id: `gen${gen}-${i}`, name: `Person ${gen}-${i}` });
+          if (gen > 0) {
+            // Connect to parent in previous generation
+            parentChild.push({
+              parentId: `gen${gen - 1}-${i % 3}`,
+              childId: `gen${gen}-${i}`,
+            });
+          }
+        }
+      }
+
+      const graph = new FamilyGraph(people, parentChild);
+
+      // Find path from first person to last person
+      const path = graph.findPath('gen0-0', 'gen3-0');
+      expect(path).not.toBeNull();
+      expect(path!.length).toBeGreaterThan(1);
+      expect(path![0]).toBe('gen0-0');
+      expect(path![path!.length - 1]).toBe('gen3-0');
+    });
+  });
 });

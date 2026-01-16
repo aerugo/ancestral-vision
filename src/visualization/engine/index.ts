@@ -36,3 +36,30 @@ export {
   type RenderCallback,
   type CameraUniformData,
 } from './three-integration';
+
+// Phase 1: Core Rendering Pipeline
+export {
+  createRenderPassManager,
+  type RenderPassManager,
+  type RenderPassConfig,
+  type DrawCall,
+} from './render-pass';
+
+export {
+  createPipelineFactory,
+  type PipelineFactory,
+} from './pipeline-factory';
+
+export {
+  createMSAAManager,
+  SAMPLE_COUNTS,
+  type MSAAManager,
+  type MSAAConfig,
+  type SampleCount,
+} from './msaa';
+
+export {
+  createCameraUniformBuffer,
+  CAMERA_UNIFORM_SIZE as CAMERA_BUFFER_SIZE,
+  type CameraUniformBuffer,
+} from './camera-uniforms';

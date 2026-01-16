@@ -1,6 +1,8 @@
 /**
  * Visual Effects
  * Re-exports all effect-related functions for constellation visualization
+ *
+ * Note: Post-processing is handled by the tsl-pipeline module (WebGPU-native).
  */
 
 export {
@@ -11,25 +13,3 @@ export {
   type SacredGeometryConfig,
   type SacredGeometryGridResult,
 } from './sacred-geometry-grid';
-
-export {
-  createPostProcessing,
-  updatePostProcessingSize,
-  renderWithPostProcessing,
-  disposePostProcessing,
-  type PostProcessingConfig,
-  type PostProcessingResult,
-  type BloomConfig,
-  type VignetteConfig,
-} from './post-processing';
-
-export {
-  createTSLPostProcessing,
-  updateTSLPostProcessingSize,
-  renderWithTSLPostProcessing,
-  disposeTSLPostProcessing,
-  type TSLPostProcessingConfig,
-  type TSLPostProcessingResult,
-  type TSLBloomConfig,
-  type TSLVignetteConfig,
-} from './webgpu-post-processing';

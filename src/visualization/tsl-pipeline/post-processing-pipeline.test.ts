@@ -225,7 +225,7 @@ describe('post-processing-pipeline module', () => {
       expect(result.uniforms.vignetteOffset.value).toBe(0.3);
     });
 
-    it('should use default config when not provided', async () => {
+    it('should use default config when not provided (bloom disabled for fog fix)', async () => {
       const { createPostProcessingPipeline } = await import('./post-processing-pipeline');
 
       const result = createPostProcessingPipeline(
@@ -234,8 +234,9 @@ describe('post-processing-pipeline module', () => {
         {} as THREE.Camera
       );
 
-      expect(result.config.bloom.enabled).toBe(true);
-      expect(result.config.bloom.strength).toBe(1.5);
+      // Bloom is disabled by default to eliminate the glowing fog effect
+      expect(result.config.bloom.enabled).toBe(false);
+      expect(result.config.bloom.strength).toBe(0.4);
       expect(result.config.vignette.enabled).toBe(true);
     });
 

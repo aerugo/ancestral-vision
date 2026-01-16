@@ -121,14 +121,14 @@ export interface PostProcessingPipelineResult {
 }
 
 /**
- * Default bloom configuration matching prototype visual style
- * Prototype uses intensity: 0.6 with postprocessing library for luminous halos
+ * Default bloom configuration - DISABLED to eliminate fog/glow halo effect
+ * Can be re-enabled by passing bloom config to createPostProcessingPipeline
  */
 const DEFAULT_BLOOM: BloomConfig = {
-  enabled: true,
-  strength: 0.4,    // Reduced for pattern preservation
-  radius: 0.4,      // Medium radius for soft glow spread
-  threshold: 0.4,   // Raised to preserve internal patterns
+  enabled: false,   // Disabled - bloom was creating unwanted fog/glow halo
+  strength: 0.4,
+  radius: 0.4,
+  threshold: 0.4,
 };
 
 /**

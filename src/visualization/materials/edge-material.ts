@@ -17,6 +17,7 @@ import {
   add,
   sub,
   mix,
+  vec3,
 } from 'three/tsl';
 
 export interface EdgeMaterialConfig {
@@ -86,6 +87,7 @@ export function createEdgeMaterial(config: EdgeMaterialConfig = {}): EdgeMateria
   // Vertex attributes
   const progress = attribute('aProgress');
   const strength = attribute('aStrength');
+  const pulseIntensity = attribute('aPulseIntensity');
 
   // Flowing energy animation: fract(progress * 3 - time * speed)
   const flow = fract(sub(mul(progress, 3), mul(uTime, uFlowSpeed)));
@@ -99,6 +101,11 @@ export function createEdgeMaterial(config: EdgeMaterialConfig = {}): EdgeMateria
 
   // Color mixing along edge
   const edgeColor = mix(uColorPrimary, uColorSecondary, mul(progress, 0.3));
+
+  // Pulse glow: warm white color when pulse intensity is non-zero
+  const pulseGlowColor = vec3(1.0, 0.95, 0.85); // Warm white
+  const pulseGlowStrength = mul(pulseIntensity, float(2.5)); // Amplify for visibility
+  const finalColor = mix(edgeColor, pulseGlowColor, pulseGlowStrength);
 
   // Enhanced visual effects (Phase 9.2)
   let enhancedOpacityContrib = float(0);
@@ -130,13 +137,17 @@ export function createEdgeMaterial(config: EdgeMaterialConfig = {}): EdgeMateria
 
   // Final opacity combining all effects
   const baseOpacityCalc = mul(mul(mul(endFade, add(mul(flowPulse, 0.5), 0.5)), shimmer), mul(strength, uBaseOpacity));
-  const finalOpacity = enhancedMode
+  const opacityWithEnhanced = enhancedMode
     ? add(baseOpacityCalc, mul(enhancedOpacityContrib, endFade))
     : baseOpacityCalc;
 
+  // Add pulse intensity boost to opacity for extra glow effect
+  const pulseOpacityBoost = mul(pulseIntensity, float(0.8));
+  const finalOpacity = add(opacityWithEnhanced, pulseOpacityBoost);
+
   // Create material
   const material = new LineBasicNodeMaterial();
-  material.colorNode = edgeColor;
+  material.colorNode = finalColor;
   material.opacityNode = finalOpacity;
   material.transparent = true;
   // Use NormalBlending instead of AdditiveBlending to eliminate the glowing fog

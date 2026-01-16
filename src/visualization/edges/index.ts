@@ -5,8 +5,12 @@ import * as THREE from 'three';
 import {
   createEdgeGeometry,
   disposeEdgeGeometry,
+  updateEdgePulseIntensities,
+  updateEdgePulseIntensitiesSmooth,
   type EdgeData,
   type EdgeGeometryConfig,
+  type EdgeSegmentMapping,
+  type EdgePulseDetail,
 } from './edge-geometry';
 import {
   createEdgeMaterial,
@@ -16,8 +20,9 @@ import {
   type EdgeMaterialUniforms,
 } from '../materials/edge-material';
 
-export type { EdgeData, EdgeGeometryConfig } from './edge-geometry';
+export type { EdgeData, EdgeGeometryConfig, EdgeSegmentMapping, EdgePulseDetail } from './edge-geometry';
 export type { EdgeMaterialConfig, EdgeMaterialUniforms } from '../materials/edge-material';
+export { updateEdgePulseIntensities, updateEdgePulseIntensitiesSmooth } from './edge-geometry';
 
 export interface EdgeSystemData {
   edges: EdgeData[];
@@ -31,6 +36,10 @@ export interface EdgeSystemConfig {
 export interface EdgeSystemResult {
   mesh: THREE.LineSegments;
   uniforms: EdgeMaterialUniforms;
+  /** Segment mapping for pulse intensity updates */
+  segmentMapping: EdgeSegmentMapping[];
+  /** Reference to the pulse intensity attribute */
+  pulseIntensityAttribute: THREE.BufferAttribute;
 }
 
 /**
@@ -45,7 +54,10 @@ export function createEdgeSystem(
   data: EdgeSystemData,
   config: EdgeSystemConfig = {}
 ): EdgeSystemResult {
-  const geometry = createEdgeGeometry(data.edges, config.geometry);
+  const { geometry, segmentMapping, pulseIntensityAttribute } = createEdgeGeometry(
+    data.edges,
+    config.geometry
+  );
   const { material, uniforms } = createEdgeMaterial(config.material);
 
   // Use LineSegments to draw disconnected line segments
@@ -53,7 +65,7 @@ export function createEdgeSystem(
   const mesh = new THREE.LineSegments(geometry, material);
   mesh.frustumCulled = false; // Edges span large areas
 
-  return { mesh, uniforms };
+  return { mesh, uniforms, segmentMapping, pulseIntensityAttribute };
 }
 
 /**

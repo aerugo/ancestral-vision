@@ -210,11 +210,27 @@ WGSL Shaders created:
 
 **Total: 98 passing tests for Phase 2 (185 total engine tests)**
 
+### Phase 3 Completion (2026-01-16) - TDD
+
+Implemented node materials and texturing system following strict TDD:
+
+- [x] texture-manager.ts (38 tests) - Texture loading, caching, procedural generation
+- [x] flowing-material.ts (37 tests) - Animated tri-planar material with flow effects
+- [x] presets.ts (29 tests) - Material presets (lava, celestial, sacred)
+
+WGSL Shaders created:
+- triplanar.wgsl - Tri-planar texture projection utilities
+- flowing-surface.wgsl - Animated flow material with FBM noise
+- pbr.wgsl - Full PBR lighting (GGX, Fresnel, tone mapping)
+
+**Total: 104 passing tests for Phase 3 (289 total engine tests)**
+
 ### Next Session
 
-- [ ] Phase 3: Visual Effects
-  - [ ] Tri-planar texturing with flow animation
-  - [ ] Emissive/self-illumination
+- [ ] Phase 4: Compute-Based Effects
+  - [ ] Particle system compute shader
+  - [ ] Edge flow animation
+  - [ ] GPU indirect drawing
   - [ ] Light sprites
 
 ---

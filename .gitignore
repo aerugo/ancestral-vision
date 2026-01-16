@@ -314,3 +314,4 @@ Icon?
 .shader-cache/
 .env.gcp
 .playwright-mcp/
+data/example-genealogy.backup.json

@@ -30,7 +30,8 @@
       "birth_place": "Belmont County, Ohio",
       "biography": "John Martin's journey began on a crisp autumn morning, November 14, 1818, in a small log cabin nestled on the rugged frontier of Belmont County, Ohio. He was the eldest son of William Martin, a stern but fair Scotch-Irish settler, and Eleanor Hayes Martin, a woman whose gentle demeanor belied an unyielding spirit forged by pioneer life. From a young age, John was instilled with the values of hard work, self-reliance, and an unwavering commitment to family. His formal education was sparse, limited to a few winters spent in a one-room schoolhouse, where he mastered rudimentary reading, writing, and arithmetic. Most of his learning came from the land itself, as he toiled alongside his father, clearing acreage, planting crops, and tending livestock, becoming intimately familiar with the rhythms of farming that would define his life. The dense forests and fertile river valleys of Ohio shaped his character, imbuing him with the stoicism and resilience necessary for agricultural pursuits in a rapidly developing nation. He learned to read the weather, anticipate the needs of his land, and mend anything that broke, skills that proved invaluable. By his late teens, John Martin was a sturdy, quiet young man, known for his strong hands and his thoughtful, if sometimes reserved, nature. His early twenties were spent contributing to the family farm, saving what little he could, and dreaming of his own parcel of land. The lure of richer, less-worked soil beckoned further west within Ohio, particularly the promising tracts of Preble County. It was at a lively community gathering, a harvest festival in a neighboring settlement in 1840, that John's path irrevocably intertwined with that of Mary Thompson. Mary, born March 3, 1822, in Greene County, Ohio, was the daughter of a blacksmith and possessed a quiet strength and a radiant kindness that immediately captivated the reserved John. Their courtship was conducted with the decorum of the era, marked by Sunday visits, shared meals, and long conversations under the shade of ancient oaks. They were married on April 10, 1842, in a simple ceremony in Mary’s family church, embarking on a partnership that would anchor John through both prosperity and hardship. Soon after their marriage, John and Mary, with a young son, William Martin (born 1843), in tow, packed their worldly possessions into a sturdy wagon and journeyed southwest to Preble County, Ohio. Here, John purchased a modest tract of land – eighty acres of gently rolling hills, partially timbered, with a promising stream cutting through the property. It was on this land, with Mary's tireless support, that John Martin established his enduring legacy. Their farmstead, initially a small cabin that John meticulously expanded over the years, became the heart of their growing family. John was, as described by his youngest child, a ",
       "status": "complete",
-      "generation": -1
+      "generation": -1,
+      "death_date": "1883-01-01"
     },
     {
       "id": "4ba51958-eca7-45ba-9e33-b5ceb958e2d8",
@@ -94,15 +95,9 @@
       "name": "James Harrison",
       "gender": "male",
       "birth_date": "1851-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "945ab7af-15e6-4840-81c0-cd3fa79341b7",
-      "given_name": "Samuel",
-      "surname": "Martin",
-      "name": "Samuel Martin",
-      "gender": "male",
-      "status": "pending"
+      "status": "complete",
+      "birth_place": "Gratis Township, Preble County, Ohio",
+      "death_date": "1926-01-01"
     },
     {
       "id": "1be6a372-8133-409e-813a-914cb6cf7d46",
@@ -113,16 +108,8 @@
       "birth_date": "1848-03-12",
       "birth_place": "Gratis Township, Preble County, Ohio",
       "biography": "Arthur Harrison, a man whose hands spoke the language of wood and whose character was forged in the sturdy bedrock of rural Ohio, was born on March 12, 1848, in the quiet embrace of Gratis Township, Preble County. He was the eldest son of David Harrison, a farmer of modest means but unyielding spirit, and Clara Mae Stevenson, a woman whose gentle wisdom guided their household. Though the prompt initially suggested a birth year of 1901 for an Arthur Harrison, the specific familial context provided through his children firmly places Arthur, the subject of this biography, in the generation preceding them, making him the patriarch of a lineage deeply rooted in the fertile lands of Preble County.\n\nFrom a young age, Arthur displayed an innate aptitude for craftsmanship, a keen eye for detail, and a remarkable patience. The family farm, while demanding, offered him ample opportunity to tinker and build. He spent countless hours in his father's small workshop, fascinated by the transformation of raw timber into functional objects. By his early teens, Arthur had forgone the plough for the plane, apprenticing under old Silas Finch, a venerable master carpenter in Eaton. Under Silas’s stern but fair tutelage, Arthur honed his skills, learning not just the mechanics of joinery and framing, but also the enduring values of integrity, precision, and dedication. Silas Finch often remarked that Arthur possessed ",
-      "status": "complete"
-    },
-    {
-      "id": "1bfa7aea-b8ed-455f-8ee6-57cb0d9d4996",
-      "given_name": "Clara",
-      "surname": "Davies",
-      "name": "Clara Davies",
-      "gender": "female",
-      "birth_date": "1904-01-01",
-      "status": "pending"
+      "status": "complete",
+      "death_date": "1922-01-01"
     },
     {
       "id": "9dbb775c-1d09-4771-9b8d-1eb8858270aa",
@@ -173,8 +160,11 @@
       "name": "Mary Thompson",
       "gender": "female",
       "birth_date": "1822-01-01",
-      "status": "pending",
-      "generation": -1
+      "status": "complete",
+      "generation": -1,
+      "birth_place": "Gratis Township, Preble County, Ohio",
+      "death_date": "1892-01-01",
+      "maiden_name": "Thompson"
     },
     {
       "id": "acef280d-7b85-4290-92a0-c2695ddec6a1",
@@ -202,7 +192,8 @@
       "death_place": "Marietta, Ohio",
       "biography": "Eleanor Thompson was born on June 14, 1798, amidst the rolling hills and burgeoning farmlands of Westmoreland County, Pennsylvania. Her parents, Robert Thompson and Margaret (née Cunningham) Thompson, were diligent Scotch-Irish Presbyterians who had sought new opportunities in the fertile lands west of the Allegheny Mountains. Eleanor was the third of five children, growing up in a modest log cabin that her father, a skilled cooper, had largely constructed himself. Life on the Pennsylvania frontier in the late 18th and early 19th centuries was arduous, but it instilled in Eleanor a strong work ethic, resilience, and a deep appreciation for community.\n\nHer formal education was rudimentary, confined to a few winters attending a subscription school held in a local church, where she learned to read the Bible, write basic letters, and master sums. Yet, her true education came in the rhythms of daily life: assisting her mother with spinning wool, weaving linen, preserving foodstuffs, and tending to the younger children. Eleanor developed a reputation for her nimble fingers and keen eye, becoming particularly adept at intricate needlework, a skill that would serve her well throughout her life. She was known for a quiet strength and an unwavering kindness, often mediating disputes among her siblings with a gentle word and a calm demeanor.\n\nIt was in the vibrant, expanding communities of western Pennsylvania that Eleanor met Thomas Martin. Thomas, born in 1795 in Chester County, Pennsylvania, was a resourceful young man, dividing his time between working his family’s small farm and honing his considerable carpentry skills. Their courtship blossomed during shared church gatherings and harvest festivals, culminating in their marriage on May 7, 1821, in Greensburg, Westmoreland County.\n\nSoon after their wedding, with the promise of cheap, fertile land beckoning, Thomas and Eleanor made the momentous decision to join the westward migration to the newly settled Ohio frontier. They packed their meager belongings into a sturdy Conestoga wagon, leaving behind the familiar landscapes of Pennsylvania for the challenging but hopeful journey across the Allegheny Ridge and down the Ohio River Valley. Their destination was Marietta, Washington County, Ohio, a burgeoning river town and one of the earliest American settlements in the Northwest Territory, which offered both agricultural prospects and a demand for skilled tradesmen like Thomas.\n\nBy early 1822, Eleanor and Thomas had established a small homestead just outside Marietta. Thomas, true to his resourceful nature, immediately set about clearing a modest patch of corn and wheat, while simultaneously finding steady work as a carpenter, constructing homes, barns, and riverboats for the growing community. Eleanor, for her part, transformed their simple cabin into a warm and welcoming home, applying her domestic skills to manage a household that would soon grow.\n\nTheir first child, Mary Thompson Martin, was born on March 15, 1823, in their small Marietta home. Mary would be the only child to survive into adulthood, a common tragedy in an era marked by high infant mortality. Eleanor poured her love and energy into raising Mary, teaching her not only the essential domestic skills of the time but also the value of education and a strong moral compass. She would often read aloud from the family Bible by the flickering light of a tallow candle, instilling in Mary a lifelong love of stories and an enduring faith.\n\nLife on the Ohio frontier was demanding. Eleanor contributed significantly to the family's self-sufficiency, tending a kitchen garden that provided vegetables and herbs, raising chickens for eggs and meat, and diligently spinning and weaving to produce much of the family’s clothing. She was an active member of the local Presbyterian church, finding solace and community among her fellow congregants. Her calm temperament and practical wisdom often made her a trusted confidante among her neighbors. One widely recounted anecdote tells of Eleanor successfully nursing an entire family through a severe bout of the ague (malaria) during a particularly harsh summer, relying on traditional remedies and an unwavering spirit.\n\nAs the decades passed, Eleanor and Thomas remained in Marietta, witnessing the town grow from a frontier outpost into a vibrant regional center. Thomas continued his dual life as farmer and carpenter, his reputation for honest work and skilled craftsmanship firmly established.\n\nIn 1842, their daughter, Mary Thompson Martin, married John Martin, a diligent and stoic farmer from nearby Warren Township. The following year, on April 7, 1843, Eleanor welcomed her first grandchild, William Martin, born in a sturdy farmhouse just outside Eaton, Preble County, Ohio, where Mary and John had settled. Though separated by a day’s journey, Eleanor made efforts to visit her daughter and burgeoning family whenever possible, cherishing her role as a grandmother.\n\nOver the next decade, Eleanor delighted in the arrival of more grandchildren: Thomas Martin (born 1845), Eleanor Martin (born 1848, named in her honor), Samuel Martin (born 1850), Martha Martin (born 1851), and finally, Sarah Elizabeth Martin (born October 12, 1852). She would often send meticulously sewn garments or hand-knitted blankets to her grandchildren, each stitch imbued with her love and care. Her visits were eagerly anticipated, as she brought not only practical advice but also tales of early Pennsylvania and the pioneering days of Marietta, connecting the younger generation to their family's rich history.\n\nIn her later years, Eleanor remained a pillar of strength and wisdom within her family and community. She continued to practice her needlework, crafting quilts that became cherished heirlooms, and tending her small garden, her hands gnarled but still capable. Thomas Martin, her devoted husband, passed away peacefully in 1868 at the age of 73, after nearly five decades of marriage. Eleanor bore his loss with her characteristic quiet grace, finding comfort in her memories and the presence of her daughter, Mary, and her grandchildren, who often came to visit her in Marietta.\n\nEleanor Thompson passed away on August 2, 1872, at the age of 74, in her home in Marietta, Ohio. She was laid to rest beside her husband in the Mound Cemetery, overlooking the very lands they had helped to cultivate. Her life, though outwardly simple, was a testament to the enduring spirit of the American pioneer woman – a life marked by hard work, unwavering faith, and a deep devotion to family. She left behind a legacy of resilience, kindness, and quiet strength that continued to shape the lives of her daughter, Mary Thompson Martin, and her numerous grandchildren for generations to come. Her memory was cherished as the wise and loving matriarch who helped lay the foundation for her family’s enduring presence in Ohio.",
       "status": "complete",
-      "generation": -2
+      "generation": -2,
+      "maiden_name": "Thompson"
     },
     {
       "id": "c5488d01-eba4-49d7-a01a-281f00046326",
@@ -228,7 +219,8 @@
       "death_date": "1930-04-27",
       "death_place": "Preble County, Ohio",
       "biography": "Eleanor Mary Martin, born on August 14, 1848, in a modest farmhouse nestled within the rolling hills of Preble County, Ohio, was the third of six children born to John Martin, a diligent and stoic farmer, and Mary Thompson Martin, a woman celebrated for her unwavering kindness and quiet strength. Her middle name, Mary, honored her devoted mother, while her first name, Eleanor, carried the legacy of her paternal grandmother, Eleanor (née Davies) Thompson, born in Pennsylvania in 1798. This connection to her grandmother, a resilient Scotch-Irish Presbyterian, hinted at the quiet fortitude that would define much of Eleanor's own life.\n\nEleanor's earliest years were inextricably linked to the rhythms of agrarian life. Her elder brothers, William Martin (born 1843) and Thomas Martin (born 1845), were already active in farm chores, their boisterous energy a constant presence. Following Eleanor came Samuel Martin (born 1850), Martha Martin (born 1851), and finally, Sarah Elizabeth Martin (born 1852). Their father, John Martin, born around 1820, exemplified the steadfast character of pioneers who carved a living from the rich Ohio soil. Her mother, Mary Thompson Martin, born in 1823 in Marietta, Washington County, Ohio, brought to the family a gentle wisdom, honed by her own rural upbringing and a brief education in a one-room schoolhouse. Mary’s father, Thomas Thompson (born 1796, died 1865), a resourceful carpenter who had migrated from a hamlet near Carlisle, Cumberland County, Pennsylvania, had instilled in his daughter a practical resilience that Mary, in turn, passed on to her children.\n\nEleanor's childhood was typical for a girl of her era. She attended the local one-room schoolhouse during the winter months, learning her letters, arithmetic, and basic geography alongside her siblings and the children of neighboring farms. Her formal education was supplemented by a hands-on apprenticeship in domestic arts under her mother's patient guidance. From churning butter and preserving fruits to mending garments and tending a small kitchen garden, Eleanor developed the skills essential for running a household. She was known for her observant nature and a quiet thoughtfulness, often found poring over a borrowed book by the fireplace, or sketching the intricate patterns of wildflowers in a homemade notebook. The family farm, while productive, was not without its struggles, particularly during the lean years surrounding the Civil War, though Preble County remained largely untouched by direct conflict. Eleanor witnessed the somber departures of young men, including distant cousins, and the profound changes the war brought to national life, strengthening her appreciation for stability and community.\n\nBy her early twenties, Eleanor was a poised and capable young woman. On May 12, 1870, at the age of 21, she married Arthur Benjamin Hayes (born 1846), a diligent farmer whose family had settled in an adjacent township. Arthur, with his steady demeanor and strong work ethic, proved to be an ideal partner for Eleanor. They established their own farm just a few miles from the Martin homestead, raising a family of their own. Their first child, John Hayes, was born in 1871, followed by Clara Hayes in 1874, Eleanor “Nell” Hayes in 1878, and their youngest, Arthur Hayes, in 1883. Eleanor instilled in her children the same values of hard work, kindness, and quiet resilience she had learned from her parents. She was a meticulous homemaker, her kitchen always smelling of fresh-baked bread and her gardens bountiful.\n\nEleanor maintained close ties with her siblings and their expanding families. She frequently exchanged visits with her brothers William and Thomas, and her younger sisters, Samuel, Martha, and Sarah Elizabeth. She delighted in the growth of her nieces and nephews, including Sarah Elizabeth’s children: William Harrison (born 1876), Eleanor Harrison (born 1879), and Thomas Harrison (born 1883), and her brother Samuel's children Mary Martin (born 1872), William Martin (born 1875), John Martin (born 1869), Arthur Martin (born 1876), Clara Martin (born 1879), and Robert Martin (born 1882). Her home became a central gathering place, particularly for holiday celebrations and harvest feasts. The turn of the century brought both joy and sorrow; her beloved mother, Mary Thompson Martin, passed away in 1901, a loss deeply felt by the entire family. Her father, John Martin, had preceded her mother in death, passing in 1895. Eleanor found strength in her faith and her growing family, carrying on the traditions passed down through generations.\n\nAs the years advanced, Eleanor embraced her role as a matriarch. Her husband, Arthur Benjamin Hayes, passed away in 1910, leaving Eleanor a widow at 62. She continued to manage the farm with the help of her sons, her quiet strength a beacon for her family. She lived to see many changes, from the advent of automobiles to the challenges of the Great War, always maintaining a steadfast and optimistic outlook. She mourned the passing of her elder brothers, William Martin in 1923 and Thomas Martin in 1928, reflecting on their shared childhoods and lives well-lived. Eleanor Mary Martin passed away peacefully in her Preble County home on April 27, 1930, at the age of 81. She was laid to rest beside her husband, Arthur, in the family plot at the local cemetery, leaving behind a legacy of quiet strength, enduring love, and the profound impact of a life lived with grace and purpose amidst the changing landscape of rural Ohio. Her youngest sister, Sarah Elizabeth Martin Harrison, would live on until 1935, a testament to the longevity shared by many in the Martin family.",
-      "status": "complete"
+      "status": "complete",
+      "maiden_name": "Martin"
     },
     {
       "id": "0b00dfb7-018a-48c7-ab2a-48dbfb0cf9db",
@@ -254,16 +246,8 @@
       "death_date": "1939-12-03",
       "death_place": "Preble County, Ohio",
       "biography": "Martha Eleanor Martin, born on May 17, 1851, in the verdant, rolling landscape of Preble County, Ohio, was the fifth of six children born to John Martin, a diligent and stoic farmer, and Mary Thompson Martin, a woman celebrated for her unwavering kindness and quiet strength. Her birth nestled her between her elder brother, Samuel Martin (born 1850), and her youngest sister, Sarah Elizabeth Martin (born October 12, 1852). Her early life was woven into the intricate tapestry of a bustling farmstead, a hub of ceaseless activity where the rhythms of daily life were dictated by the seasons and the demands of cultivating land and tending livestock.\n\nMartha’s maternal lineage rooted deeply in Pennsylvania soil. Her mother, Mary Thompson Martin, born in 1823 near Marietta, Washington County, Ohio, was the daughter of Thomas Thompson and Eleanor (née Davies) Thompson. Thomas, Martha’s maternal grandfather, born in 1796 in a hamlet near Carlisle, Cumberland County, Pennsylvania, was a skilled carpenter, a craft he learned from his father, William Thompson. Eleanor, born in 1798 in Westmoreland County, Pennsylvania, hailed from a diligent Scotch-Irish Presbyterian family. This heritage of craftsmanship and resilience undoubtedly instilled a practical spirit in Martha’s family.\n\nThe Martin homestead, much like countless others in post-pioneer Ohio, relied on the collective effort of every family member. Martha’s elder siblings—William Martin (born 1843), Thomas Martin (born 1845), Eleanor Mary Martin (born 1848), and Samuel Martin—were already contributing significantly to the farm by the time Martha was a toddler. Her early years involved assisting her mother with household chores, from churning butter and baking bread to tending a sprawling kitchen garden. While formal education was often brief for girls in rural Ohio, Martha, like her mother, attended a small, one-room schoolhouse for several winters. There, she honed her literacy and numeracy skills, but her true education, she often quipped, came from the rigorous yet rewarding daily life on the farm, learning the invaluable lessons of perseverance and community.\n\nAs Martha entered her teenage years in the 1860s, the lingering shadows of the Civil War still touched even remote Preble County. While her elder brothers were of an age to serve, the family’s continued presence on the farm suggested they remained to support the vital agricultural efforts. Martha observed her community’s resilience, the quiet dignity of women managing homes while men were away, and the gradual return to normalcy. She developed a keen eye for detail and a resourceful spirit, often finding creative solutions to household challenges.\n\nIn the spring of 1876, at the age of twenty-four, Martha Martin met Josiah Miller, a thoughtful and industrious young man who had recently inherited a small but fertile farm bordering the Martin property. Josiah, born in 1852 in neighboring Montgomery County, shared Martha’s grounded practicality and gentle humor. Their courtship, conducted through shared church services, social gatherings, and quiet evening visits, culminated in their marriage on September 14, 1877, at the local Preble County church. The ceremony was a modest but joyous affair, attended by their large, loving families, including Martha’s parents, her siblings William Martin, Thomas Martin, Eleanor Mary Martin, Samuel Martin, and Sarah Elizabeth Martin, along with their respective spouses and growing broods of children.\n\nMartha and Josiah settled into their own farmhouse, embarking on a life of shared labor and budding dreams. Their union was blessed with three children: Hannah Marie Miller, born on June 22, 1879, a spirited and bright girl; Robert Josiah Miller, born on October 5, 1882, a quiet boy with a deep love for animals; and Clara Eleanor Miller, born on March 18, 1885, a gentle soul much like her grandmother, Mary Thompson Martin. Martha excelled as a mother and homemaker, creating a warm, nurturing environment, her kitchen always filled with the comforting aroma of fresh bread and simmering stews. She taught her daughters the traditional skills of sewing, canning, and managing a household, while encouraging her son in his farm duties, emphasizing diligence and compassion.\n\nThroughout the late 19th and early 20th centuries, Martha remained a central figure in her family and community. She celebrated milestones with her siblings: the birth of her nieces and nephews such as John Hayes (b. 1871), Clara Hayes (b. 1874), Eleanor Hayes (b. 1878), and Arthur Hayes (b. 1883) from her sister Eleanor Mary Martin’s marriage to Arthur Hayes; and William Harrison (b. 1876), Eleanor Harrison (b. 1879), and Thomas Harrison (b. 1883) from her sister Sarah Elizabeth Martin’s marriage to Arthur Harrison. She also cherished her nieces and nephews from her brothers, William, Thomas, and Samuel, including Mary Martin (b. 1872), William Martin (b. 1875), John Martin (b. 1869), Arthur Martin (b. 1876), Clara Martin (b. 1879), and Robert Martin (b. 1882).\n\nThe turn of the century brought both joy and sorrow. Her beloved mother, Mary Thompson Martin, passed away in 1901, leaving a void Martha felt deeply but filled with cherished memories and a renewed commitment to her family’s values. As her own children grew, Hannah married a local teacher, Robert became a prosperous farmer, and Clara pursued a career as a nurse in Cincinnati before returning to care for her aging parents. Martha and Josiah reveled in the arrival of their grandchildren, their farmhouse once again echoing with youthful laughter.\n\nJosiah Miller, Martha’s devoted husband, passed away peacefully in 1925 after a short illness, leaving Martha a widow at seventy-four. Despite her grief, Martha remained strong, drawing comfort from her children and grandchildren. She lived to see her siblings gradually depart: Thomas Martin in 1928, Eleanor Mary Martin in 1930, Samuel Martin in 1934, and Sarah Elizabeth Martin in 1935. Martha bore witness to immense societal changes, from the advent of automobiles and electricity to the hardships of the Great Depression, always maintaining her quiet strength and practical outlook.\n\nMartha Eleanor Martin passed away on December 3, 1939, at the age of eighty-eight, in her cherished farmhouse in Preble County, surrounded by her loving family. She was laid to rest beside Josiah in the local cemetery, her life a testament to the enduring spirit of rural Ohio. Her legacy lived on in her children, grandchildren, and great-grandchildren, a steadfast beacon of resilience, kindness, and unwavering devotion to family and home.",
-      "status": "complete"
-    },
-    {
-      "id": "02837231-6067-4d3e-903d-db6e3f616144",
-      "given_name": "John",
-      "surname": "Martin",
-      "name": "John Martin",
-      "gender": "male",
-      "status": "queued",
-      "generation": -1
+      "status": "complete",
+      "maiden_name": "Martin"
     },
     {
       "id": "69b58199-4494-4d4a-877a-58ce20e2e1f7",
@@ -271,8 +255,11 @@
       "surname": "Harrison",
       "name": "David Harrison",
       "gender": "male",
-      "status": "queued",
-      "generation": -1
+      "status": "complete",
+      "generation": -1,
+      "birth_date": "1821-01-01",
+      "birth_place": "Preble County, Ohio",
+      "death_date": "1899-01-01"
     },
     {
       "id": "0d5005dd-81e0-4a01-ad92-3440f68de2e0",
@@ -283,7 +270,8 @@
       "birth_date": "1905-03-12",
       "birth_place": "Gratis Township, Preble County, Ohio",
       "biography": "Arthur Harrison was born on March 12, 1905, in the quiet, agrarian community of Gratis Township, Preble County, Ohio. He was the eldest child of William Harrison, a respected local carpenter whose skill was matched only by his diligence, and Clara Jenkins Harrison, a woman known for her gentle demeanor and steadfast support of her family. Arthur's birth brought great joy to his parents, especially his father William, who, as the eldest son of Sarah Elizabeth Martin and the elder Arthur Harrison, carried on a proud tradition of craftsmanship in the family.\n\nFrom an early age, young Arthur was immersed in the sights and sounds of his father’s workshop, a place filled with the sweet scent of sawdust and the rhythmic clang of hammers. His grandfather, Arthur Harrison, the patriarch and a skilled carpenter himself, lived nearby and often shared stories of his own apprenticeship, igniting a spark of fascination in the boy for the transformation of raw timber into sturdy, functional objects. Arthur’s formative years were shared with his younger sister, Mary Harrison, born in 1908, with whom he explored the fields and streams surrounding their modest home, forging a bond that would last a lifetime. His paternal grandparents, Arthur and Sarah Elizabeth Martin Harrison, were a constant presence, with his grandmother, born on a Preble County farm in 1852, instilling in him a deep appreciation for their heritage and the land.\n\nArthur attended the local one-room schoolhouse in Gratis Township, where he excelled in mathematics and mechanical drawing, subjects that fueled his natural aptitude for design and construction. His teachers often remarked on his meticulous attention to detail and his ability to visualize complex structures. Unlike some of his peers who sought immediate labor on family farms, Arthur harbored ambitions beyond agriculture. He spent his afternoons assisting his father and grandfather, learning the intricacies of joinery, the nuances of different wood types, and the importance of a true plumb line. By the time he completed his basic schooling in 1919, he was already adept with a saw and plane, possessing a craftsman's intuition.\n\nThe 1920s brought an era of dynamic change to America, and Arthur, a young man coming into his own, felt the pull of opportunity. While many of his cousins, like Clara Maxwell (b. 1909) and Arthur Maxwell (b. 1912), remained closer to agricultural pursuits, Arthur chose to pursue further education. He enrolled in a vocational program in Dayton, Ohio, in 1923, focusing on architectural drafting and advanced carpentry techniques. This period away from Gratis Township broadened his horizons, exposing him to new technologies and the burgeoning industrial landscape of urban Ohio. He lived with his uncle, Thomas Harrison, born in 1883, who had moved to Dayton years earlier and found success as a master cabinetmaker, further cementing Arthur’s commitment to the building trades.\n\nUpon graduating with distinction in 1926, Arthur returned to Gratis Township, eager to apply his enhanced skills. He joined his father, William, forming ",
-      "status": "complete"
+      "status": "complete",
+      "death_date": "1978-01-01"
     },
     {
       "id": "f3d04922-edd1-4c53-bb42-1359d4e48929",
@@ -305,32 +293,10 @@
       "name": "Clara Miller",
       "gender": "female",
       "birth_date": "1880-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "2d5cb9aa-4f47-4e23-b04a-87a90617d797",
-      "given_name": "Eleanor",
-      "surname": "Harrison",
-      "name": "Eleanor Harrison",
-      "gender": "female",
-      "birth_date": "1879-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "aeef84c4-fe6c-478f-ae6d-d01b85eb29cf",
-      "given_name": "Samuel",
-      "surname": "Martin",
-      "name": "Samuel Martin",
-      "gender": "male",
-      "status": "pending"
-    },
-    {
-      "id": "5b177f78-ca0f-473a-9505-fbb8bb4af30b",
-      "given_name": "Eleanor",
-      "surname": "Martin",
-      "name": "Eleanor Martin",
-      "gender": "female",
-      "status": "pending"
+      "status": "complete",
+      "birth_place": "Washington County, Ohio",
+      "death_date": "1945-01-01",
+      "maiden_name": "Miller"
     },
     {
       "id": "8ef316c2-9d6c-46bc-91f9-9e917b49f0c7",
@@ -343,7 +309,8 @@
       "death_date": "1999-01-22",
       "death_place": "Gratis Township, Preble County, Ohio",
       "biography": "Clara Maxwell entered the world on August 12, 1909, a warm summer day in Gratis Township, Preble County, Ohio. She was the first child born to Eleanor Harrison Maxwell, a woman known for her nurturing spirit and strong sense of duty, and Edward Maxwell, a steady and kind man who taught at the local school. Her birth brought joy to the family, especially to her maternal grandparents, Arthur Harrison, a skilled carpenter and tinkerer, and Sarah Elizabeth Martin Harrison, whose unwavering kindness and quiet strength were pillars of the community. Three years later, in 1912, Clara welcomed her younger brother, Arthur Maxwell, into the family, quickly assuming the role of protective older sister.\n\nClara’s early years were deeply rooted in the agrarian landscape of Preble County. The Maxwell household, though not a farm itself, was surrounded by the rhythms of rural life, influenced by the generations of farmers in her family, including her grandmother Sarah Elizabeth Martin, who had been born on a Preble County farm in 1852. Clara spent countless hours exploring the fields and woods near her home, often accompanied by her brother Arthur and her cousins. She shared childhood adventures with Mary Ruth Harrison, born in 1908, her older cousin Arthur Harrison (born 1905), and later, Arthur (born 1913) and Martha Harrison (born 1916). Their days were filled with imaginative play, shared secrets, and the simple joys of a close-knit family, often gathering at the Harrison family farm where her grandfather Arthur Harrison’s workshop was a source of endless fascination.\n\nEducation was highly valued in the Maxwell home, especially with her father being a teacher. Clara attended Gratis Consolidated School, where her natural curiosity and keen intellect quickly became apparent. She excelled in language arts and history, often losing herself in books borrowed from the small school library. Her mother, Eleanor, instilled in her a deep appreciation for learning and a compassionate heart, while her grandmother, Sarah Elizabeth, who passed away in 1935, left an indelible mark with her quiet determination and ethical foundation. After graduating high school in 1927, Clara, encouraged by her parents, pursued higher education at Miami University in Oxford, Ohio, a short distance from home. She enrolled in the College of Education, intending to follow in her father’s footsteps. To help with tuition, Clara worked part-time in the university library, a job that further ignited her love for books and organization.\n\nClara’s college years coincided with the onset of the Great Depression. The economic hardship placed a heavy burden on families across the nation, and the Maxwells were no exception. Despite the struggles, Clara persevered, graduating with a teaching certificate in 1931. Her first teaching position was in a small, one-room schoolhouse in a neighboring township, a challenging but rewarding experience. On June 18, 1933, at the height of the Depression, Clara married Samuel Thompson, a hardworking and principled farmer from a respected Preble County family. Their wedding was a simple affair, but rich in love and hope for the future. Samuel, born in 1907, shared Clara’s quiet strength and commitment to family.\n\nTogether, Clara and Samuel built a life on Samuel’s family farm. Their family grew with the birth of their daughter, Eleanor Ruth Thompson, on May 5, 1935, named in honor of Clara’s beloved mother. Three years later, on November 10, 1938, their son, David Samuel Thompson, arrived, carrying on the names of his father and great-grandfather. Clara temporarily stepped away from full-time teaching to raise her children, though she continued to tutor local students, ensuring a small but steady income during those lean years. The advent of World War II brought further challenges. Her brother, Arthur Maxwell, served overseas, while Samuel’s role in food production kept him on the farm. Clara, like many women, managed rationing, tended a victory garden, and volunteered tirelessly for community war efforts.\n\nAs her children grew, Clara returned to teaching full-time in the early 1950s, joining the faculty of Gratis High School, where she taught English and History. She quickly became a beloved and respected figure, known for her calm demeanor, engaging storytelling, and ability to make history come alive for her students. Her deep roots in Preble County history, passed down from her grandparents Sarah Elizabeth Martin and Arthur Harrison, gave her lessons a unique authenticity. The 1950s and 60s saw the next generation come of age. Eleanor Ruth married James Miller, and David Samuel married Katherine Lewis, bringing new life and joy to the family. Clara delighted in her grandchildren: Sarah Jane Miller (b. 1958), Thomas Arthur Thompson (b. 1961), Clara Mae Miller (b. 1963), and Edward Samuel Thompson (b. 1965). Her mother, Eleanor Harrison Maxwell, passed away in 1963, a profound loss that Clara bore with her characteristic resilience, finding solace in her growing family.\n\nClara retired from teaching in 1974, dedicating her golden years to her passions: gardening, reading, and most importantly, her family. She and Samuel enjoyed a quiet life together until his passing in 1985. Though heartbroken, Clara found strength in her children and grandchildren, and in the enduring connections with her brother Arthur Maxwell and her remaining cousins, particularly Mary Ruth Harrison. She became the family's unofficial historian, a treasured repository of stories from her childhood and tales of her grandparents, weaving a rich tapestry of Preble County life for her descendants. Clara Maxwell passed away peacefully in her Gratis Township home on January 22, 1999, at the age of 89. Her life, spanning nearly a century, was a testament to dedication, resilience, and the quiet power of a nurturing spirit, leaving behind a legacy of love and learning for all who knew her.",
-      "status": "complete"
+      "status": "complete",
+      "maiden_name": "Maxwell"
     },
     {
       "id": "3ca31370-5c1e-45ff-89ee-4ca13d9c445b",
@@ -364,23 +331,8 @@
       "surname": "Maxwell",
       "name": "Robert Maxwell",
       "gender": "male",
-      "status": "pending"
-    },
-    {
-      "id": "3b693cea-8d00-4866-897e-4742ce0ba346",
-      "given_name": "Thomas",
-      "surname": "Martin",
-      "name": "Thomas Martin",
-      "gender": "male",
-      "status": "pending"
-    },
-    {
-      "id": "42ed291c-09f0-4bab-a8d9-90bd96ffc789",
-      "given_name": "Martha",
-      "surname": "Martin",
-      "name": "Martha Martin",
-      "gender": "female",
-      "status": "pending"
+      "status": "complete",
+      "birth_date": "1881-01-01"
     },
     {
       "id": "69ccc23f-90ef-4281-b802-5daed332c724",
@@ -389,7 +341,9 @@
       "name": "Arthur Harrison",
       "gender": "male",
       "birth_date": "1913-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Preble County, Ohio",
+      "death_date": "1984-01-01"
     },
     {
       "id": "0d2a621f-f430-4c61-b081-37f084e25766",
@@ -398,7 +352,10 @@
       "name": "Martha Harrison",
       "gender": "female",
       "birth_date": "1916-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Preble County, Ohio",
+      "death_date": "1992-01-01",
+      "maiden_name": "Harrison"
     },
     {
       "id": "e9e21bc9-17a2-4bed-8cfd-285d41a0e9de",
@@ -406,15 +363,9 @@
       "surname": "Jensen",
       "name": "Clara Jensen",
       "gender": "female",
-      "status": "pending"
-    },
-    {
-      "id": "efc2135b-be52-4abd-8657-97f81da15a31",
-      "given_name": "William",
-      "surname": "Martin",
-      "name": "William Martin",
-      "gender": "male",
-      "status": "pending"
+      "status": "complete",
+      "maiden_name": "Jensen",
+      "birth_date": "1881-01-01"
     },
     {
       "id": "b440f22f-ae50-4862-be81-31f23324e496",
@@ -422,8 +373,11 @@
       "surname": "Martin",
       "name": "Thomas Martin",
       "gender": "male",
-      "status": "queued",
-      "generation": -3
+      "status": "complete",
+      "generation": -3,
+      "birth_date": "1755-01-01",
+      "birth_place": "Pennsylvania",
+      "death_date": "1832-01-01"
     },
     {
       "id": "098bfa77-9f61-483e-8911-bae3552731bf",
@@ -431,8 +385,12 @@
       "surname": "Martin",
       "name": "Isabella Martin",
       "gender": "female",
-      "status": "queued",
-      "generation": -3
+      "status": "complete",
+      "generation": -3,
+      "birth_date": "1755-01-01",
+      "birth_place": "Pennsylvania",
+      "death_date": "1832-01-01",
+      "maiden_name": "Martin"
     },
     {
       "id": "1413f70b-5df6-4626-ad6c-0a19e7d1b55e",
@@ -441,8 +399,11 @@
       "name": "Martha Martin",
       "gender": "female",
       "birth_date": "1821-01-01",
-      "status": "queued",
-      "generation": -1
+      "status": "complete",
+      "generation": -1,
+      "birth_place": "Gratis Township, Preble County, Ohio",
+      "death_date": "1890-01-01",
+      "maiden_name": "Martin"
     },
     {
       "id": "6aa1ed42-f7d6-4990-a236-876c08d80d0f",
@@ -451,8 +412,10 @@
       "name": "Thomas Martin",
       "gender": "male",
       "birth_date": "1824-01-01",
-      "status": "queued",
-      "generation": -1
+      "status": "complete",
+      "generation": -1,
+      "birth_place": "Belmont County, Ohio",
+      "death_date": "1901-01-01"
     },
     {
       "id": "e93e72fe-d45b-4dd1-828e-4a82db9244b7",
@@ -461,8 +424,11 @@
       "name": "Elizabeth Martin",
       "gender": "female",
       "birth_date": "1828-01-01",
-      "status": "queued",
-      "generation": -1
+      "status": "complete",
+      "generation": -1,
+      "birth_place": "Gratis Township, Preble County, Ohio",
+      "death_date": "1905-01-01",
+      "maiden_name": "Martin"
     },
     {
       "id": "280cb2d6-d9ed-428f-bc6f-b2e8acb48088",
@@ -470,8 +436,10 @@
       "surname": "Hayes",
       "name": "Eleanor Hayes",
       "gender": "female",
-      "status": "pending",
-      "generation": -2
+      "status": "complete",
+      "generation": -2,
+      "maiden_name": "Hayes",
+      "birth_date": "1780-01-01"
     },
     {
       "id": "83b602c5-f5dc-460d-bd00-50865a35c26f",
@@ -479,8 +447,11 @@
       "surname": "Hayes",
       "name": "Patrick Hayes",
       "gender": "male",
-      "status": "queued",
-      "generation": -3
+      "status": "complete",
+      "generation": -3,
+      "birth_date": "1765-01-01",
+      "birth_place": "Pennsylvania",
+      "death_date": "1842-01-01"
     },
     {
       "id": "be12f2d0-4614-4066-b66a-33130dbe7a36",
@@ -488,8 +459,12 @@
       "surname": "Hayes",
       "name": "Maeve Hayes",
       "gender": "female",
-      "status": "queued",
-      "generation": -3
+      "status": "complete",
+      "generation": -3,
+      "birth_date": "1765-01-01",
+      "birth_place": "Pennsylvania",
+      "death_date": "1843-01-01",
+      "maiden_name": "Hayes"
     },
     {
       "id": "48db2501-8447-427a-ba58-aafab0677f80",
@@ -498,8 +473,11 @@
       "name": "Margaret Martin",
       "gender": "female",
       "birth_date": "1814-01-01",
-      "status": "queued",
-      "generation": -1
+      "status": "complete",
+      "generation": -1,
+      "birth_place": "Eaton, Preble County, Ohio",
+      "death_date": "1884-01-01",
+      "maiden_name": "Martin"
     },
     {
       "id": "14aad363-8874-4541-95da-ee29d1e26ed5",
@@ -508,8 +486,11 @@
       "name": "Elizabeth Martin",
       "gender": "female",
       "birth_date": "1816-01-01",
-      "status": "queued",
-      "generation": -1
+      "status": "complete",
+      "generation": -1,
+      "birth_place": "Preble County, Ohio",
+      "death_date": "1887-01-01",
+      "maiden_name": "Martin"
     },
     {
       "id": "083f53d5-d1ee-4e2c-a385-9be28c297fb9",
@@ -518,27 +499,23 @@
       "name": "Sarah Martin",
       "gender": "female",
       "birth_date": "1821-01-01",
-      "status": "queued",
-      "generation": -1
+      "status": "complete",
+      "generation": -1,
+      "birth_place": "Belmont County, Ohio",
+      "death_date": "1897-01-01",
+      "maiden_name": "Martin"
     },
     {
       "id": "45c4319f-b819-40f6-9979-b5f84f29556c",
       "given_name": "William",
-      "surname": ".",
-      "name": "William .",
+      "surname": "Thompson",
+      "name": "William Thompson",
       "gender": "male",
       "birth_date": "1825-01-01",
-      "status": "queued",
-      "generation": -1
-    },
-    {
-      "id": "e62e6449-5ee2-4529-b798-49d9adaa7add",
-      "given_name": "Sarah",
-      "surname": "Martin",
-      "name": "Sarah Martin",
-      "gender": "female",
-      "status": "pending",
-      "generation": -2
+      "status": "complete",
+      "generation": -1,
+      "birth_place": "Eaton, Preble County, Ohio",
+      "death_date": "1894-01-01"
     },
     {
       "id": "d9a7cce9-2b34-4292-a9ed-0925e6443543",
@@ -547,7 +524,9 @@
       "name": "John Martin",
       "gender": "male",
       "birth_date": "1869-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Eaton, Preble County, Ohio",
+      "death_date": "1942-01-01"
     },
     {
       "id": "4e79cddb-e1f6-4653-9dac-56fbdc23d9fb",
@@ -556,7 +535,10 @@
       "name": "Mary Martin",
       "gender": "female",
       "birth_date": "1872-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Washington County, Ohio",
+      "death_date": "1947-01-01",
+      "maiden_name": "Martin"
     },
     {
       "id": "ae0f8b27-bc41-4456-9140-8a7980f1829e",
@@ -565,7 +547,9 @@
       "name": "William Martin",
       "gender": "male",
       "birth_date": "1875-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Gratis Township, Preble County, Ohio",
+      "death_date": "1953-01-01"
     },
     {
       "id": "228e1da2-54af-4644-96f9-96864f21383a",
@@ -574,25 +558,10 @@
       "name": "Amelia Davies",
       "gender": "female",
       "birth_date": "1846-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "7e780233-fc05-473f-be23-beab21d21138",
-      "given_name": "Eleanor",
-      "surname": "Martin",
-      "name": "Eleanor Martin",
-      "gender": "female",
-      "birth_date": "1841-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "03a6709c-105b-4f1b-af51-88ea4bf119e8",
-      "given_name": "Margaret",
-      "surname": "Martin",
-      "name": "Margaret Martin",
-      "gender": "female",
-      "birth_date": "1848-01-01",
-      "status": "pending"
+      "status": "complete",
+      "birth_place": "Eaton, Preble County, Ohio",
+      "death_date": "1916-01-01",
+      "maiden_name": "Davies"
     },
     {
       "id": "efdd32f6-8a42-4907-9d9e-82a339682922",
@@ -600,8 +569,11 @@
       "surname": "Thompson",
       "name": "William Thompson",
       "gender": "male",
-      "status": "queued",
-      "generation": -3
+      "status": "complete",
+      "generation": -3,
+      "birth_date": "1769-01-01",
+      "birth_place": "Pennsylvania",
+      "death_date": "1843-01-01"
     },
     {
       "id": "295e98be-e84f-4aad-a120-3a6d4b2344b4",
@@ -609,8 +581,12 @@
       "surname": "Thompson",
       "name": "Eleanor Thompson",
       "gender": "female",
-      "status": "queued",
-      "generation": -3
+      "status": "complete",
+      "generation": -3,
+      "birth_date": "1769-01-01",
+      "birth_place": "Pennsylvania",
+      "death_date": "1847-01-01",
+      "maiden_name": "Thompson"
     },
     {
       "id": "1fb83301-ad59-4db0-8812-4fe7c5ca98a9",
@@ -619,8 +595,10 @@
       "name": "Daniel Thompson",
       "gender": "male",
       "birth_date": "1820-01-01",
-      "status": "queued",
-      "generation": -1
+      "status": "complete",
+      "generation": -1,
+      "birth_place": "Washington County, Ohio",
+      "death_date": "1889-01-01"
     },
     {
       "id": "1f128259-0e4a-4ab4-aa60-72d75ba1343e",
@@ -629,8 +607,11 @@
       "name": "Sarah Thompson",
       "gender": "female",
       "birth_date": "1825-01-01",
-      "status": "queued",
-      "generation": -1
+      "status": "complete",
+      "generation": -1,
+      "birth_place": "Preble County, Ohio",
+      "death_date": "1904-01-01",
+      "maiden_name": "Thompson"
     },
     {
       "id": "99685394-6614-469f-af56-3d0adceaf3d1",
@@ -639,18 +620,11 @@
       "name": "Elizabeth Miller",
       "gender": "female",
       "birth_date": "1798-01-01",
-      "status": "pending",
-      "generation": -2
-    },
-    {
-      "id": "b5f267fc-34bb-4d16-b1f0-b2fd0ad8e7fb",
-      "given_name": "Margaret",
-      "surname": "Martin",
-      "name": "Margaret Martin",
-      "gender": "female",
-      "birth_date": "1848-01-01",
-      "status": "pending",
-      "generation": -2
+      "status": "complete",
+      "generation": -2,
+      "birth_place": "Pennsylvania",
+      "death_date": "1863-01-01",
+      "maiden_name": "Miller"
     },
     {
       "id": "60a0f346-512e-436e-87d2-3b2e09162238",
@@ -658,8 +632,11 @@
       "surname": "Thompson",
       "name": "Robert Thompson",
       "gender": "male",
-      "status": "queued",
-      "generation": -3
+      "status": "complete",
+      "generation": -3,
+      "birth_date": "1771-01-01",
+      "birth_place": "Pennsylvania",
+      "death_date": "1844-01-01"
     },
     {
       "id": "ba191e0e-a468-4826-b6e5-dbf75493ac81",
@@ -667,8 +644,12 @@
       "surname": "Thompson",
       "name": "Margaret Thompson",
       "gender": "female",
-      "status": "queued",
-      "generation": -3
+      "status": "complete",
+      "generation": -3,
+      "birth_date": "1771-01-01",
+      "birth_place": "Pennsylvania",
+      "death_date": "1841-01-01",
+      "maiden_name": "Thompson"
     },
     {
       "id": "93ff00b0-1b84-43a4-a7fa-8f6c3e0d6fb5",
@@ -677,8 +658,10 @@
       "name": "Thomas Martin",
       "gender": "male",
       "birth_date": "1795-01-01",
-      "status": "pending",
-      "generation": -2
+      "status": "complete",
+      "generation": -2,
+      "birth_place": "Pennsylvania",
+      "death_date": "1868-01-01"
     },
     {
       "id": "1885c1a0-416c-4b97-8f2d-abbfe53c2e4e",
@@ -687,7 +670,9 @@
       "name": "Arthur Martin",
       "gender": "male",
       "birth_date": "1876-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Gratis Township, Preble County, Ohio",
+      "death_date": "1942-01-01"
     },
     {
       "id": "4f65b6e6-393a-4d22-8adf-9e9dd99ceca5",
@@ -696,7 +681,10 @@
       "name": "Clara Martin",
       "gender": "female",
       "birth_date": "1879-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Eaton, Preble County, Ohio",
+      "death_date": "1952-01-01",
+      "maiden_name": "Martin"
     },
     {
       "id": "fffccfe6-7157-48e4-8acc-c8ca84efa823",
@@ -705,7 +693,9 @@
       "name": "Robert Martin",
       "gender": "male",
       "birth_date": "1882-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Belmont County, Ohio",
+      "death_date": "1959-01-01"
     },
     {
       "id": "bab0e9f7-62bc-4939-b30e-06ef355e4668",
@@ -714,7 +704,10 @@
       "name": "Eliza Patterson",
       "gender": "female",
       "birth_date": "1850-01-01",
-      "status": "pending"
+      "status": "complete",
+      "birth_place": "Belmont County, Ohio",
+      "death_date": "1921-01-01",
+      "maiden_name": "Patterson"
     },
     {
       "id": "3e6528ac-51d1-4ed5-8dfa-2f4ecb1e9195",
@@ -723,7 +716,9 @@
       "name": "John Hayes",
       "gender": "male",
       "birth_date": "1871-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Belmont County, Ohio",
+      "death_date": "1937-01-01"
     },
     {
       "id": "c469fbf8-18b5-48b0-8911-019d7dd33d7b",
@@ -732,7 +727,10 @@
       "name": "Clara Hayes",
       "gender": "female",
       "birth_date": "1874-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Preble County, Ohio",
+      "death_date": "1946-01-01",
+      "maiden_name": "Hayes"
     },
     {
       "id": "d6d7b890-30a4-4d5e-a1ed-442b049d8d8b",
@@ -741,7 +739,10 @@
       "name": "Eleanor Hayes",
       "gender": "female",
       "birth_date": "1878-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Gratis Township, Preble County, Ohio",
+      "death_date": "1949-01-01",
+      "maiden_name": "Hayes"
     },
     {
       "id": "e036a8a3-c62d-4ee4-a40f-d25fc9588def",
@@ -750,7 +751,9 @@
       "name": "Arthur Hayes",
       "gender": "male",
       "birth_date": "1883-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Gratis Township, Preble County, Ohio",
+      "death_date": "1955-01-01"
     },
     {
       "id": "726d7b45-e1dd-4fff-8409-74c674dbb7e1",
@@ -759,79 +762,9 @@
       "name": "Arthur Hayes",
       "gender": "male",
       "birth_date": "1846-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "19fbed2b-acfe-4268-8ab5-c4cd4a2a73a8",
-      "given_name": "Sarah",
-      "surname": "Harrison",
-      "name": "Sarah Harrison",
-      "gender": "female",
-      "birth_date": "1852-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "9adfa173-156d-47dc-9169-f81bcd1ff2b7",
-      "given_name": "Eleanor",
-      "surname": "Thompson",
-      "name": "Eleanor Thompson",
-      "gender": "female",
-      "birth_date": "1798-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "4d0dcc24-7f78-4e9e-8e5f-5dc7f9a1954c",
-      "given_name": "Mary",
-      "surname": "Martin",
-      "name": "Mary Martin",
-      "gender": "female",
-      "birth_date": "1872-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "4e1ca05d-b37a-4189-ae1e-7b0bbdf285c7",
-      "given_name": "William",
-      "surname": "Martin",
-      "name": "William Martin",
-      "gender": "male",
-      "birth_date": "1875-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "cc1df4e0-668c-4501-95f0-09acdfe640ba",
-      "given_name": "John",
-      "surname": "Martin",
-      "name": "John Martin",
-      "gender": "male",
-      "birth_date": "1869-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "1eb39771-1465-4d56-8315-35ee4ee8d41d",
-      "given_name": "Arthur",
-      "surname": "Martin",
-      "name": "Arthur Martin",
-      "gender": "male",
-      "birth_date": "1876-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "752db909-530c-48d4-a8e9-7d10ebfbec92",
-      "given_name": "Clara",
-      "surname": "Martin",
-      "name": "Clara Martin",
-      "gender": "female",
-      "birth_date": "1879-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "8057df6e-6a14-4c80-b713-c87ef786b86d",
-      "given_name": "Robert",
-      "surname": "Martin",
-      "name": "Robert Martin",
-      "gender": "male",
-      "birth_date": "1882-01-01",
-      "status": "pending"
+      "status": "complete",
+      "birth_place": "Washington County, Ohio",
+      "death_date": "1920-01-01"
     },
     {
       "id": "485aeafb-e6f8-4320-a169-74a2435064da",
@@ -839,7 +772,9 @@
       "surname": "Hayes",
       "name": "Eleanor Hayes",
       "gender": "female",
-      "status": "pending"
+      "status": "complete",
+      "maiden_name": "Hayes",
+      "birth_date": "1848-01-01"
     },
     {
       "id": "b5e3bccb-0d9d-48ff-81c9-071a01927a80",
@@ -848,7 +783,10 @@
       "name": "Hannah Miller",
       "gender": "female",
       "birth_date": "1879-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Eaton, Preble County, Ohio",
+      "death_date": "1953-01-01",
+      "maiden_name": "Miller"
     },
     {
       "id": "ec76333f-3d09-4f34-80fb-8c6cfc344527",
@@ -857,7 +795,9 @@
       "name": "Robert Miller",
       "gender": "male",
       "birth_date": "1882-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Gratis Township, Preble County, Ohio",
+      "death_date": "1957-01-01"
     },
     {
       "id": "04c20028-7413-43b1-bc6d-050e23dce128",
@@ -866,7 +806,10 @@
       "name": "Clara Miller",
       "gender": "female",
       "birth_date": "1885-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Eaton, Preble County, Ohio",
+      "death_date": "1952-01-01",
+      "maiden_name": "Miller"
     },
     {
       "id": "00514bd3-d6b8-477b-9502-11e932e7fe1f",
@@ -875,24 +818,9 @@
       "name": "Josiah Miller",
       "gender": "male",
       "birth_date": "1852-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "402d84fb-25c5-41c6-a57c-c9f37d31adca",
-      "given_name": "Arthur",
-      "surname": "Hayes",
-      "name": "Arthur Hayes",
-      "gender": "male",
-      "birth_date": "1883-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "4e43638c-bbd4-40b3-944d-95a2f9f62379",
-      "given_name": "Arthur",
-      "surname": "Hayes",
-      "name": "Arthur Hayes",
-      "gender": "male",
-      "status": "pending"
+      "status": "complete",
+      "birth_place": "Gratis Township, Preble County, Ohio",
+      "death_date": "1924-01-01"
     },
     {
       "id": "34516ff8-ac53-4110-9b83-294970079368",
@@ -900,8 +828,12 @@
       "surname": "Stevenson",
       "name": "Clara Stevenson",
       "gender": "female",
-      "status": "queued",
-      "generation": -1
+      "status": "complete",
+      "generation": -1,
+      "birth_date": "1821-01-01",
+      "birth_place": "Belmont County, Ohio",
+      "death_date": "1897-01-01",
+      "maiden_name": "Stevenson"
     },
     {
       "id": "819fd7e4-e436-473a-8d24-9f1527a22f51",
@@ -909,43 +841,11 @@
       "surname": "Harrison",
       "name": "Clara Harrison",
       "gender": "female",
-      "status": "queued"
-    },
-    {
-      "id": "213b92f7-dc64-409c-b352-1e5d3b77a88f",
-      "given_name": "Sarah",
-      "surname": "Harrison",
-      "name": "Sarah Harrison",
-      "gender": "female",
-      "birth_date": "1852-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "6e451b17-0895-4912-bbdb-31a39a0b1a60",
-      "given_name": "Thomas",
-      "surname": "Harrison",
-      "name": "Thomas Harrison",
-      "gender": "male",
-      "birth_date": "1883-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "7ead33bb-e13f-43b2-bb27-332224b1bbfe",
-      "given_name": "Clara",
-      "surname": "Maxwell",
-      "name": "Clara Maxwell",
-      "gender": "female",
-      "birth_date": "1909-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "4df4c0b1-1424-4354-b619-bfc23b65bb28",
-      "given_name": "Arthur",
-      "surname": "Maxwell",
-      "name": "Arthur Maxwell",
-      "gender": "male",
-      "birth_date": "1912-01-01",
-      "status": "pending"
+      "status": "complete",
+      "birth_date": "1878-01-01",
+      "birth_place": "Preble County, Ohio",
+      "death_date": "1947-01-01",
+      "maiden_name": "Harrison"
     },
     {
       "id": "f5d84a83-cdd4-4075-8ac0-060ed05b4b4d",
@@ -953,7 +853,11 @@
       "surname": "Harrison",
       "name": "Ruth Harrison",
       "gender": "female",
-      "status": "queued"
+      "status": "complete",
+      "birth_date": "1881-01-01",
+      "birth_place": "Washington County, Ohio",
+      "death_date": "1960-01-01",
+      "maiden_name": "Harrison"
     },
     {
       "id": "aa1a5f38-bbd2-4dd6-8c4d-1c1c607eda2f",
@@ -962,7 +866,10 @@
       "name": "Clara Montgomery",
       "gender": "female",
       "birth_date": "1932-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Washington County, Ohio",
+      "death_date": "2009-01-01",
+      "maiden_name": "Montgomery"
     },
     {
       "id": "19e0fd16-14d5-43e4-b2d5-3676169f7d3f",
@@ -971,7 +878,9 @@
       "name": "William Montgomery",
       "gender": "male",
       "birth_date": "1935-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Eaton, Preble County, Ohio",
+      "death_date": "2013-01-01"
     },
     {
       "id": "838b9901-aaa5-4936-bc82-f777cbc74769",
@@ -980,7 +889,9 @@
       "name": "Eleanor Montgomery",
       "gender": "female",
       "birth_date": "1940-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Washington County, Ohio",
+      "maiden_name": "Montgomery"
     },
     {
       "id": "e632e4d4-6f5f-48f0-909c-a2ecbe306b5c",
@@ -988,16 +899,8 @@
       "surname": "Montgomery",
       "name": "John Montgomery",
       "gender": "male",
-      "status": "pending"
-    },
-    {
-      "id": "68f1d7e7-829d-4e3a-ba53-c13d4fb61df1",
-      "given_name": "Eleanor",
-      "surname": "Harrison",
-      "name": "Eleanor Harrison",
-      "gender": "female",
-      "birth_date": "1879-01-01",
-      "status": "pending"
+      "status": "complete",
+      "birth_date": "1910-01-01"
     },
     {
       "id": "da87e415-0942-424d-b912-f4fa4e7f4b1f",
@@ -1005,7 +908,11 @@
       "surname": "Maxwell",
       "name": "Eleanor Maxwell",
       "gender": "female",
-      "status": "queued"
+      "status": "complete",
+      "birth_date": "1882-01-01",
+      "birth_place": "Gratis Township, Preble County, Ohio",
+      "death_date": "1958-01-01",
+      "maiden_name": "Maxwell"
     },
     {
       "id": "0e1780e0-61a2-40f1-b34f-615912a0c0c6",
@@ -1013,7 +920,10 @@
       "surname": "Maxwell",
       "name": "Edward Maxwell",
       "gender": "male",
-      "status": "queued"
+      "status": "complete",
+      "birth_date": "1882-01-01",
+      "birth_place": "Washington County, Ohio",
+      "death_date": "1947-01-01"
     },
     {
       "id": "1b3ad77d-7920-487b-a7a7-a9a64dbf32c9",
@@ -1022,7 +932,10 @@
       "name": "Eleanor Thompson",
       "gender": "female",
       "birth_date": "1935-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Preble County, Ohio",
+      "death_date": "2012-01-01",
+      "maiden_name": "Thompson"
     },
     {
       "id": "c9fcf1e3-8bc5-4745-b04a-1ad19e57e9ab",
@@ -1031,7 +944,9 @@
       "name": "David Thompson",
       "gender": "male",
       "birth_date": "1938-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Gratis Township, Preble County, Ohio",
+      "death_date": "2012-01-01"
     },
     {
       "id": "9b2a01f9-7e14-45f4-a276-0dca53bdf31d",
@@ -1040,59 +955,9 @@
       "name": "Samuel Thompson",
       "gender": "male",
       "birth_date": "1907-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "438df103-cb11-45bc-8b11-7ce58c72e8fe",
-      "given_name": "James",
-      "surname": "Miller",
-      "name": "James Miller",
-      "gender": "male",
-      "status": "pending"
-    },
-    {
-      "id": "591f616b-ac10-4a9b-8a32-bac46b2fbeed",
-      "given_name": "Katherine",
-      "surname": "Lewis",
-      "name": "Katherine Lewis",
-      "gender": "female",
-      "status": "pending"
-    },
-    {
-      "id": "93d38a36-7f4d-4e77-91d4-3142be1cb124",
-      "given_name": "Sarah",
-      "surname": "Miller",
-      "name": "Sarah Miller",
-      "gender": "female",
-      "birth_date": "1958-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "2fdbb99d-9324-4c8c-b8f1-cd3aba32d58b",
-      "given_name": "Thomas",
-      "surname": "Thompson",
-      "name": "Thomas Thompson",
-      "gender": "male",
-      "birth_date": "1961-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "fd569336-22bf-45bf-9944-8059296bd29e",
-      "given_name": "Clara",
-      "surname": "Miller",
-      "name": "Clara Miller",
-      "gender": "female",
-      "birth_date": "1963-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "606e45fe-f365-4cc1-a4bd-5c71758581cc",
-      "given_name": "Edward",
-      "surname": "Thompson",
-      "name": "Edward Thompson",
-      "gender": "male",
-      "birth_date": "1965-01-01",
-      "status": "pending"
+      "status": "complete",
+      "birth_place": "Belmont County, Ohio",
+      "death_date": "1983-01-01"
     },
     {
       "id": "44cc5336-dd42-41e4-9a53-cffddd345918",
@@ -1101,7 +966,9 @@
       "name": "Katherine Eleanor",
       "gender": "female",
       "birth_date": "1940-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Washington County, Ohio",
+      "maiden_name": "Eleanor"
     },
     {
       "id": "c9b25483-6a2d-4c77-9d2a-b292886f702a",
@@ -1110,7 +977,8 @@
       "name": "James Edward",
       "gender": "male",
       "birth_date": "1943-01-01",
-      "status": "queued"
+      "status": "complete",
+      "birth_place": "Belmont County, Ohio"
     },
     {
       "id": "ad42f449-f805-43b3-92d3-a80925ff5ae0",
@@ -1118,41 +986,9 @@
       "surname": "Miller",
       "name": "Margaret Miller",
       "gender": "female",
-      "status": "pending"
-    },
-    {
-      "id": "a96b0ddb-8dfa-41ea-9e10-b32a682125d5",
-      "given_name": "Sarah",
-      "surname": "Martin",
-      "name": "Sarah Martin",
-      "gender": "female",
-      "birth_date": "1852-01-01",
-      "status": "pending"
-    },
-    {
-      "id": "be05708c-d005-46f6-abeb-ff1498753ae3",
-      "given_name": "William",
-      "surname": "Harrison",
-      "name": "William Harrison",
-      "gender": "male",
-      "status": "pending"
-    },
-    {
-      "id": "f120a923-3f5d-4def-8474-d1e97f107804",
-      "given_name": "Mr.",
-      "surname": "Thompson",
-      "name": "Mr. Thompson",
-      "gender": "male",
-      "status": "pending"
-    },
-    {
-      "id": "2eb33d20-eb40-4055-9cfc-57b3d708f1f7",
-      "given_name": "Eleanor",
-      "surname": "Thompson",
-      "name": "Eleanor Thompson",
-      "gender": "female",
-      "birth_date": "1935-01-01",
-      "status": "pending"
+      "status": "complete",
+      "maiden_name": "Miller",
+      "birth_date": "1910-01-01"
     }
   ],
   "events": [
@@ -3556,14 +3392,6 @@
       "child_id": "b4c94c9e-40f9-4fef-aee0-37e5a8b222d8"
     },
     {
-      "parent_id": "b4c94c9e-40f9-4fef-aee0-37e5a8b222d8",
-      "child_id": "8ef316c2-9d6c-46bc-91f9-9e917b49f0c7"
-    },
-    {
-      "parent_id": "b4c94c9e-40f9-4fef-aee0-37e5a8b222d8",
-      "child_id": "3ca31370-5c1e-45ff-89ee-4ca13d9c445b"
-    },
-    {
       "parent_id": "1be6a372-8133-409e-813a-914cb6cf7d46",
       "child_id": "3a7d6912-b1db-48d2-89ef-8d51d507466d"
     },
@@ -3660,7 +3488,7 @@
       "child_id": "60a4452d-5291-432f-be81-2797f2eee9a8"
     },
     {
-      "parent_id": "02837231-6067-4d3e-903d-db6e3f616144",
+      "parent_id": "b82c03f1-0542-4cea-8e85-6a080877392f",
       "child_id": "c5488d01-eba4-49d7-a01a-281f00046326"
     },
     {
@@ -3700,7 +3528,7 @@
       "child_id": "0b00dfb7-018a-48c7-ab2a-48dbfb0cf9db"
     },
     {
-      "parent_id": "02837231-6067-4d3e-903d-db6e3f616144",
+      "parent_id": "b82c03f1-0542-4cea-8e85-6a080877392f",
       "child_id": "87a29070-904e-4846-94fc-1a94ffd79be1"
     },
     {
@@ -3786,7 +3614,7 @@
       "person2_id": "b82c03f1-0542-4cea-8e85-6a080877392f"
     },
     {
-      "person1_id": "02837231-6067-4d3e-903d-db6e3f616144",
+      "person1_id": "b82c03f1-0542-4cea-8e85-6a080877392f",
       "person2_id": "4ba51958-eca7-45ba-9e33-b5ceb958e2d8"
     },
     {

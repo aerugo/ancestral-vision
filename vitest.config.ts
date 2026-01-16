@@ -5,7 +5,7 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: 'jsdom',
+    environment: 'happy-dom',
     globals: true,
     pool: 'vmThreads',
     setupFiles: ["./src/lib/test-setup.ts"],

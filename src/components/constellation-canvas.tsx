@@ -46,12 +46,14 @@ import {
   createSacredGeometryGrid,
   updateSacredGeometryGrid,
   disposeSacredGeometryGrid,
-  createPostProcessing,
+} from '@/visualization/effects';
+import {
+  createPostProcessingPipeline,
   updatePostProcessingSize,
   renderWithPostProcessing,
-  disposePostProcessing,
-  type PostProcessingResult,
-} from '@/visualization/effects';
+  disposePostProcessingPipeline,
+  type PostProcessingPipelineResult,
+} from '@/visualization/tsl-pipeline';
 import { ConstellationSelection } from '@/visualization/selection';
 import { CameraAnimator } from '@/visualization/camera-animation';
 import {
@@ -208,8 +210,7 @@ export function ConstellationCanvas(): React.ReactElement {
   const backgroundParticlesRef = useRef<BackgroundParticleResult | null>(null);
   const eventFirefliesRef = useRef<EventFireflyResult | null>(null);
   const sacredGeometryGridRef = useRef<THREE.Group | null>(null);
-  const postProcessingRef = useRef<PostProcessingResult | null>(null);
-  const usePostProcessingRef = useRef<boolean>(false);
+  const postProcessingRef = useRef<PostProcessingPipelineResult | null>(null);
 
   // Fetch constellation graph data (people + relationships) for layout
   const { data: graphData, isLoading, isError, error } = useConstellationGraph();
@@ -229,8 +230,13 @@ export function ConstellationCanvas(): React.ReactElement {
   }
 
   const initScene = useCallback(async (): Promise<(() => void) | undefined> => {
+    console.log('[initScene] Starting initialization...');
     const container = containerRef.current;
-    if (!container) return undefined;
+    if (!container) {
+      console.log('[initScene] No container ref, returning');
+      return undefined;
+    }
+    console.log('[initScene] Container found, creating canvas...');
 
     // Create canvas
     const canvas = document.createElement('canvas');
@@ -246,9 +252,23 @@ export function ConstellationCanvas(): React.ReactElement {
     canvas.style.height = '100%';
 
     // Initialize renderer (async for WebGPU support - INV-A001)
-    const renderer = await createRenderer(canvas);
-    rendererRef.current = renderer;
+    console.log('[initScene] Creating renderer...');
+    let renderer: WebGLRenderer;
+    try {
+      renderer = await createRenderer(canvas);
+      console.log('[initScene] Renderer created:', renderer);
+      rendererRef.current = renderer;
+    } catch (error) {
+      console.error('[initScene] Renderer creation failed:', error);
+      return undefined;
+    }
 
+    // Detect renderer type for material selection
+    // WebGPU renderer has 'backend' property, WebGL does not
+    const isWebGPU = 'backend' in renderer;
+    console.log(`[initScene] Renderer type: ${isWebGPU ? 'WebGPU' : 'WebGL'}`);
+
+    console.log('[initScene] Creating scene and camera...');
     // Create scene
     const scene = createScene();
     sceneRef.current = scene;
@@ -306,14 +326,19 @@ export function ConstellationCanvas(): React.ReactElement {
         positionMap.set(p.id, constellationData.positions[i]!);
       });
 
-      const instancedResult = createInstancedConstellation(constellationData);
+      // Use TSL materials for WebGPU, custom GLSL ShaderMaterial for WebGL fallback
+      const instancedResult = createInstancedConstellation(constellationData, {
+        materialMode: isWebGPU ? 'tsl' : 'custom',
+      });
       instancedConstellationRef.current = instancedResult;
+      console.log(`[initScene] Instanced constellation created with ${instancedResult.materialMode} materials`);
       scene.add(instancedResult.mesh);
     }
 
     // Add edge system (Phase 2) - use REAL edges from FamilyGraph with proper types
     // Filter out spouse edges (invisible - for layout clustering only)
-    if (positions.length > 1 && graphEdges.length > 0) {
+    // NOTE: TSL-based LineBasicNodeMaterial only works with WebGPU
+    if (isWebGPU && positions.length > 1 && graphEdges.length > 0) {
       const visualEdges: EdgeSystemData['edges'] = graphEdges
         .filter((edge): edge is GraphEdge & { type: 'parent-child' } => edge.type === 'parent-child')
         .map(edge => {
@@ -335,20 +360,30 @@ export function ConstellationCanvas(): React.ReactElement {
         edgeSystemRef.current = edgeResult;
         scene.add(edgeResult.mesh);
       }
+    } else if (positions.length > 1) {
+      console.log('[initScene] Skipping edge system (WebGL fallback - TSL not supported)');
+      edgeSystemRef.current = null;
     }
 
     // Add background particles (Phase 3) - atmospheric Haeckel-inspired particles
-    const particleResult = createBackgroundParticles({
-      count: 300,
-      innerRadius: 100,
-      outerRadius: 400,
-      pointSize: 3,
-    });
-    backgroundParticlesRef.current = particleResult;
-    scene.add(particleResult.mesh);
+    // Phase 6: Use default pointSize (15) to match prototype
+    // NOTE: TSL-based PointsNodeMaterial only works with WebGPU
+    if (isWebGPU) {
+      const particleResult = createBackgroundParticles({
+        count: 300,
+        innerRadius: 100,
+        outerRadius: 400,
+      });
+      backgroundParticlesRef.current = particleResult;
+      scene.add(particleResult.mesh);
+    } else {
+      console.log('[initScene] Skipping background particles (WebGL fallback - TSL not supported)');
+      backgroundParticlesRef.current = null;
+    }
 
     // Add event fireflies (Phase 4) - orbital particles representing life events
-    if (positions.length > 0) {
+    // NOTE: TSL-based PointsNodeMaterial only works with WebGPU
+    if (isWebGPU && positions.length > 0) {
       // Demo event types for each node
       const demoEventTypes = [
         ['birth', 'marriage'],
@@ -369,6 +404,9 @@ export function ConstellationCanvas(): React.ReactElement {
       });
       eventFirefliesRef.current = fireflyResult;
       scene.add(fireflyResult.mesh);
+    } else if (positions.length > 0) {
+      console.log('[initScene] Skipping event fireflies (WebGL fallback - TSL not supported)');
+      eventFirefliesRef.current = null;
     }
 
     // Add sacred geometry grid (Phase 5) - mandala-style background reference grid
@@ -382,18 +420,18 @@ export function ConstellationCanvas(): React.ReactElement {
     sacredGeometryGridRef.current = gridGroup;
     scene.add(gridGroup);
 
-    // Setup post-processing (Phase 6) - bloom and vignette effects
-    // Note: EffectComposer requires WebGLRenderer, check if renderer is compatible
-    try {
-      // Only enable post-processing for WebGL renderer (WebGPU has different pipeline)
-      const isWebGL = renderer.constructor.name === 'WebGLRenderer';
-      if (isWebGL) {
-        const postProcessingResult = createPostProcessing(renderer, scene, camera, {
+    // Setup post-processing (Phase 2 WebGPU Graphics Engine) - unified TSL bloom and vignette
+    // INV-A012: Bloom imported from three/addons/tsl/display/BloomNode.js
+    // INV-A013: TSL PostProcessing works with both WebGPU and WebGL renderers
+    // NOTE: TSL PostProcessing has compatibility issues with pure WebGL - skip for WebGL
+    if (isWebGPU) {
+      try {
+        const postProcessingResult = createPostProcessingPipeline(renderer, scene, camera, {
           bloom: {
             enabled: true,
-            intensity: 0.6,
-            threshold: 0.3,
-            radius: 0.5,
+            strength: 1.5,  // Phase 6: Increased for prototype-matching halos
+            radius: 0.6,
+            threshold: 0.2,  // Phase 6: Lowered to capture more glow
           },
           vignette: {
             enabled: true,
@@ -402,15 +440,14 @@ export function ConstellationCanvas(): React.ReactElement {
           },
         });
         postProcessingRef.current = postProcessingResult;
-        usePostProcessingRef.current = true;
-        console.log('[ConstellationCanvas] Post-processing enabled (WebGL)');
-      } else {
-        console.log('[ConstellationCanvas] Post-processing disabled (WebGPU - not supported)');
-        usePostProcessingRef.current = false;
+        console.log('[ConstellationCanvas] TSL post-processing enabled (WebGPU pipeline)');
+      } catch (error) {
+        console.warn('[ConstellationCanvas] Post-processing setup failed:', error);
+        postProcessingRef.current = null;
       }
-    } catch (error) {
-      console.warn('[ConstellationCanvas] Post-processing setup failed:', error);
-      usePostProcessingRef.current = false;
+    } else {
+      console.log('[ConstellationCanvas] Skipping TSL post-processing (WebGL fallback - no post-processing)');
+      postProcessingRef.current = null;
     }
 
     // Store people positions for keyboard navigation
@@ -566,9 +603,10 @@ export function ConstellationCanvas(): React.ReactElement {
 
       controls.update();
 
-      // Render with or without post-processing (Phase 6)
-      if (usePostProcessingRef.current && postProcessingRef.current) {
-        renderWithPostProcessing(postProcessingRef.current.composer);
+      // Render with TSL post-processing (Phase 2 WebGPU Graphics Engine)
+      // INV-A013: TSL PostProcessing works with both WebGPU and WebGL renderers
+      if (postProcessingRef.current) {
+        renderWithPostProcessing(postProcessingRef.current);
       } else {
         renderer.render(scene, camera);
       }
@@ -584,9 +622,9 @@ export function ConstellationCanvas(): React.ReactElement {
         camera.updateProjectionMatrix();
         renderer.setSize(newWidth, newHeight);
 
-        // Update post-processing size (Phase 6)
+        // Update post-processing size (Phase 2 WebGPU Graphics Engine)
         if (postProcessingRef.current) {
-          updatePostProcessingSize(postProcessingRef.current.composer, newWidth, newHeight);
+          updatePostProcessingSize(postProcessingRef.current, newWidth, newHeight);
         }
       }
     };
@@ -627,9 +665,9 @@ export function ConstellationCanvas(): React.ReactElement {
         disposeSacredGeometryGrid(sacredGeometryGridRef.current);
         sacredGeometryGridRef.current = null;
       }
-      // Dispose post-processing (Phase 6 resources)
+      // Dispose post-processing (Phase 2 WebGPU Graphics Engine - INV-A009)
       if (postProcessingRef.current) {
-        disposePostProcessing(postProcessingRef.current.composer);
+        disposePostProcessingPipeline(postProcessingRef.current);
         postProcessingRef.current = null;
       }
       disposeScene(scene);

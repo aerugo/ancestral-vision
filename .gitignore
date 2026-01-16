@@ -312,6 +312,9 @@ Icon?
 
 # WebGPU/WebGL shader cache (if generated)
 .shader-cache/
+
+# External reference repositories (cloned locally, not tracked)
+webgpu-samples/
 .env.gcp
 .playwright-mcp/
 data/example-genealogy.backup.json

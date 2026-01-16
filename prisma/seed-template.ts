@@ -14,6 +14,8 @@ import {
   mapPersonFields,
   parseParentChildLinks,
   parseSpouseLinks,
+  parseNotes,
+  parseEvents,
   type GenealogyJson,
 } from '../src/lib/genealogy-import';
 
@@ -39,7 +41,15 @@ export async function cleanTemplateData(): Promise<void> {
   });
 
   if (constellation) {
-    // Delete relationships first (foreign key constraints)
+    // Delete events first (foreign key to person)
+    await prisma.event.deleteMany({
+      where: { constellationId: constellation.id },
+    });
+    // Delete notes (foreign key to person)
+    await prisma.note.deleteMany({
+      where: { constellationId: constellation.id },
+    });
+    // Delete relationships (foreign key constraints)
     await prisma.parentChildRelationship.deleteMany({
       where: { constellationId: constellation.id },
     });
@@ -110,12 +120,33 @@ export async function seedTemplateData(): Promise<void> {
 
   // Parse metadata
   const metadata = parseGenealogyMetadata(genealogyJson);
-  const persons = genealogyJson.persons ?? [];
+  const allPersons = genealogyJson.persons ?? [];
   const childLinks = genealogyJson.child_links ?? [];
   const spouseLinks = genealogyJson.spouse_links ?? [];
 
+  // Build set of connected person IDs (appear in at least one relationship)
+  const connectedPersonIds = new Set<string>();
+  // Always include centered person
+  connectedPersonIds.add(metadata.centeredPersonId);
+  // Add all persons from parent-child relationships
+  for (const link of childLinks) {
+    connectedPersonIds.add(link.parent_id);
+    connectedPersonIds.add(link.child_id);
+  }
+  // Add all persons from spouse relationships
+  for (const link of spouseLinks) {
+    connectedPersonIds.add(link.person1_id);
+    connectedPersonIds.add(link.person2_id);
+  }
+
+  // Filter to only connected persons
+  const persons = allPersons.filter(p => connectedPersonIds.has(p.id));
+  const skippedCount = allPersons.length - persons.length;
+
   console.log(`   Centered Person ID: ${metadata.centeredPersonId}`);
-  console.log(`   Persons to import: ${persons.length}`);
+  console.log(`   Total persons in file: ${allPersons.length}`);
+  console.log(`   Connected persons to import: ${persons.length}`);
+  console.log(`   Skipping unconnected persons: ${skippedCount}`);
   console.log(`   Parent-child links: ${childLinks.length}`);
   console.log(`   Spouse links: ${spouseLinks.length}`);
 
@@ -214,6 +245,58 @@ export async function seedTemplateData(): Promise<void> {
   }
   console.log(`   Created ${spouseRelCount} spouse relationships`);
 
+  // Import notes (only for connected persons)
+  console.log('📝 Importing notes...');
+  const allParsedNotes = parseNotes(genealogyJson);
+  const parsedNotes = allParsedNotes.filter(n => connectedPersonIds.has(n.personId));
+  let noteCount = 0;
+  for (const note of parsedNotes) {
+    try {
+      await prisma.note.create({
+        data: {
+          id: note.id,
+          constellationId: constellation.id,
+          personId: note.personId,
+          title: note.title,
+          content: note.content,
+          createdBy: user.id,
+        },
+      });
+      noteCount++;
+    } catch (error) {
+      // Skip if person ID doesn't exist
+      console.warn(`   Warning: Could not create note ${note.id} for person ${note.personId}: ${error}`);
+    }
+  }
+  console.log(`   Imported ${noteCount} notes (skipped ${allParsedNotes.length - parsedNotes.length} for unconnected persons)`);
+
+  // Import events (only for connected persons)
+  console.log('📅 Importing events...');
+  const allParsedEvents = parseEvents(genealogyJson);
+  const parsedEvents = allParsedEvents.filter(e => connectedPersonIds.has(e.primaryPersonId));
+  let eventCount = 0;
+  for (const event of parsedEvents) {
+    try {
+      await prisma.event.create({
+        data: {
+          id: event.id,
+          constellationId: constellation.id,
+          primaryPersonId: event.primaryPersonId,
+          title: event.title,
+          description: event.description,
+          date: (event.date ?? undefined) as Prisma.InputJsonValue | undefined,
+          location: (event.location ?? undefined) as Prisma.InputJsonValue | undefined,
+          createdBy: user.id,
+        },
+      });
+      eventCount++;
+    } catch (error) {
+      // Skip if person ID doesn't exist
+      console.warn(`   Warning: Could not create event ${event.id} for person ${event.primaryPersonId}: ${error}`);
+    }
+  }
+  console.log(`   Imported ${eventCount} events (skipped ${allParsedEvents.length - parsedEvents.length} for unconnected persons)`);
+
   // Update constellation with metadata
   console.log('📊 Updating constellation metadata...');
   await prisma.constellation.update({
@@ -249,6 +332,8 @@ export async function seedTemplateData(): Promise<void> {
   console.log(`   Persons: ${importedCount}`);
   console.log(`   Parent-child relationships: ${pcRelCount}`);
   console.log(`   Spouse relationships: ${spouseRelCount}`);
+  console.log(`   Notes: ${noteCount}`);
+  console.log(`   Events: ${eventCount}`);
   console.log(`   Centered person: ${metadata.centeredPersonId}`);
 }
 

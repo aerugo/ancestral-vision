@@ -41,6 +41,30 @@ export interface RawSpouseLink {
 }
 
 /**
+ * Raw note from ancestral-synth-json format
+ */
+export interface RawNote {
+  id: string;
+  person_id: string;
+  content: string;
+  category?: string;
+  source?: string;
+}
+
+/**
+ * Raw event from ancestral-synth-json format
+ */
+export interface RawEvent {
+  id: string;
+  event_type: string;
+  primary_person_id: string;
+  event_date?: string;
+  event_year?: number;
+  location?: string;
+  description?: string;
+}
+
+/**
  * Genealogy JSON file structure (ancestral-synth-json format)
  *
  * Note: The JSON uses "child_links" as the key name (not "parent_child_links")
@@ -55,6 +79,8 @@ export interface GenealogyJson {
   persons: RawPerson[];
   child_links: RawParentChildLink[];
   spouse_links: RawSpouseLink[];
+  notes?: RawNote[];
+  events?: RawEvent[];
 }
 
 /**
@@ -163,22 +189,22 @@ export function parseDateString(dateStr: string | null | undefined): FuzzyDate |
     // Full date: YYYY-MM-DD
     return {
       type: 'exact',
-      year: parseInt(parts[0], 10),
-      month: parseInt(parts[1], 10),
-      day: parseInt(parts[2], 10),
+      year: parseInt(parts[0]!, 10),
+      month: parseInt(parts[1]!, 10),
+      day: parseInt(parts[2]!, 10),
     };
   } else if (parts.length === 2) {
     // Year and month: YYYY-MM
     return {
       type: 'exact',
-      year: parseInt(parts[0], 10),
-      month: parseInt(parts[1], 10),
+      year: parseInt(parts[0]!, 10),
+      month: parseInt(parts[1]!, 10),
     };
   } else {
     // Year only: YYYY
     return {
       type: 'exact',
-      year: parseInt(parts[0], 10),
+      year: parseInt(parts[0]!, 10),
     };
   }
 }
@@ -267,4 +293,101 @@ export function parseSpouseLinks(json: GenealogyJson): ParsedSpouseLink[] {
     person1Id: link.person1_id,
     person2Id: link.person2_id,
   }));
+}
+
+/**
+ * Parsed note ready for Prisma
+ */
+export interface ParsedNote {
+  id: string;
+  personId: string;
+  content: string;
+  title: string | null;
+}
+
+/**
+ * Parsed event ready for Prisma
+ */
+export interface ParsedEvent {
+  id: string;
+  primaryPersonId: string;
+  title: string;
+  description: string | null;
+  date: FuzzyDate | null;
+  location: Place | null;
+}
+
+/**
+ * Parse notes from genealogy JSON
+ *
+ * @param json - The genealogy JSON object
+ * @returns Array of parsed notes
+ */
+export function parseNotes(json: GenealogyJson): ParsedNote[] {
+  if (!json.notes) {
+    return [];
+  }
+
+  return json.notes.map((note) => ({
+    id: note.id,
+    personId: note.person_id,
+    content: note.content,
+    // Use category as title if available
+    title: note.category ? note.category.charAt(0).toUpperCase() + note.category.slice(1) : null,
+  }));
+}
+
+/**
+ * Map event type to human-readable title
+ */
+function mapEventTypeToTitle(eventType: string, description?: string): string {
+  const typeMap: Record<string, string> = {
+    birth: 'Birth',
+    death: 'Death',
+    marriage: 'Marriage',
+    occupation: 'Occupation',
+    military_service: 'Military Service',
+    education: 'Education',
+    residence: 'Residence',
+    immigration: 'Immigration',
+    emigration: 'Emigration',
+    naturalization: 'Naturalization',
+    other: description || 'Event',
+  };
+
+  return typeMap[eventType] || eventType.charAt(0).toUpperCase() + eventType.slice(1).replace(/_/g, ' ');
+}
+
+/**
+ * Parse events from genealogy JSON
+ *
+ * @param json - The genealogy JSON object
+ * @returns Array of parsed events
+ */
+export function parseEvents(json: GenealogyJson): ParsedEvent[] {
+  if (!json.events) {
+    return [];
+  }
+
+  return json.events.map((event) => {
+    // Construct FuzzyDate from event_date or event_year
+    let date: FuzzyDate | null = null;
+    if (event.event_date) {
+      date = parseDateString(event.event_date);
+    } else if (event.event_year) {
+      date = {
+        type: 'exact',
+        year: event.event_year,
+      };
+    }
+
+    return {
+      id: event.id,
+      primaryPersonId: event.primary_person_id,
+      title: mapEventTypeToTitle(event.event_type, event.description),
+      description: event.description ?? null,
+      date,
+      location: event.location ? { name: event.location } : null,
+    };
+  });
 }

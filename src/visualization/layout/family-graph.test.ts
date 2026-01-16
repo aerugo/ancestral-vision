@@ -1,0 +1,259 @@
+/**
+ * Family Graph Tests
+ *
+ * Tests for graph construction from family data with relationship inference.
+ */
+import { describe, it, expect } from 'vitest';
+import { FamilyGraph, calculateBiographyWeight, type PersonInput, type ParentChildInput } from './family-graph';
+import { EDGE_STRENGTH_DEFAULTS } from './types';
+
+describe('calculateBiographyWeight', () => {
+  it('should return 0 for undefined biography', () => {
+    expect(calculateBiographyWeight(undefined)).toBe(0);
+  });
+
+  it('should return 0 for empty biography', () => {
+    expect(calculateBiographyWeight('')).toBe(0);
+    expect(calculateBiographyWeight('   ')).toBe(0);
+  });
+
+  it('should return weight between 0 and 1', () => {
+    const weight = calculateBiographyWeight('A short biography');
+    expect(weight).toBeGreaterThan(0);
+    expect(weight).toBeLessThanOrEqual(1);
+  });
+
+  it('should return higher weight for longer biography', () => {
+    const shortWeight = calculateBiographyWeight('Short bio.');
+    const longWeight = calculateBiographyWeight('A much longer biography that contains many more characters and details about the person.');
+
+    expect(longWeight).toBeGreaterThan(shortWeight);
+  });
+
+  it('should cap at weight 1 for very long biographies', () => {
+    const veryLong = 'x'.repeat(2000);
+    const weight = calculateBiographyWeight(veryLong);
+    expect(weight).toBeLessThanOrEqual(1);
+  });
+
+  it('should use square root easing', () => {
+    // At 250 chars (25% of max), weight should be sqrt(0.25) = 0.5
+    const bio250 = 'x'.repeat(250);
+    const weight = calculateBiographyWeight(bio250);
+    expect(weight).toBeCloseTo(0.5, 1);
+  });
+});
+
+describe('FamilyGraph', () => {
+  describe('constructor', () => {
+    it('should create empty graph from empty data', () => {
+      const graph = new FamilyGraph([], []);
+      expect(graph.nodes.size).toBe(0);
+      expect(graph.edges.length).toBe(0);
+      expect(graph.centeredId).toBe('');
+    });
+
+    it('should create nodes from people', () => {
+      const people: PersonInput[] = [
+        { id: 'person1', name: 'Alice' },
+        { id: 'person2', name: 'Bob' },
+      ];
+      const graph = new FamilyGraph(people, []);
+
+      expect(graph.nodes.size).toBe(2);
+      expect(graph.nodes.get('person1')?.person.name).toBe('Alice');
+      expect(graph.nodes.get('person2')?.person.name).toBe('Bob');
+    });
+
+    it('should use first person as centeredId by default', () => {
+      const people: PersonInput[] = [
+        { id: 'person1', name: 'Alice' },
+        { id: 'person2', name: 'Bob' },
+      ];
+      const graph = new FamilyGraph(people, []);
+
+      expect(graph.centeredId).toBe('person1');
+    });
+
+    it('should use provided centeredPersonId', () => {
+      const people: PersonInput[] = [
+        { id: 'person1', name: 'Alice' },
+        { id: 'person2', name: 'Bob' },
+      ];
+      const graph = new FamilyGraph(people, [], 'person2');
+
+      expect(graph.centeredId).toBe('person2');
+    });
+  });
+
+  describe('parent-child relationships', () => {
+    it('should create parent-child edges', () => {
+      const people: PersonInput[] = [
+        { id: 'parent', name: 'Parent' },
+        { id: 'child', name: 'Child' },
+      ];
+      const parentChild: ParentChildInput[] = [
+        { parentId: 'parent', childId: 'child' },
+      ];
+
+      const graph = new FamilyGraph(people, parentChild);
+
+      expect(graph.edges.length).toBe(1);
+      expect(graph.edges[0]?.sourceId).toBe('parent');
+      expect(graph.edges[0]?.targetId).toBe('child');
+      expect(graph.edges[0]?.strength).toBe(EDGE_STRENGTH_DEFAULTS['parent-child']);
+    });
+
+    it('should calculate generations from parent-child relationships', () => {
+      const people: PersonInput[] = [
+        { id: 'grandparent', name: 'Grandparent' },
+        { id: 'parent', name: 'Parent' },
+        { id: 'child', name: 'Child' },
+      ];
+      const parentChild: ParentChildInput[] = [
+        { parentId: 'grandparent', childId: 'parent' },
+        { parentId: 'parent', childId: 'child' },
+      ];
+
+      const graph = new FamilyGraph(people, parentChild, 'parent');
+
+      expect(graph.nodes.get('grandparent')?.generation).toBe(-1);
+      expect(graph.nodes.get('parent')?.generation).toBe(0);
+      expect(graph.nodes.get('child')?.generation).toBe(1);
+    });
+  });
+
+  describe('children of same parent', () => {
+    it('should create only parent-child edges for siblings', () => {
+      const people: PersonInput[] = [
+        { id: 'parent', name: 'Parent' },
+        { id: 'child1', name: 'Child 1' },
+        { id: 'child2', name: 'Child 2' },
+      ];
+      const parentChild: ParentChildInput[] = [
+        { parentId: 'parent', childId: 'child1' },
+        { parentId: 'parent', childId: 'child2' },
+      ];
+
+      const graph = new FamilyGraph(people, parentChild);
+
+      // Only parent-child edges
+      expect(graph.edges.length).toBe(2);
+      expect(graph.edges.every(e => e.type === 'parent-child')).toBe(true);
+    });
+
+    it('should assign same generation to children of same parent', () => {
+      const people: PersonInput[] = [
+        { id: 'parent', name: 'Parent' },
+        { id: 'child1', name: 'Child 1' },
+        { id: 'child2', name: 'Child 2' },
+      ];
+      const parentChild: ParentChildInput[] = [
+        { parentId: 'parent', childId: 'child1' },
+        { parentId: 'parent', childId: 'child2' },
+      ];
+
+      const graph = new FamilyGraph(people, parentChild, 'parent');
+
+      expect(graph.nodes.get('child1')?.generation).toBe(1);
+      expect(graph.nodes.get('child2')?.generation).toBe(1);
+    });
+  });
+
+  describe('biography weight', () => {
+    it('should calculate biography weight for nodes', () => {
+      const people: PersonInput[] = [
+        { id: 'person1', name: 'Alice', biography: 'A long biography with lots of details.' },
+        { id: 'person2', name: 'Bob', biography: '' },
+      ];
+
+      const graph = new FamilyGraph(people, []);
+
+      expect(graph.nodes.get('person1')?.biographyWeight).toBeGreaterThan(0);
+      expect(graph.nodes.get('person2')?.biographyWeight).toBe(0);
+    });
+  });
+
+  describe('connections', () => {
+    it('should add connections to nodes', () => {
+      const people: PersonInput[] = [
+        { id: 'parent', name: 'Parent' },
+        { id: 'child', name: 'Child' },
+      ];
+      const parentChild: ParentChildInput[] = [
+        { parentId: 'parent', childId: 'child' },
+      ];
+
+      const graph = new FamilyGraph(people, parentChild);
+
+      expect(graph.nodes.get('parent')?.connections).toContain('child');
+      expect(graph.nodes.get('child')?.connections).toContain('parent');
+    });
+  });
+
+  describe('helper methods', () => {
+    it('getNodesArray should return all nodes', () => {
+      const people: PersonInput[] = [
+        { id: 'person1', name: 'Alice' },
+        { id: 'person2', name: 'Bob' },
+      ];
+      const graph = new FamilyGraph(people, []);
+
+      const nodes = graph.getNodesArray();
+      expect(nodes.length).toBe(2);
+      expect(nodes.map(n => n.id).sort()).toEqual(['person1', 'person2']);
+    });
+
+    it('getRelatives should return connected node IDs', () => {
+      const people: PersonInput[] = [
+        { id: 'parent', name: 'Parent' },
+        { id: 'child', name: 'Child' },
+        { id: 'unrelated', name: 'Unrelated' },
+      ];
+      const parentChild: ParentChildInput[] = [
+        { parentId: 'parent', childId: 'child' },
+      ];
+
+      const graph = new FamilyGraph(people, parentChild);
+
+      expect(graph.getRelatives('parent')).toContain('child');
+      expect(graph.getRelatives('parent')).not.toContain('unrelated');
+    });
+
+    it('getGenerationNodes should return nodes in a generation', () => {
+      const people: PersonInput[] = [
+        { id: 'parent', name: 'Parent' },
+        { id: 'child1', name: 'Child 1' },
+        { id: 'child2', name: 'Child 2' },
+      ];
+      const parentChild: ParentChildInput[] = [
+        { parentId: 'parent', childId: 'child1' },
+        { parentId: 'parent', childId: 'child2' },
+      ];
+
+      const graph = new FamilyGraph(people, parentChild, 'parent');
+
+      const gen1Nodes = graph.getGenerationNodes(1);
+      expect(gen1Nodes.length).toBe(2);
+      expect(gen1Nodes.map(n => n.id).sort()).toEqual(['child1', 'child2']);
+    });
+
+    it('getGenerationRange should return min and max generations', () => {
+      const people: PersonInput[] = [
+        { id: 'grandparent', name: 'Grandparent' },
+        { id: 'parent', name: 'Parent' },
+        { id: 'child', name: 'Child' },
+      ];
+      const parentChild: ParentChildInput[] = [
+        { parentId: 'grandparent', childId: 'parent' },
+        { parentId: 'parent', childId: 'child' },
+      ];
+
+      const graph = new FamilyGraph(people, parentChild, 'parent');
+
+      const range = graph.getGenerationRange();
+      expect(range.min).toBe(-1);
+      expect(range.max).toBe(1);
+    });
+  });
+});

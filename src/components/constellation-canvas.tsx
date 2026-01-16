@@ -15,7 +15,6 @@ import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js
 import { createRenderer } from '@/visualization/renderer';
 import { createScene, createCamera, createControls, disposeScene } from '@/visualization/scene';
 import {
-  createConstellationMesh,
   generatePlaceholderPeople,
   type PlaceholderPerson,
 } from '@/visualization/constellation';
@@ -45,6 +44,7 @@ import {
 } from '@/visualization/particles';
 import {
   createSacredGeometryGrid,
+  updateSacredGeometryGrid,
   disposeSacredGeometryGrid,
   createPostProcessing,
   updatePostProcessingSize,
@@ -54,8 +54,14 @@ import {
 } from '@/visualization/effects';
 import { ConstellationSelection } from '@/visualization/selection';
 import { CameraAnimator } from '@/visualization/camera-animation';
-import { ForceLayout, type LayoutNode } from '@/visualization/layout';
-import { usePeople } from '@/hooks/use-people';
+import {
+  FamilyGraph,
+  ForceDirectedLayout,
+  type PersonInput,
+  type ParentChildInput,
+  type GraphEdge,
+} from '@/visualization/layout';
+import { useConstellationGraph } from '@/hooks/use-constellation-graph';
 import { useSelectionStore } from '@/store/selection-store';
 import * as THREE from 'three';
 
@@ -76,55 +82,110 @@ function createFocusIndicator(): THREE.Mesh {
 }
 
 /**
+ * Result of layout calculation including positions and edges
+ */
+interface LayoutResult {
+  people: PlaceholderPerson[];
+  edges: GraphEdge[];
+}
+
+/**
  * Convert API people data to PlaceholderPerson format for visualization
  * Uses force-directed layout with golden angle distribution
+ * Layout algorithm ported from: reference_prototypes/family-constellations/
+ *
+ * Uses FamilyGraph to build parent-child edges for tree structure
  */
 function peopleToPlacelderPeople(
-  people: Array<{ id: string; givenName: string | null; surname: string | null; generation: number }>
-): PlaceholderPerson[] {
-  if (people.length === 0) return [];
+  people: Array<{ id: string; givenName: string | null; surname: string | null; generation: number; biography?: string | null }>,
+  parentChildRelationships: ParentChildInput[] = [],
+  centeredPersonId?: string
+): LayoutResult {
+  if (people.length === 0) return { people: [], edges: [] };
 
-  // Create layout nodes from people data
-  const layoutNodes: LayoutNode[] = people.map(person => ({
+  // Convert to PersonInput format for FamilyGraph
+  const personInputs: PersonInput[] = people.map(person => ({
     id: person.id,
-    generation: person.generation,
-    position: { x: 0, y: 0, z: 0 },
-    velocity: { x: 0, y: 0, z: 0 },
+    name: person.givenName || person.surname || 'Unknown',
+    biography: person.biography ?? undefined,
   }));
 
-  // Initialize force-directed layout with golden angle distribution
-  const layout = new ForceLayout(layoutNodes, {
-    generationSpacing: 60,      // Distance between generation rings
-    repulsionStrength: 80,      // Push nodes apart
-    centerStrength: 0.03,       // Keep centered
-    generationStrength: 0.15,   // Maintain ring structure
-    damping: 0.85,              // Velocity decay
-  });
+  // Build family graph with parent-child relationships
+  // If no relationships provided, infer from generation structure
+  let parentChild = parentChildRelationships;
 
-  // Initialize positions using golden angle
-  layout.initialize();
+  if (parentChild.length === 0) {
+    console.warn('[peopleToPlacelderPeople] No parent-child relationships provided, generating demo relationships');
+    // Fallback: Infer parent-child relationships from generation structure
+    // Group by generation and connect to adjacent generations
+    const genMap = new Map<number, typeof people>();
+    people.forEach(person => {
+      const gen = person.generation;
+      if (!genMap.has(gen)) genMap.set(gen, []);
+      genMap.get(gen)!.push(person);
+    });
 
-  // Run simulation until stable (max 150 iterations)
-  for (let i = 0; i < 150; i++) {
-    layout.step();
-    if (layout.isStable()) break;
+    const sortedGens = Array.from(genMap.keys()).sort((a, b) => a - b);
+    parentChild = [];
+
+    for (let i = 0; i < sortedGens.length - 1; i++) {
+      const currentGen = sortedGens[i];
+      const nextGen = sortedGens[i + 1];
+      if (currentGen === undefined || nextGen === undefined) continue;
+
+      const currentPeople = genMap.get(currentGen) || [];
+      const nextPeople = genMap.get(nextGen) || [];
+
+      // Connect each person in current gen to 1-2 people in next gen
+      currentPeople.forEach((person, idx) => {
+        const connectCount = Math.min(2, nextPeople.length);
+        for (let j = 0; j < connectCount; j++) {
+          const targetIndex = (idx + j) % nextPeople.length;
+          const targetPerson = nextPeople[targetIndex];
+          if (targetPerson) {
+            parentChild.push({
+              parentId: person.id,
+              childId: targetPerson.id,
+            });
+          }
+        }
+      });
+    }
   }
 
-  // Get final positions from layout
-  const positionMap = layout.getPositionMap();
+  // Build the graph with parent-child relationships
+  const graph = new FamilyGraph(
+    personInputs,
+    parentChild,
+    centeredPersonId ?? people[0]?.id
+  );
 
-  return people.map(person => {
-    const layoutPos = positionMap.get(person.id) || { x: 0, y: 0, z: 0 };
+  // Get nodes array and edges
+  const nodes = graph.getNodesArray();
+  const edges = graph.edges;
+
+  console.log(`[peopleToPlacelderPeople] Graph built: ${nodes.length} nodes, ${edges.length} parent-child edges`);
+
+  // Run force-directed layout
+  const layout = new ForceDirectedLayout();
+  layout.calculate(nodes, edges, graph.centeredId);
+
+  // Convert to PlaceholderPerson format
+  const result: PlaceholderPerson[] = people.map(person => {
+    const node = graph.nodes.get(person.id);
+    const pos = node?.position ?? { x: 0, y: 0, z: 0 };
     return {
       id: person.id,
       givenName: person.givenName || person.surname || 'Unknown',
       position: {
-        x: layoutPos.x,
-        y: layoutPos.y, // Layout keeps y=0, can add variation if desired
-        z: layoutPos.z,
+        x: pos.x,
+        y: pos.y,
+        z: pos.z,
       },
     };
   });
+
+  return { people: result, edges };
 }
 
 export function ConstellationCanvas(): React.ReactElement {
@@ -145,8 +206,8 @@ export function ConstellationCanvas(): React.ReactElement {
   const postProcessingRef = useRef<PostProcessingResult | null>(null);
   const usePostProcessingRef = useRef<boolean>(false);
 
-  // Fetch real people data
-  const { data: people, isLoading, isError, error } = usePeople();
+  // Fetch constellation graph data (people + relationships) for layout
+  const { data: graphData, isLoading, isError, error } = useConstellationGraph();
   const { selectPerson, clearSelection } = useSelectionStore();
 
   // Keyboard navigation state (using refs to avoid re-initializing scene)
@@ -156,10 +217,10 @@ export function ConstellationCanvas(): React.ReactElement {
 
   // Debug logging
   if (isError) {
-    console.error('[ConstellationCanvas] Failed to fetch people:', error);
+    console.error('[ConstellationCanvas] Failed to fetch constellation graph:', error);
   }
   if (!isLoading && !isError) {
-    console.log('[ConstellationCanvas] People loaded:', people?.length ?? 0, 'people');
+    console.log('[ConstellationCanvas] Constellation graph loaded:', graphData?.rawPeople?.length ?? 0, 'people,', graphData?.parentChildRelationships?.length ?? 0, 'parent-child relationships');
   }
 
   const initScene = useCallback(async (): Promise<(() => void) | undefined> => {
@@ -206,16 +267,25 @@ export function ConstellationCanvas(): React.ReactElement {
 
     // Add constellation - use real data if available
     // Only use placeholder data if loading fails (empty array after load)
-    const constellationPeople =
-      people && people.length > 0
-        ? peopleToPlacelderPeople(people)
+    // Layout result includes both positioned people AND proper edges with types
+    const layoutResult =
+      graphData && graphData.rawPeople.length > 0
+        ? peopleToPlacelderPeople(
+            graphData.rawPeople,
+            graphData.parentChildRelationships,
+            graphData.centeredPersonId
+          )
         : isLoading
-          ? [] // Don't show anything while loading
-          : generatePlaceholderPeople(10); // Only show placeholder if no data after load
+          ? { people: [], edges: [] } // Don't show anything while loading
+          : { people: generatePlaceholderPeople(10), edges: [] }; // Only show placeholder if no data after load
+
+    const constellationPeople = layoutResult.people;
+    const graphEdges = layoutResult.edges;
 
     // Use new instanced constellation with TSL materials (Phase 1)
     const positions: THREE.Vector3[] = [];
     const biographyWeights: number[] = [];
+    const positionMap = new Map<string, THREE.Vector3>(); // Map person ID to position for edge rendering
     if (constellationPeople.length > 0) {
       const constellationData: ConstellationData = {
         positions: constellationPeople.map(p => new THREE.Vector3(p.position.x, p.position.y, p.position.z)),
@@ -224,43 +294,39 @@ export function ConstellationCanvas(): React.ReactElement {
       };
       positions.push(...constellationData.positions);
       biographyWeights.push(...constellationData.biographyWeights);
+
+      // Build position map for edge rendering
+      constellationPeople.forEach((p, i) => {
+        positionMap.set(p.id, constellationData.positions[i]!);
+      });
+
       const instancedResult = createInstancedConstellation(constellationData);
       instancedConstellationRef.current = instancedResult;
       scene.add(instancedResult.mesh);
     }
 
-    // Add edge system (Phase 2) - create demo edges between nodes
-    if (positions.length > 1) {
-      const edges: EdgeSystemData['edges'] = [];
-      // Create edges between consecutive nodes to demo the Bezier curves
-      for (let i = 0; i < positions.length - 1; i++) {
-        const sourcePos = positions[i];
-        const targetPos = positions[i + 1];
-        if (sourcePos && targetPos) {
-          edges.push({
-            id: `edge-${i}`,
+    // Add edge system (Phase 2) - use REAL edges from FamilyGraph with proper types
+    if (positions.length > 1 && graphEdges.length > 0) {
+      const visualEdges: EdgeSystemData['edges'] = graphEdges
+        .map(edge => {
+          const sourcePos = positionMap.get(edge.sourceId);
+          const targetPos = positionMap.get(edge.targetId);
+          if (!sourcePos || !targetPos) return null;
+          return {
+            id: edge.id,
             sourcePosition: sourcePos,
             targetPosition: targetPos,
-            type: 'parent-child',
-            strength: 0.8 + Math.random() * 0.2,
-          });
-        }
+            type: edge.type,
+            strength: edge.strength,
+          };
+        })
+        .filter((e): e is NonNullable<typeof e> => e !== null);
+
+      if (visualEdges.length > 0) {
+        const edgeResult = createEdgeSystem({ edges: visualEdges }, { material: { enhancedMode: true } });
+        edgeSystemRef.current = edgeResult;
+        scene.add(edgeResult.mesh);
       }
-      // Add an extra edge from last to first to show a loop
-      const firstPos = positions[0];
-      const lastPos = positions[positions.length - 1];
-      if (firstPos && lastPos && positions.length > 2) {
-        edges.push({
-          id: 'edge-loop',
-          sourcePosition: lastPos,
-          targetPosition: firstPos,
-          type: 'spouse',
-          strength: 0.6,
-        });
-      }
-      const edgeResult = createEdgeSystem({ edges }, { material: { enhancedMode: true } });
-      edgeSystemRef.current = edgeResult;
-      scene.add(edgeResult.mesh);
     }
 
     // Add background particles (Phase 3) - atmospheric Haeckel-inspired particles
@@ -338,11 +404,6 @@ export function ConstellationCanvas(): React.ReactElement {
       console.warn('[ConstellationCanvas] Post-processing setup failed:', error);
       usePostProcessingRef.current = false;
     }
-
-    // Also add old constellation for comparison (can be removed later)
-    const constellation = createConstellationMesh(constellationPeople);
-    constellation.position.x = 100; // Offset to compare side by side
-    scene.add(constellation);
 
     // Store people positions for keyboard navigation
     peoplePositionsRef.current = constellationPeople;
@@ -490,6 +551,11 @@ export function ConstellationCanvas(): React.ReactElement {
         updateEventFirefliesTime(eventFirefliesRef.current.uniforms, elapsedTime);
       }
 
+      // Update sacred geometry grid animation (Phase 5) - slow rotation
+      if (sacredGeometryGridRef.current) {
+        updateSacredGeometryGrid(sacredGeometryGridRef.current, elapsedTime);
+      }
+
       controls.update();
 
       // Render with or without post-processing (Phase 6)
@@ -564,7 +630,7 @@ export function ConstellationCanvas(): React.ReactElement {
         canvas.parentNode.removeChild(canvas);
       }
     };
-  }, [people, selectPerson, clearSelection, isLoading]);
+  }, [graphData, selectPerson, clearSelection, isLoading]);
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;

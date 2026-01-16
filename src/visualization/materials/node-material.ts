@@ -88,10 +88,10 @@ export function createNodeMaterial(config: NodeMaterialConfig = {}): NodeMateria
     glowIntensity = 1.5,
     pulseSpeed = 2.0,
     pulseAmplitude = 0.05,
-    enhancedMode = false,
+    enhancedMode = true, // Phase 2: Enable enhanced visual effects by default
     innerGlowIntensity = 0.8,
     sssStrength = 0.3,
-    mandalaIntensity = 0.3,
+    mandalaIntensity = 0.4, // Phase 6: Tuned to prototype value
   } = config;
 
   // Create base uniforms

@@ -9,6 +9,18 @@ import {
   type VisualizationData,
   type VisualizationConfig,
 } from './engine';
+import { createRenderer } from './renderer';
+import {
+  createPostProcessing,
+  disposePostProcessing,
+  updatePostProcessingSize,
+} from './effects/post-processing';
+import {
+  createTSLPostProcessing,
+  disposeTSLPostProcessing,
+  updateTSLPostProcessingSize,
+  renderWithTSLPostProcessing,
+} from './effects/webgpu-post-processing';
 
 // Mock the renderer module to avoid WebGPU initialization issues in tests
 vi.mock('./renderer', () => ({
@@ -41,6 +53,25 @@ vi.mock('./effects/post-processing', () => ({
   updatePostProcessingSize: vi.fn(),
   renderWithPostProcessing: vi.fn(),
   disposePostProcessing: vi.fn(),
+}));
+
+// Mock TSL post-processing for WebGPU
+vi.mock('./effects/webgpu-post-processing', () => ({
+  createTSLPostProcessing: vi.fn().mockReturnValue({
+    postProcessing: {
+      render: vi.fn(),
+      setSize: vi.fn(),
+      dispose: vi.fn(),
+    },
+    config: {
+      bloom: { enabled: true, intensity: 0.6, threshold: 0.3, radius: 0.5 },
+      vignette: { enabled: true, darkness: 0.4, offset: 0.3 },
+    },
+    uniforms: {},
+  }),
+  updateTSLPostProcessingSize: vi.fn(),
+  renderWithTSLPostProcessing: vi.fn(),
+  disposeTSLPostProcessing: vi.fn(),
 }));
 
 // Mock sacred geometry grid
@@ -318,6 +349,172 @@ describe('visualization engine', () => {
 
       disposeVisualizationEngine(engine);
       expect(disposeSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('WebGPU Post-Processing Integration (Phase 1)', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    describe('when renderer is WebGPURenderer', () => {
+      beforeEach(() => {
+        // Override renderer mock to simulate WebGPU
+        vi.mocked(createRenderer).mockImplementation(async () => {
+          const mockRenderer = {
+            setSize: vi.fn(),
+            setAnimationLoop: vi.fn(),
+            render: vi.fn(),
+            dispose: vi.fn(),
+            getSize: vi.fn().mockImplementation((target: THREE.Vector2) => {
+              target.set(800, 600);
+              return target;
+            }),
+            domElement: { tagName: 'CANVAS' },
+            constructor: { name: 'WebGPURenderer' }, // WebGPU!
+          };
+          return mockRenderer as unknown as THREE.WebGLRenderer;
+        });
+      });
+
+      it('should create TSL post-processing for WebGPU renderer', async () => {
+        const engine = await createVisualizationEngine(container);
+        expect(vi.mocked(createTSLPostProcessing)).toHaveBeenCalled();
+        expect(vi.mocked(createPostProcessing)).not.toHaveBeenCalled();
+        engine.dispose();
+      });
+
+      it('should dispose TSL post-processing on engine dispose', async () => {
+        const engine = await createVisualizationEngine(container);
+        engine.dispose();
+        expect(vi.mocked(disposeTSLPostProcessing)).toHaveBeenCalled();
+        expect(vi.mocked(disposePostProcessing)).not.toHaveBeenCalled();
+      });
+
+      it('should resize TSL post-processing on engine resize', async () => {
+        const engine = await createVisualizationEngine(container);
+        engine.resize(1920, 1080);
+        expect(vi.mocked(updateTSLPostProcessingSize)).toHaveBeenCalledWith(expect.anything(), 1920, 1080);
+        engine.dispose();
+      });
+
+      it('should use TSL post-processing in render loop', async () => {
+        // Capture the animation callback
+        let animationCallback: (() => void) | null = null;
+        vi.mocked(createRenderer).mockImplementation(async () => {
+          const mockRenderer = {
+            setSize: vi.fn(),
+            setAnimationLoop: vi.fn((callback: (() => void) | null) => {
+              animationCallback = callback;
+            }),
+            render: vi.fn(),
+            dispose: vi.fn(),
+            getSize: vi.fn().mockImplementation((target: THREE.Vector2) => {
+              target.set(800, 600);
+              return target;
+            }),
+            domElement: { tagName: 'CANVAS' },
+            constructor: { name: 'WebGPURenderer' },
+          };
+          return mockRenderer as unknown as THREE.WebGLRenderer;
+        });
+
+        const engine = await createVisualizationEngine(container);
+        engine.start();
+
+        // Manually invoke the animation callback to simulate render loop
+        expect(animationCallback).not.toBeNull();
+        if (animationCallback) {
+          animationCallback();
+        }
+
+        expect(vi.mocked(renderWithTSLPostProcessing)).toHaveBeenCalled();
+        engine.stop();
+        engine.dispose();
+      });
+    });
+
+    describe('when renderer is WebGLRenderer', () => {
+      beforeEach(() => {
+        // Restore WebGL renderer mock
+        vi.mocked(createRenderer).mockImplementation(async () => {
+          const mockRenderer = {
+            setSize: vi.fn(),
+            setAnimationLoop: vi.fn(),
+            render: vi.fn(),
+            dispose: vi.fn(),
+            getSize: vi.fn().mockImplementation((target: THREE.Vector2) => {
+              target.set(800, 600);
+              return target;
+            }),
+            domElement: { tagName: 'CANVAS' },
+            constructor: { name: 'WebGLRenderer' }, // WebGL
+          };
+          return mockRenderer as unknown as THREE.WebGLRenderer;
+        });
+      });
+
+      it('should create WebGL post-processing for WebGL renderer', async () => {
+        const engine = await createVisualizationEngine(container);
+        expect(vi.mocked(createPostProcessing)).toHaveBeenCalled();
+        expect(vi.mocked(createTSLPostProcessing)).not.toHaveBeenCalled();
+        engine.dispose();
+      });
+
+      it('should dispose WebGL post-processing on engine dispose', async () => {
+        const engine = await createVisualizationEngine(container);
+        engine.dispose();
+        expect(vi.mocked(disposePostProcessing)).toHaveBeenCalled();
+        expect(vi.mocked(disposeTSLPostProcessing)).not.toHaveBeenCalled();
+      });
+
+      it('should resize WebGL post-processing on engine resize', async () => {
+        const engine = await createVisualizationEngine(container);
+        engine.resize(1920, 1080);
+        expect(vi.mocked(updatePostProcessingSize)).toHaveBeenCalled();
+        engine.dispose();
+      });
+    });
+
+    describe('post-processing configuration', () => {
+      beforeEach(() => {
+        // Use WebGPU for these tests
+        vi.mocked(createRenderer).mockImplementation(async () => {
+          const mockRenderer = {
+            setSize: vi.fn(),
+            setAnimationLoop: vi.fn(),
+            render: vi.fn(),
+            dispose: vi.fn(),
+            getSize: vi.fn().mockImplementation((target: THREE.Vector2) => {
+              target.set(800, 600);
+              return target;
+            }),
+            domElement: { tagName: 'CANVAS' },
+            constructor: { name: 'WebGPURenderer' },
+          };
+          return mockRenderer as unknown as THREE.WebGLRenderer;
+        });
+      });
+
+      it('should pass post-processing config to TSL post-processing', async () => {
+        const config: VisualizationConfig = {
+          postProcessing: {
+            bloom: { intensity: 0.8 },
+            vignette: { darkness: 0.5 },
+          },
+        };
+        const engine = await createVisualizationEngine(container, config);
+        expect(vi.mocked(createTSLPostProcessing)).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.anything(),
+          expect.anything(),
+          expect.objectContaining({
+            bloom: expect.objectContaining({ intensity: 0.8 }),
+            vignette: expect.objectContaining({ darkness: 0.5 }),
+          })
+        );
+        engine.dispose();
+      });
     });
   });
 });

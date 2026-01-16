@@ -34,6 +34,19 @@ const DEFAULT_CONFIG: Required<SacredGeometryConfig> = {
 };
 
 /**
+ * Sacred geometry grid result with animation capability
+ * Phase 5: Visual parity with prototype
+ */
+export interface SacredGeometryGridResult {
+  /** The grid group mesh */
+  mesh: THREE.Group;
+  /** Update function for animation (call with elapsed time in seconds) */
+  update: (time: number) => void;
+  /** Dispose function for cleanup */
+  dispose: () => void;
+}
+
+/**
  * Creates sacred geometry grid group with concentric rings and radial lines
  * @param config - Grid configuration
  * @returns Group containing ring and radial line meshes
@@ -123,6 +136,50 @@ export function createSacredGeometryGrid(
   }
 
   return group;
+}
+
+/**
+ * Creates sacred geometry grid with animation capability
+ * Phase 5: Visual parity with prototype - adds subtle rotation animation
+ *
+ * @param config - Grid configuration
+ * @returns Grid result with mesh, update, and dispose methods
+ */
+export function createAnimatedSacredGeometryGrid(
+  config: SacredGeometryConfig = {}
+): SacredGeometryGridResult {
+  const group = createSacredGeometryGrid(config);
+
+  /**
+   * Update animation - very slow rotation for ethereal effect
+   * @param time - Elapsed time in seconds
+   */
+  function update(time: number): void {
+    group.rotation.y = time * 0.02; // Very slow rotation (0.02 rad/sec)
+  }
+
+  /**
+   * Dispose all resources
+   */
+  function dispose(): void {
+    disposeSacredGeometryGrid(group);
+  }
+
+  return {
+    mesh: group,
+    update,
+    dispose,
+  };
+}
+
+/**
+ * Updates sacred geometry grid animation
+ * Convenience function for existing grid groups
+ * @param group - Grid group to animate
+ * @param time - Elapsed time in seconds
+ */
+export function updateSacredGeometryGrid(group: THREE.Group, time: number): void {
+  group.rotation.y = time * 0.02; // Very slow rotation (0.02 rad/sec)
 }
 
 /**

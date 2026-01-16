@@ -29,15 +29,17 @@ export interface EdgeSystemConfig {
 }
 
 export interface EdgeSystemResult {
-  mesh: THREE.Line;
+  mesh: THREE.LineSegments;
   uniforms: EdgeMaterialUniforms;
 }
 
 /**
- * Creates complete edge rendering system
+ * Creates complete edge rendering system.
+ * Uses LineSegments to prevent spurious connections between separate edges.
+ *
  * @param data - Edge connection data
  * @param config - System configuration
- * @returns Line mesh and uniform references
+ * @returns LineSegments mesh and uniform references
  */
 export function createEdgeSystem(
   data: EdgeSystemData,
@@ -46,7 +48,9 @@ export function createEdgeSystem(
   const geometry = createEdgeGeometry(data.edges, config.geometry);
   const { material, uniforms } = createEdgeMaterial(config.material);
 
-  const mesh = new THREE.Line(geometry, material);
+  // Use LineSegments to draw disconnected line segments
+  // This prevents THREE.Line from drawing spurious connections between edges
+  const mesh = new THREE.LineSegments(geometry, material);
   mesh.frustumCulled = false; // Edges span large areas
 
   return { mesh, uniforms };
@@ -63,9 +67,9 @@ export function updateEdgeSystemTime(uniforms: EdgeMaterialUniforms, time: numbe
 
 /**
  * Disposes edge system resources (INV-A009)
- * @param mesh - Line mesh to dispose
+ * @param mesh - LineSegments mesh to dispose
  */
-export function disposeEdgeSystem(mesh: THREE.Line): void {
+export function disposeEdgeSystem(mesh: THREE.LineSegments): void {
   disposeEdgeGeometry(mesh.geometry);
   if (Array.isArray(mesh.material)) {
     mesh.material.forEach((m) => disposeEdgeMaterial(m));

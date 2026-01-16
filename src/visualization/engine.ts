@@ -13,6 +13,13 @@ import {
   type PostProcessingResult,
 } from './effects/post-processing';
 import {
+  createTSLPostProcessing,
+  updateTSLPostProcessingSize,
+  renderWithTSLPostProcessing,
+  disposeTSLPostProcessing,
+  type TSLPostProcessingResult,
+} from './effects/webgpu-post-processing';
+import {
   createSacredGeometryGrid,
   disposeSacredGeometryGrid,
   type SacredGeometryConfig,
@@ -173,12 +180,21 @@ export async function createVisualizationEngine(
   const gridGroup = createSacredGeometryGrid(resolvedConfig.grid);
   scene.add(gridGroup);
 
-  // Post-processing (WebGL only)
+  // Post-processing (WebGL or WebGPU)
   let postProcessing: PostProcessingResult | null = null;
+  let tslPostProcessing: TSLPostProcessingResult | null = null;
   const isWebGL = renderer.constructor.name === 'WebGLRenderer';
   if (isWebGL) {
     postProcessing = createPostProcessing(
       renderer as THREE.WebGLRenderer,
+      scene,
+      camera,
+      resolvedConfig.postProcessing
+    );
+  } else {
+    // WebGPU renderer - use TSL post-processing
+    tslPostProcessing = createTSLPostProcessing(
+      renderer,
       scene,
       camera,
       resolvedConfig.postProcessing
@@ -211,10 +227,15 @@ export async function createVisualizationEngine(
     const elapsed = (performance.now() - animationStartTime) / 1000;
     timeUniform.value = elapsed;
 
-    // Render
+    // Render with appropriate post-processing
     if (postProcessing) {
+      // WebGL path
       renderWithPostProcessing(postProcessing.composer);
+    } else if (tslPostProcessing) {
+      // WebGPU path
+      renderWithTSLPostProcessing(tslPostProcessing.postProcessing);
     } else {
+      // Fallback: direct render
       renderer.render(scene, camera);
     }
   }
@@ -379,6 +400,9 @@ export async function createVisualizationEngine(
       if (postProcessing) {
         updatePostProcessingSize(postProcessing.composer, width, height);
       }
+      if (tslPostProcessing) {
+        updateTSLPostProcessingSize(tslPostProcessing.postProcessing, width, height);
+      }
     },
 
     dispose(): void {
@@ -399,6 +423,10 @@ export async function createVisualizationEngine(
       if (postProcessing) {
         disposePostProcessing(postProcessing.composer);
         postProcessing = null;
+      }
+      if (tslPostProcessing) {
+        disposeTSLPostProcessing(tslPostProcessing.postProcessing);
+        tslPostProcessing = null;
       }
 
       // Dispose renderer

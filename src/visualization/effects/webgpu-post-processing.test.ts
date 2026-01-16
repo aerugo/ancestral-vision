@@ -200,9 +200,9 @@ describe('TSL Post-Processing (Phase 9.3)', () => {
       expect(result.config.bloom.intensity).toBe(0.6);
     });
 
-    it('should use default bloom threshold of 0.3', () => {
+    it('should use default bloom threshold of 0.8 (Phase 6 tuned)', () => {
       const result = createTSLPostProcessing(mockRenderer, mockScene, mockCamera);
-      expect(result.config.bloom.threshold).toBe(0.3);
+      expect(result.config.bloom.threshold).toBe(0.8);
     });
   });
 

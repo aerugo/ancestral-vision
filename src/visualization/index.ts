@@ -119,12 +119,29 @@ export {
   type PerformanceMode,
 } from './performance';
 
-// Layout System
+// Layout System (ported from prototype)
 export {
-  ForceLayout,
+  ForceDirectedLayout,
+  FamilyGraph,
+  BarnesHutTree,
+  calculateBiographyWeight,
   GOLDEN_ANGLE,
-  type LayoutNode,
-  type LayoutEdge,
-  type Vector3,
-  type ForceLayoutConfig,
+  BARNES_HUT_THRESHOLD,
+  DEFAULT_LAYOUT_CONFIG,
+  EDGE_IDEAL_DISTANCE_MULTIPLIERS,
+  EDGE_STRENGTH_DEFAULTS,
+  vec3Add,
+  vec3Sub,
+  vec3Scale,
+  vec3Length,
+  vec3Normalize,
+  type Vec3,
+  type GraphNode,
+  type GraphEdge,
+  type EdgeType,
+  type LayoutPerson,
+  type LayoutConfig,
+  type PersonInput,
+  type ParentChildInput,
+  type SpouseInput,
 } from './layout';

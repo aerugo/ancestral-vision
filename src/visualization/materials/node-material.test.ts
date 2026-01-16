@@ -212,9 +212,9 @@ describe('node-material module', () => {
       expect(uniforms.uSSSStrength.value).toBe(0.3);
     });
 
-    it('should default mandala intensity to 0.3', () => {
+    it('should default mandala intensity to 0.4 (Phase 6 tuned)', () => {
       const { uniforms } = createNodeMaterial({ enhancedMode: true });
-      expect(uniforms.uMandalaIntensity.value).toBe(0.3);
+      expect(uniforms.uMandalaIntensity.value).toBe(0.4);
     });
 
     it('should accept custom inner glow intensity', () => {
@@ -241,15 +241,40 @@ describe('node-material module', () => {
       expect(uniforms.uMandalaIntensity.value).toBe(0.6);
     });
 
-    it('should not create enhanced uniforms when enhancedMode is false', () => {
+    it('should not create enhanced uniforms when enhancedMode is explicitly false', () => {
       const { uniforms } = createNodeMaterial({ enhancedMode: false });
       expect(uniforms.uInnerGlowIntensity).toBeUndefined();
       expect(uniforms.uSSSStrength).toBeUndefined();
       expect(uniforms.uMandalaIntensity).toBeUndefined();
     });
+  });
 
-    it('should not create enhanced uniforms by default', () => {
+  describe('Enhanced mode default (Phase 2 - Visual Parity)', () => {
+    it('should enable enhanced mode by default', () => {
       const { uniforms } = createNodeMaterial();
+      // Enhanced uniforms should be present by default
+      expect(uniforms.uInnerGlowIntensity).toBeDefined();
+      expect(uniforms.uSSSStrength).toBeDefined();
+      expect(uniforms.uMandalaIntensity).toBeDefined();
+    });
+
+    it('should have default inner glow intensity of 0.8 when using defaults', () => {
+      const { uniforms } = createNodeMaterial();
+      expect(uniforms.uInnerGlowIntensity?.value).toBe(0.8);
+    });
+
+    it('should have default SSS strength of 0.3 when using defaults', () => {
+      const { uniforms } = createNodeMaterial();
+      expect(uniforms.uSSSStrength?.value).toBe(0.3);
+    });
+
+    it('should have default mandala intensity of 0.4 when using defaults (Phase 6 tuned)', () => {
+      const { uniforms } = createNodeMaterial();
+      expect(uniforms.uMandalaIntensity?.value).toBe(0.4);
+    });
+
+    it('should allow disabling enhanced mode explicitly', () => {
+      const { uniforms } = createNodeMaterial({ enhancedMode: false });
       expect(uniforms.uInnerGlowIntensity).toBeUndefined();
       expect(uniforms.uSSSStrength).toBeUndefined();
       expect(uniforms.uMandalaIntensity).toBeUndefined();

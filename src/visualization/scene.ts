@@ -14,7 +14,14 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 const COLORS = {
   background: new THREE.Color(0x050510), // Deep space blue-black
   ambient: new THREE.Color(0x1a1a2e),
+  fog: new THREE.Color(0x0a0612), // Cosmic indigo - slightly lighter for depth
 } as const;
+
+/**
+ * Fog configuration for atmospheric depth
+ * Phase 5: Visual parity with prototype
+ */
+const FOG_DENSITY = 0.001; // Moderate density (prototype uses 0.0008-0.0012)
 
 /**
  * Create a new Three.js scene with cosmic styling
@@ -22,6 +29,10 @@ const COLORS = {
 export function createScene(): THREE.Scene {
   const scene = new THREE.Scene();
   scene.background = COLORS.background;
+
+  // Atmospheric fog for depth perception (Phase 5: Visual parity)
+  // Creates sense of infinite cosmic space with objects fading at distance
+  scene.fog = new THREE.FogExp2(COLORS.fog.getHex(), FOG_DENSITY);
 
   // Add ambient light for base visibility
   const ambientLight = new THREE.AmbientLight(0x404040, 0.5);

@@ -316,3 +316,156 @@ describe('getIntersectedPosition', () => {
     expect(result).toBeNull();
   });
 });
+
+describe('InstancedMesh selection', () => {
+  it('should return personId from InstancedMesh using instanceId', () => {
+    const camera = new THREE.PerspectiveCamera();
+    const scene = new THREE.Scene();
+    const selection = new ConstellationSelection(camera, scene);
+
+    // Create mock InstancedMesh with personIds array
+    const mockInstancedMesh = new THREE.InstancedMesh(
+      new THREE.SphereGeometry(1),
+      new THREE.MeshBasicMaterial(),
+      3
+    );
+    mockInstancedMesh.userData.personIds = ['person-0', 'person-1', 'person-2'];
+
+    const mockIntersects = [
+      {
+        object: mockInstancedMesh,
+        instanceId: 1, // Second instance
+        point: new THREE.Vector3(10, 20, 30),
+      },
+    ];
+
+    const raycasterSpy = vi.spyOn(THREE.Raycaster.prototype, 'intersectObjects');
+    raycasterSpy.mockReturnValue(mockIntersects as unknown as THREE.Intersection[]);
+
+    const result = selection.getIntersectedPerson(0, 0);
+
+    expect(result).toBe('person-1');
+
+    raycasterSpy.mockRestore();
+    selection.dispose();
+    mockInstancedMesh.geometry.dispose();
+    (mockInstancedMesh.material as THREE.Material).dispose();
+  });
+
+  it('should return null for InstancedMesh without personIds array', () => {
+    const camera = new THREE.PerspectiveCamera();
+    const scene = new THREE.Scene();
+    const selection = new ConstellationSelection(camera, scene);
+
+    const mockInstancedMesh = new THREE.InstancedMesh(
+      new THREE.SphereGeometry(1),
+      new THREE.MeshBasicMaterial(),
+      3
+    );
+    // No personIds array set
+
+    const mockIntersects = [
+      {
+        object: mockInstancedMesh,
+        instanceId: 1,
+        point: new THREE.Vector3(10, 20, 30),
+      },
+    ];
+
+    const raycasterSpy = vi.spyOn(THREE.Raycaster.prototype, 'intersectObjects');
+    raycasterSpy.mockReturnValue(mockIntersects as unknown as THREE.Intersection[]);
+
+    const result = selection.getIntersectedPerson(0, 0);
+
+    expect(result).toBeNull();
+
+    raycasterSpy.mockRestore();
+    selection.dispose();
+    mockInstancedMesh.geometry.dispose();
+    (mockInstancedMesh.material as THREE.Material).dispose();
+  });
+
+  it('should return position from InstancedMesh intersection', () => {
+    const camera = new THREE.PerspectiveCamera();
+    const scene = new THREE.Scene();
+    const selection = new ConstellationSelection(camera, scene);
+
+    const mockInstancedMesh = new THREE.InstancedMesh(
+      new THREE.SphereGeometry(1),
+      new THREE.MeshBasicMaterial(),
+      3
+    );
+    mockInstancedMesh.userData.personIds = ['person-0', 'person-1', 'person-2'];
+
+    const mockIntersects = [
+      {
+        object: mockInstancedMesh,
+        instanceId: 2,
+        point: new THREE.Vector3(100, 200, 300),
+      },
+    ];
+
+    const raycasterSpy = vi.spyOn(THREE.Raycaster.prototype, 'intersectObjects');
+    raycasterSpy.mockReturnValue(mockIntersects as unknown as THREE.Intersection[]);
+
+    const result = selection.getIntersectedPosition(0, 0);
+
+    expect(result).not.toBeNull();
+    expect(result?.x).toBe(100);
+    expect(result?.y).toBe(200);
+    expect(result?.z).toBe(300);
+
+    raycasterSpy.mockRestore();
+    selection.dispose();
+    mockInstancedMesh.geometry.dispose();
+    (mockInstancedMesh.material as THREE.Material).dispose();
+  });
+
+  it('should prefer InstancedMesh over regular mesh if first in intersects', () => {
+    const camera = new THREE.PerspectiveCamera();
+    const scene = new THREE.Scene();
+    const selection = new ConstellationSelection(camera, scene);
+
+    const mockInstancedMesh = new THREE.InstancedMesh(
+      new THREE.SphereGeometry(1),
+      new THREE.MeshBasicMaterial(),
+      2
+    );
+    mockInstancedMesh.userData.personIds = ['instanced-person-0', 'instanced-person-1'];
+
+    const mockRegularMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(1),
+      new THREE.MeshBasicMaterial()
+    );
+    mockRegularMesh.userData.personId = 'regular-person';
+
+    // InstancedMesh is first (closer)
+    const mockIntersects = [
+      {
+        object: mockInstancedMesh,
+        instanceId: 0,
+        point: new THREE.Vector3(0, 0, 0),
+        distance: 5,
+      },
+      {
+        object: mockRegularMesh,
+        point: new THREE.Vector3(0, 0, 0),
+        distance: 10,
+      },
+    ];
+
+    const raycasterSpy = vi.spyOn(THREE.Raycaster.prototype, 'intersectObjects');
+    raycasterSpy.mockReturnValue(mockIntersects as unknown as THREE.Intersection[]);
+
+    const result = selection.getIntersectedPerson(0, 0);
+
+    expect(result).toBe('instanced-person-0');
+
+    raycasterSpy.mockRestore();
+    selection.dispose();
+    mockInstancedMesh.geometry.dispose();
+    (mockInstancedMesh.material as THREE.Material).dispose();
+    mockRegularMesh.geometry.dispose();
+    (mockRegularMesh.material as THREE.Material).dispose();
+  });
+});

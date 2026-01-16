@@ -92,7 +92,7 @@ describe('edge system', () => {
       expect(result).toHaveProperty('uniforms');
     });
 
-    it('should create Line mesh', () => {
+    it('should create LineSegments mesh', () => {
       const data: EdgeSystemData = {
         edges: [{
           id: 'e1',
@@ -104,7 +104,7 @@ describe('edge system', () => {
       };
       const { mesh } = createEdgeSystem(data);
 
-      expect(mesh).toBeInstanceOf(THREE.Line);
+      expect(mesh).toBeInstanceOf(THREE.LineSegments);
     });
 
     it('should handle empty edges array', () => {
@@ -128,14 +128,15 @@ describe('edge system', () => {
             id: 'e2',
             sourcePosition: new THREE.Vector3(0, 0, 0),
             targetPosition: new THREE.Vector3(0, 10, 0),
-            type: 'spouse',
+            type: 'parent-child',
             strength: 0.8,
           },
         ],
       };
       const { mesh } = createEdgeSystem(data);
 
-      expect(mesh.geometry.attributes.position.count).toBeGreaterThan(60);
+      // With LineSegments format: 2 edges × 30 segments × 2 positions = 120 positions
+      expect(mesh.geometry.attributes.position.count).toBeGreaterThan(100);
     });
   });
 

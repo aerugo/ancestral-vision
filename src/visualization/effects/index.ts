@@ -5,8 +5,11 @@
 
 export {
   createSacredGeometryGrid,
+  createAnimatedSacredGeometryGrid,
+  updateSacredGeometryGrid,
   disposeSacredGeometryGrid,
   type SacredGeometryConfig,
+  type SacredGeometryGridResult,
 } from './sacred-geometry-grid';
 
 export {

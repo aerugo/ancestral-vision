@@ -52,7 +52,7 @@ const DEFAULT_CONFIG: Required<BackgroundParticleConfig> = {
   innerRadius: 100,
   outerRadius: 500,
   pointSize: 4,
-  enhancedMode: false,
+  enhancedMode: true,  // Phase 4: Enable divine spark by default
   divineSparkIntensity: 0.6,
 };
 
@@ -80,10 +80,11 @@ export function createBackgroundParticles(
   const colors = new Float32Array(count * 3);
 
   // Color palette: violet, gold, rose (Klimt-inspired)
+  // Phase 6: Weighted distribution - 75% violet, 15% gold, 10% rose (prototype values)
   const colorPalette = [
-    new THREE.Color().setHSL(0.79, 0.6, 0.55), // Violet
-    new THREE.Color().setHSL(0.12, 0.6, 0.55), // Gold
-    new THREE.Color().setHSL(0.97, 0.6, 0.55), // Rose
+    { color: new THREE.Color(0x9966cc), weight: 0.75 }, // Violet (dominant)
+    { color: new THREE.Color(0xd4a84b), weight: 0.15 }, // Gold
+    { color: new THREE.Color(0xc98b8b), weight: 0.10 }, // Rose
   ];
 
   for (let i = 0; i < count; i++) {
@@ -100,14 +101,20 @@ export function createBackgroundParticles(
     // Random phase for animation offset [0, 2π]
     phases[i] = Math.random() * Math.PI * 2;
 
-    // Random color from palette
-    const colorIndex = Math.floor(Math.random() * colorPalette.length);
-    const color = colorPalette[colorIndex];
-    if (color) {
-      colors[i * 3] = color.r;
-      colors[i * 3 + 1] = color.g;
-      colors[i * 3 + 2] = color.b;
+    // Weighted random color from palette (Phase 6)
+    const rand = Math.random();
+    let cumulative = 0;
+    let selectedColor = colorPalette[0]!.color;
+    for (const entry of colorPalette) {
+      cumulative += entry.weight;
+      if (rand <= cumulative) {
+        selectedColor = entry.color;
+        break;
+      }
     }
+    colors[i * 3] = selectedColor.r;
+    colors[i * 3 + 1] = selectedColor.g;
+    colors[i * 3 + 2] = selectedColor.b;
   }
 
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));

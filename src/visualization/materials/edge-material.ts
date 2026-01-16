@@ -67,9 +67,9 @@ export function createEdgeMaterial(config: EdgeMaterialConfig = {}): EdgeMateria
     colorSecondary = DEFAULT_COLOR_SECONDARY.clone(),
     flowSpeed = 0.5,
     baseOpacity = 0.7,
-    enhancedMode = false,
-    prayerBeadIntensity = 0.4,
-    byzantineIntensity = 0.2,
+    enhancedMode = true,  // Phase 3: Enable enhanced effects by default
+    prayerBeadIntensity = 0.6, // Phase 6: Tuned to prototype value
+    byzantineIntensity = 0.3,  // Phase 6: Tuned to prototype value
   } = config;
 
   // Create base uniforms

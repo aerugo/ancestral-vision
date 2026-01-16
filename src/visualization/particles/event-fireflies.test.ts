@@ -295,34 +295,26 @@ describe('event-fireflies module', () => {
       nodeEventTypes: [['birth']],
     };
 
-    it('should support enhanced mode config option', () => {
-      const config: EventFireflyConfig = { enhancedMode: true };
-      const result = createEventFireflies(baseData, config);
-      expect(result).toHaveProperty('mesh');
-    });
-
-    it('should create divine spark intensity uniform when enhanced', () => {
-      const config: EventFireflyConfig = { enhancedMode: true };
-      const { uniforms } = createEventFireflies(baseData, config);
+    it('should enable enhanced mode by default', () => {
+      const { uniforms } = createEventFireflies(baseData);
+      // Enhanced mode enabled by default means divine spark uniform should be present
       expect(uniforms.uDivineSparkIntensity).toBeDefined();
     });
 
-    it('should use default divine spark intensity of 0.8 when enhanced', () => {
-      const config: EventFireflyConfig = { enhancedMode: true };
-      const { uniforms } = createEventFireflies(baseData, config);
+    it('should have default divine spark intensity of 0.8 when using defaults', () => {
+      const { uniforms } = createEventFireflies(baseData);
       expect(uniforms.uDivineSparkIntensity?.value).toBe(0.8);
     });
 
     it('should accept custom divine spark intensity', () => {
       const config: EventFireflyConfig = {
-        enhancedMode: true,
         divineSparkIntensity: 1.0,
       };
       const { uniforms } = createEventFireflies(baseData, config);
       expect(uniforms.uDivineSparkIntensity?.value).toBe(1.0);
     });
 
-    it('should not create enhanced uniforms when enhancedMode is false', () => {
+    it('should allow disabling enhanced mode explicitly', () => {
       const config: EventFireflyConfig = { enhancedMode: false };
       const { uniforms } = createEventFireflies(baseData, config);
       expect(uniforms.uDivineSparkIntensity).toBeUndefined();

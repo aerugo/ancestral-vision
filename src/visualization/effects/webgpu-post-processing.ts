@@ -66,7 +66,7 @@ export interface TSLPostProcessingResult {
 const DEFAULT_BLOOM: TSLBloomConfig = {
   enabled: true,
   intensity: 0.6,
-  threshold: 0.3,
+  threshold: 0.8, // Phase 6: Tuned to prototype value
   radius: 0.5,
 };
 

@@ -44,6 +44,18 @@ export class ConstellationSelection {
     const intersects = this._raycaster.intersectObjects(this._scene.children, true);
 
     for (const intersect of intersects) {
+      // Handle InstancedMesh - use instanceId to look up personId from array
+      if (
+        intersect.object instanceof THREE.InstancedMesh &&
+        intersect.instanceId !== undefined
+      ) {
+        const personIds = intersect.object.userData.personIds as string[] | undefined;
+        if (personIds && personIds[intersect.instanceId]) {
+          return personIds[intersect.instanceId];
+        }
+      }
+
+      // Handle regular mesh - check userData.personId directly
       const personId = intersect.object.userData.personId as string | undefined;
       if (personId) {
         return personId;
@@ -73,6 +85,23 @@ export class ConstellationSelection {
     const intersects = this._raycaster.intersectObjects(this._scene.children, true);
 
     for (const intersect of intersects) {
+      // Handle InstancedMesh - use instanceId to check if valid instance
+      if (
+        intersect.object instanceof THREE.InstancedMesh &&
+        intersect.instanceId !== undefined
+      ) {
+        const personIds = intersect.object.userData.personIds as string[] | undefined;
+        if (personIds && personIds[intersect.instanceId]) {
+          // Return the intersection point in world coordinates
+          return {
+            x: intersect.point.x,
+            y: intersect.point.y,
+            z: intersect.point.z,
+          };
+        }
+      }
+
+      // Handle regular mesh - check userData.personId directly
       const personId = intersect.object.userData.personId as string | undefined;
       if (personId) {
         // Return the intersection point in world coordinates

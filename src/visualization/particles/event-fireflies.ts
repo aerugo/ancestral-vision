@@ -76,7 +76,7 @@ const DEFAULT_CONFIG: Required<EventFireflyConfig> = {
   weightMultiplier: 20,
   orbitRadius: 6,
   pointSize: 3,
-  enhancedMode: false,
+  enhancedMode: true,  // Phase 4: Enable divine spark by default
   divineSparkIntensity: 0.8,
 };
 

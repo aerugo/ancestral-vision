@@ -142,9 +142,9 @@ describe('post-processing module', () => {
       expect(config.vignette.darkness).toBe(0.4);
     });
 
-    it('should use default bloom threshold of 0.3', () => {
+    it('should use default bloom threshold of 0.8 (Phase 6 tuned)', () => {
       const { config } = createPostProcessing(mockRenderer, mockScene, mockCamera);
-      expect(config.bloom.threshold).toBe(0.3);
+      expect(config.bloom.threshold).toBe(0.8);
     });
 
     it('should use default bloom radius of 0.5', () => {

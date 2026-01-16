@@ -11,8 +11,8 @@ export interface EdgeData {
   sourcePosition: THREE.Vector3;
   /** Target node position */
   targetPosition: THREE.Vector3;
-  /** Edge relationship type */
-  type: 'parent-child' | 'spouse' | 'sibling';
+  /** Edge relationship type (only parent-child edges exist in the tree) */
+  type: 'parent-child';
   /** Edge strength (0-1) for visual intensity */
   strength: number;
 }
@@ -83,7 +83,10 @@ export function createBezierCurvePoints(
 }
 
 /**
- * Creates BufferGeometry for all edges with attributes for shader
+ * Creates BufferGeometry for all edges with attributes for shader.
+ * Uses line segment pairs for THREE.LineSegments to prevent spurious
+ * connections between separate edges.
+ *
  * @param edges - Array of edge data
  * @param config - Geometry configuration
  * @returns BufferGeometry with position, progress, and strength attributes
@@ -113,16 +116,22 @@ export function createEdgeGeometry(
       bezierConfig
     );
 
-    for (let i = 0; i < points.length; i++) {
-      const point = points[i];
-      if (point) {
-        positions.push(point.x, point.y, point.z);
+    // Create line segment pairs for LineSegments rendering
+    // Each segment needs start and end points
+    for (let i = 0; i < points.length - 1; i++) {
+      const startPoint = points[i];
+      const endPoint = points[i + 1];
+      if (startPoint && endPoint) {
+        // Segment start
+        positions.push(startPoint.x, startPoint.y, startPoint.z);
+        const startProgress = i / (points.length - 1);
+        progressValues.push(startProgress);
+        strengthValues.push(edge.strength);
 
-        // Progress along edge (0 to 1)
-        const progress = i / (points.length - 1);
-        progressValues.push(progress);
-
-        // Edge strength
+        // Segment end
+        positions.push(endPoint.x, endPoint.y, endPoint.z);
+        const endProgress = (i + 1) / (points.length - 1);
+        progressValues.push(endProgress);
         strengthValues.push(edge.strength);
       }
     }

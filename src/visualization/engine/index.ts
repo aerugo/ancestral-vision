@@ -63,3 +63,33 @@ export {
   CAMERA_UNIFORM_SIZE as CAMERA_BUFFER_SIZE,
   type CameraUniformBuffer,
 } from './camera-uniforms';
+
+// Phase 2: Clustered Lighting
+export {
+  // Light Manager
+  createLightManager,
+  LIGHT_STRUCT_SIZE,
+  DEFAULT_MAX_LIGHTS,
+  type LightManager,
+  type PointLight,
+  type PointLightUpdate,
+  type PointLightData,
+  type LightManagerConfig,
+  type LightBuffers,
+  // Cluster Grid
+  createClusterGrid,
+  TILE_COUNT_X,
+  TILE_COUNT_Y,
+  TILE_COUNT_Z,
+  MAX_LIGHTS_PER_CLUSTER,
+  CLUSTER_COUNT,
+  type ClusterGrid,
+  type ClusterGridConfig,
+  type ClusterGridFullConfig,
+  type ClusterBuffers,
+  type ClusterUniformData,
+  // Cluster Compute
+  createClusterCompute,
+  type ClusterCompute,
+  type ClusterComputeConfig,
+} from './lights';

@@ -12,6 +12,8 @@ import { create } from 'zustand';
 interface SelectionState {
   /** Currently selected person ID */
   selectedPersonId: string | null;
+  /** Previously selected person ID (for pulse animation between selections) */
+  previousSelectedPersonId: string | null;
   /** IDs of people connected to the selected person (parents, children, spouses) */
   connectedPersonIds: string[];
   /** Whether the profile panel is open */
@@ -32,19 +34,22 @@ interface SelectionState {
  */
 export const useSelectionStore = create<SelectionState>((set) => ({
   selectedPersonId: null,
+  previousSelectedPersonId: null,
   connectedPersonIds: [],
   isPanelOpen: false,
 
   selectPerson: (personId, connectedIds) =>
-    set({
+    set((state) => ({
+      previousSelectedPersonId: state.selectedPersonId,
       selectedPersonId: personId,
       connectedPersonIds: connectedIds,
       isPanelOpen: true,
-    }),
+    })),
 
   clearSelection: () =>
     set({
       selectedPersonId: null,
+      previousSelectedPersonId: null,
       connectedPersonIds: [],
       isPanelOpen: false,
     }),

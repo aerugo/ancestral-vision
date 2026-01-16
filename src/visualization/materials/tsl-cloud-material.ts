@@ -196,12 +196,13 @@ const mysticalSphere = wgslFn(`
     let turbNorm = (turb + 2.0) * 0.5;
 
     // === COMBINE PATTERNS (Hilma af Klint style layering) ===
-    let patternMix = turbNorm * 0.5 + goldenSpiral * 0.3 + flowerPattern * 0.2;
-    let patternIntensity = pow(patternMix, 1.2) * densityMult;
+    // Ensure minimum pattern value to avoid dark blotches
+    let patternMix = max(turbNorm * 0.5 + goldenSpiral * 0.3 + flowerPattern * 0.2, 0.25);
+    let patternIntensity = pow(patternMix, 1.1) * densityMult;
 
     // === COLOR PALETTE (Klimt golden warmth) ===
-    // Base: warm amber to gold gradient
-    let goldBase = mix(colorSecondary, colorPrimary, patternIntensity);
+    // Base: warm amber to gold gradient with minimum brightness
+    let goldBase = mix(colorSecondary, colorPrimary, clamp(patternIntensity, 0.3, 1.0));
 
     // Add subtle color variation based on position
     let positionHue = (spherePos.y + 1.0) * 0.5; // 0 at bottom, 1 at top
@@ -217,8 +218,8 @@ const mysticalSphere = wgslFn(`
     finalColor = mix(finalColor, accentLight, flowerPattern * positionHue * 0.3);
 
     // === SELF-ILLUMINATION (inner glow) ===
-    // Good base glow for visible luminous spheres
-    let innerGlow = 0.35 + patternIntensity * 0.35; // Base illumination 35-70%
+    // Strong base glow for visible luminous spheres - prevents dark blotches
+    let innerGlow = 0.55 + patternIntensity * 0.35; // Base illumination 55-90%
     finalColor = finalColor * innerGlow;
 
     // === SURFACE LIGHTING (subtle directional) ===
@@ -252,11 +253,11 @@ const mysticalSphere = wgslFn(`
     finalColor = finalColor + colorHighlight * shimmer;
 
     // === FINAL OUTPUT ===
-    // Minimum brightness for visibility
-    finalColor = max(finalColor, vec3<f32>(0.05, 0.04, 0.03));
+    // Minimum brightness for visibility - prevents dark blotches
+    finalColor = max(finalColor, vec3<f32>(0.15, 0.12, 0.10));
 
     // Clamp to prevent over-saturation
-    finalColor = clamp(finalColor, vec3<f32>(0.0), vec3<f32>(0.9));
+    finalColor = clamp(finalColor, vec3<f32>(0.0), vec3<f32>(0.95));
 
     return vec4<f32>(finalColor, 1.0);
   }

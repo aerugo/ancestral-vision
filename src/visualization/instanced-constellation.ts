@@ -1,6 +1,6 @@
 /**
  * Instanced Constellation Rendering
- * Creates and manages instanced mesh for constellation nodes with TSL or custom shader materials
+ * Creates and manages instanced mesh for constellation nodes with TSL, custom, or cloud shader materials
  */
 import * as THREE from 'three';
 import {
@@ -13,9 +13,23 @@ import {
   updateCustomNodeMaterialTime,
   type CustomNodeMaterialUniforms,
 } from './materials/custom-node-material';
+import {
+  createCloudNodeMaterial,
+  createCloudNodeMaterialWithPreset,
+  updateCloudNodeMaterialTime,
+  type CloudNodeMaterialUniforms,
+  type CloudNodeMaterialConfig,
+  type CloudPreset,
+} from './materials/cloud-node-material';
+import {
+  createTSLCloudMaterial,
+  updateTSLCloudMaterialTime,
+  type TSLCloudMaterialUniforms,
+  type TSLCloudMaterialConfig,
+} from './materials/tsl-cloud-material';
 
 /** Material mode for node rendering */
-export type MaterialMode = 'tsl' | 'custom';
+export type MaterialMode = 'tsl' | 'custom' | 'cloud' | 'tsl-cloud';
 
 export interface ConstellationConfig {
   /** Base sphere radius (default: 2) */
@@ -28,8 +42,14 @@ export interface ConstellationConfig {
   scaleMultiplier?: number;
   /** Enable enhanced visual effects (inner glow, SSS, mandala) for TSL mode */
   enhancedMode?: boolean;
-  /** Material mode: 'tsl' for WebGPU-compatible TSL or 'custom' for WebGL GLSL shader (default: 'tsl') */
+  /** Material mode: 'tsl' for WebGPU-compatible TSL, 'custom' for GLSL shader, 'cloud' for GLSL clouds, or 'tsl-cloud' for WebGPU clouds */
   materialMode?: MaterialMode;
+  /** Cloud material configuration (used when materialMode is 'cloud') */
+  cloudConfig?: CloudNodeMaterialConfig;
+  /** Cloud preset to use (used when materialMode is 'cloud', overrides cloudConfig) */
+  cloudPreset?: CloudPreset;
+  /** TSL cloud material configuration (used when materialMode is 'tsl-cloud') */
+  tslCloudConfig?: TSLCloudMaterialConfig;
 }
 
 export interface ConstellationData {
@@ -42,7 +62,7 @@ export interface ConstellationData {
 }
 
 /** Union type for material uniforms */
-export type ConstellationUniforms = NodeMaterialUniforms | CustomNodeMaterialUniforms;
+export type ConstellationUniforms = NodeMaterialUniforms | CustomNodeMaterialUniforms | CloudNodeMaterialUniforms | TSLCloudMaterialUniforms;
 
 export interface InstancedConstellationResult {
   /** The instanced mesh to add to scene */
@@ -55,17 +75,20 @@ export interface InstancedConstellationResult {
   materialMode: MaterialMode;
 }
 
-const DEFAULT_CONFIG: Required<ConstellationConfig> = {
+const DEFAULT_CONFIG: Required<Omit<ConstellationConfig, 'cloudConfig' | 'cloudPreset' | 'tslCloudConfig'>> & Pick<ConstellationConfig, 'cloudConfig' | 'cloudPreset' | 'tslCloudConfig'> = {
   sphereRadius: 2,
   sphereSegments: 32,
   baseScale: 1.0,
   scaleMultiplier: 2.5,
   enhancedMode: true,
   materialMode: 'custom', // Custom GLSL shader for visual parity with prototype
+  cloudConfig: undefined,
+  cloudPreset: undefined,
+  tslCloudConfig: undefined,
 };
 
 /**
- * Creates an instanced constellation mesh with TSL or custom shader material
+ * Creates an instanced constellation mesh with TSL, custom shader, or cloud material
  * @param data - Constellation node data (positions, weights, IDs)
  * @param config - Rendering configuration
  * @returns Mesh, uniforms, and attribute references
@@ -81,6 +104,9 @@ export function createInstancedConstellation(
     scaleMultiplier,
     enhancedMode,
     materialMode,
+    cloudConfig,
+    cloudPreset,
+    tslCloudConfig,
   } = { ...DEFAULT_CONFIG, ...config };
 
   const { positions, biographyWeights, personIds } = data;
@@ -109,7 +135,23 @@ export function createInstancedConstellation(
   let material: THREE.Material;
   let uniforms: ConstellationUniforms;
 
-  if (materialMode === 'custom') {
+  if (materialMode === 'tsl-cloud') {
+    // Use TSL cloud shader for WebGPU-compatible flowing gas sphere effect
+    const result = createTSLCloudMaterial(tslCloudConfig);
+    material = result.material;
+    uniforms = result.uniforms;
+  } else if (materialMode === 'cloud') {
+    // Use GLSL cloud shader for flowing gas sphere effect (WebGL only)
+    if (cloudPreset) {
+      const result = createCloudNodeMaterialWithPreset(cloudPreset, cloudConfig);
+      material = result.material;
+      uniforms = result.uniforms;
+    } else {
+      const result = createCloudNodeMaterial(cloudConfig);
+      material = result.material;
+      uniforms = result.uniforms;
+    }
+  } else if (materialMode === 'custom') {
     // Use custom GLSL shader for visual parity with prototype
     const result = createCustomNodeMaterial();
     material = result.material;
@@ -163,10 +205,26 @@ export function createInstancedConstellation(
 }
 
 /**
+ * Type guard to check if uniforms are from TSL cloud shader material (WebGPU)
+ */
+function isTSLCloudUniforms(uniforms: ConstellationUniforms): uniforms is TSLCloudMaterialUniforms {
+  // TSL cloud has uGlowIntensity but not uLightIntensity or uCloudScale
+  return 'uFlowSpeed' in uniforms && 'uGlowIntensity' in uniforms && !('uLightIntensity' in uniforms);
+}
+
+/**
+ * Type guard to check if uniforms are from GLSL cloud shader material (WebGL)
+ */
+function isCloudUniforms(uniforms: ConstellationUniforms): uniforms is CloudNodeMaterialUniforms {
+  // GLSL cloud has uLightIntensity and uCloudScale
+  return 'uCloudDensity' in uniforms && 'uLightIntensity' in uniforms;
+}
+
+/**
  * Type guard to check if uniforms are from custom shader material
  */
 function isCustomUniforms(uniforms: ConstellationUniforms): uniforms is CustomNodeMaterialUniforms {
-  return 'uIsLightTheme' in uniforms;
+  return 'uIsLightTheme' in uniforms && !('uCloudDensity' in uniforms);
 }
 
 /**
@@ -175,7 +233,11 @@ function isCustomUniforms(uniforms: ConstellationUniforms): uniforms is CustomNo
  * @param time - Current time in seconds
  */
 export function updateConstellationTime(uniforms: ConstellationUniforms, time: number): void {
-  if (isCustomUniforms(uniforms)) {
+  if (isTSLCloudUniforms(uniforms)) {
+    updateTSLCloudMaterialTime(uniforms, time);
+  } else if (isCloudUniforms(uniforms)) {
+    updateCloudNodeMaterialTime(uniforms, time);
+  } else if (isCustomUniforms(uniforms)) {
     updateCustomNodeMaterialTime(uniforms, time);
   } else {
     updateNodeMaterialTime(uniforms, time);

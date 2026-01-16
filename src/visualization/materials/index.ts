@@ -24,6 +24,35 @@ export {
 } from './custom-node-material';
 
 export {
+  createCloudNodeMaterial,
+  createCloudNodeMaterialWithPreset,
+  updateCloudNodeMaterialTime,
+  updateCloudNodeMaterialColors,
+  updateCloudNodeMaterialTheme,
+  updateCloudNodeMaterialParams,
+  disposeCloudNodeMaterial,
+  CLOUD_PRESETS,
+  type CloudNodeMaterialConfig,
+  type CloudNodeMaterialUniforms,
+  type CloudNodeMaterialResult,
+  type CloudPreset,
+} from './cloud-node-material';
+
+export {
+  createTSLCloudMaterial,
+  createTSLCloudMaterialWithPreset,
+  updateTSLCloudMaterialTime,
+  disposeTSLCloudMaterial,
+  getTSLCloudPresetNames,
+  getRandomTSLCloudPreset,
+  TSL_CLOUD_PRESETS,
+  type TSLCloudMaterialConfig,
+  type TSLCloudMaterialUniforms,
+  type TSLCloudMaterialResult,
+  type TSLCloudPreset,
+} from './tsl-cloud-material';
+
+export {
   createEdgeMaterial,
   updateEdgeMaterialTime,
   disposeEdgeMaterial,

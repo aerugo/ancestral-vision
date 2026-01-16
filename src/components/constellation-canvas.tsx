@@ -24,7 +24,10 @@ import {
   disposeInstancedConstellation,
   type ConstellationData,
   type InstancedConstellationResult,
+  type MaterialMode,
 } from '@/visualization/instanced-constellation';
+import type { CloudPreset, TSLCloudPreset } from '@/visualization/materials';
+import { getTSLCloudPresetNames } from '@/visualization/materials';
 import {
   createEdgeSystem,
   updateEdgeSystemTime,
@@ -206,6 +209,8 @@ export function ConstellationCanvas(): React.ReactElement {
   const cameraAnimatorRef = useRef<CameraAnimator | null>(null);
   const clockRef = useRef<THREE.Clock | null>(null);
   const instancedConstellationRef = useRef<InstancedConstellationResult | null>(null);
+  // Multiple cloud constellation refs - one per preset (lava, celestial, sacred)
+  const cloudConstellationsRef = useRef<Map<TSLCloudPreset, InstancedConstellationResult>>(new Map());
   const edgeSystemRef = useRef<EdgeSystemResult | null>(null);
   const backgroundParticlesRef = useRef<BackgroundParticleResult | null>(null);
   const eventFirefliesRef = useRef<EventFireflyResult | null>(null);
@@ -309,30 +314,152 @@ export function ConstellationCanvas(): React.ReactElement {
     const graphEdges = layoutResult.edges;
 
     // Use new instanced constellation with TSL materials (Phase 1)
+    // Split nodes into central (cloud material) and peripheral (custom material) groups
     const positions: THREE.Vector3[] = [];
     const biographyWeights: number[] = [];
     const positionMap = new Map<string, THREE.Vector3>(); // Map person ID to position for edge rendering
     if (constellationPeople.length > 0) {
-      const constellationData: ConstellationData = {
-        positions: constellationPeople.map(p => new THREE.Vector3(p.position.x, p.position.y, p.position.z)),
-        biographyWeights: constellationPeople.map(() => Math.random() * 0.8 + 0.2), // Random weights for demo
-        personIds: constellationPeople.map(p => p.id),
-      };
-      positions.push(...constellationData.positions);
-      biographyWeights.push(...constellationData.biographyWeights);
+      // Identify central nodes: centered person + their direct relatives (parents, children, spouses)
+      const centeredId = graphData?.centeredPersonId;
+      const centralNodeIds = new Set<string>();
 
-      // Build position map for edge rendering
-      constellationPeople.forEach((p, i) => {
-        positionMap.set(p.id, constellationData.positions[i]!);
+      if (centeredId) {
+        centralNodeIds.add(centeredId);
+
+        // Add direct relatives from parent-child relationships
+        graphData?.parentChildRelationships?.forEach(rel => {
+          if (rel.parentId === centeredId) {
+            centralNodeIds.add(rel.childId); // Children of centered person
+          }
+          if (rel.childId === centeredId) {
+            centralNodeIds.add(rel.parentId); // Parents of centered person
+          }
+        });
+
+        // Add spouses
+        graphData?.spouseRelationships?.forEach(rel => {
+          if (rel.person1Id === centeredId) {
+            centralNodeIds.add(rel.person2Id);
+          }
+          if (rel.person2Id === centeredId) {
+            centralNodeIds.add(rel.person1Id);
+          }
+        });
+      }
+
+      // If no centered person or no relationships, use first few nodes as central
+      if (centralNodeIds.size === 0 && constellationPeople.length > 0) {
+        // Use first 3 nodes as central (demo fallback)
+        constellationPeople.slice(0, Math.min(3, constellationPeople.length)).forEach(p => {
+          centralNodeIds.add(p.id);
+        });
+      }
+
+      console.log(`[initScene] Central nodes (cloud material): ${centralNodeIds.size} nodes`);
+
+      // Split constellation people into central and peripheral groups
+      const centralPeople: PlaceholderPerson[] = [];
+      const peripheralPeople: PlaceholderPerson[] = [];
+
+      constellationPeople.forEach(p => {
+        if (centralNodeIds.has(p.id)) {
+          centralPeople.push(p);
+        } else {
+          peripheralPeople.push(p);
+        }
       });
 
-      // Use TSL materials for WebGPU, custom GLSL ShaderMaterial for WebGL fallback
-      const instancedResult = createInstancedConstellation(constellationData, {
-        materialMode: isWebGPU ? 'tsl' : 'custom',
+      // Build position map for edge rendering (all nodes)
+      constellationPeople.forEach(p => {
+        const pos = new THREE.Vector3(p.position.x, p.position.y, p.position.z);
+        positionMap.set(p.id, pos);
+        positions.push(pos);
+        biographyWeights.push(Math.random() * 0.8 + 0.2); // Random weights for demo
       });
-      instancedConstellationRef.current = instancedResult;
-      console.log(`[initScene] Instanced constellation created with ${instancedResult.materialMode} materials`);
-      scene.add(instancedResult.mesh);
+
+      // Create constellation for central nodes (mystical flowing gas spheres)
+      // Use TSL cloud material for WebGPU with random preset assignment
+      // Use GLSL cloud material for WebGL fallback
+      if (centralPeople.length > 0 && isWebGPU) {
+        // Split central nodes into preset groups (lava, celestial, sacred)
+        const presets = getTSLCloudPresetNames();
+        const presetGroups = new Map<TSLCloudPreset, PlaceholderPerson[]>();
+        presets.forEach(preset => presetGroups.set(preset, []));
+
+        // Randomly assign each central person to a preset
+        centralPeople.forEach(p => {
+          const presetIndex = Math.floor(Math.random() * presets.length);
+          const preset = presets[presetIndex] as TSLCloudPreset;
+          presetGroups.get(preset)!.push(p);
+        });
+
+        // Create a separate mesh for each preset group
+        cloudConstellationsRef.current.clear();
+        presets.forEach(preset => {
+          const people = presetGroups.get(preset)!;
+          if (people.length === 0) return;
+
+          const cloudData: ConstellationData = {
+            positions: people.map(p => new THREE.Vector3(p.position.x, p.position.y, p.position.z)),
+            biographyWeights: people.map(() => Math.random() * 0.3 + 0.7),
+            personIds: people.map(p => p.id),
+          };
+
+          const cloudResult = createInstancedConstellation(cloudData, {
+            materialMode: 'tsl-cloud' as MaterialMode,
+            tslCloudConfig: {
+              preset,
+              flowSpeed: 0.8,
+              glowIntensity: 1.2,
+            },
+          });
+
+          cloudConstellationsRef.current.set(preset, cloudResult);
+          scene.add(cloudResult.mesh);
+          console.log(`[initScene] Cloud constellation (${preset}): ${people.length} nodes`);
+        });
+
+        console.log(`[initScene] Total central nodes: ${centralPeople.length} across ${cloudConstellationsRef.current.size} presets`);
+      } else if (centralPeople.length > 0) {
+        // WebGL fallback: single mesh with GLSL cloud material
+        const cloudData: ConstellationData = {
+          positions: centralPeople.map(p => new THREE.Vector3(p.position.x, p.position.y, p.position.z)),
+          biographyWeights: centralPeople.map(() => Math.random() * 0.3 + 0.7),
+          personIds: centralPeople.map(p => p.id),
+        };
+
+        const cloudResult = createInstancedConstellation(cloudData, {
+          materialMode: 'cloud' as MaterialMode,
+          cloudPreset: 'gasGiant' as CloudPreset,
+          cloudConfig: {
+            flowSpeed: 0.8,
+            glowIntensity: 1.2,
+          },
+        });
+
+        // Store in the map with a default key for WebGL fallback
+        cloudConstellationsRef.current.clear();
+        cloudConstellationsRef.current.set('sacred', cloudResult);
+        scene.add(cloudResult.mesh);
+        console.log(`[initScene] Central constellation (WebGL fallback): ${centralPeople.length} nodes`);
+      }
+
+      // Create standard constellation for peripheral nodes
+      if (peripheralPeople.length > 0) {
+        const peripheralData: ConstellationData = {
+          positions: peripheralPeople.map(p => new THREE.Vector3(p.position.x, p.position.y, p.position.z)),
+          biographyWeights: peripheralPeople.map(() => Math.random() * 0.8 + 0.2),
+          personIds: peripheralPeople.map(p => p.id),
+        };
+
+        // Use TSL materials for WebGPU, custom GLSL ShaderMaterial for WebGL fallback
+        const instancedResult = createInstancedConstellation(peripheralData, {
+          materialMode: isWebGPU ? 'tsl' : 'custom',
+        });
+        instancedConstellationRef.current = instancedResult;
+        console.log(`[initScene] Peripheral constellation created: ${peripheralPeople.length} nodes with ${instancedResult.materialMode} materials`);
+        scene.add(instancedResult.mesh);
+      }
     }
 
     // Add edge system (Phase 2) - use REAL edges from FamilyGraph with proper types
@@ -581,6 +708,11 @@ export function ConstellationCanvas(): React.ReactElement {
         updateConstellationTime(instancedConstellationRef.current.uniforms, elapsedTime);
       }
 
+      // Update cloud constellation time uniforms for flowing gas animation (all presets)
+      cloudConstellationsRef.current.forEach((result) => {
+        updateConstellationTime(result.uniforms, elapsedTime);
+      });
+
       // Update edge system time uniform for flowing animation (Phase 2)
       if (edgeSystemRef.current) {
         updateEdgeSystemTime(edgeSystemRef.current.uniforms, elapsedTime);
@@ -645,6 +777,11 @@ export function ConstellationCanvas(): React.ReactElement {
         disposeInstancedConstellation(instancedConstellationRef.current.mesh);
         instancedConstellationRef.current = null;
       }
+      // Dispose cloud constellations (central nodes with flowing gas effect - all presets)
+      cloudConstellationsRef.current.forEach((result) => {
+        disposeInstancedConstellation(result.mesh);
+      });
+      cloudConstellationsRef.current.clear();
       // Dispose edge system (Phase 2 resources)
       if (edgeSystemRef.current) {
         disposeEdgeSystem(edgeSystemRef.current.mesh);

@@ -13,6 +13,21 @@ import {
   type InstancedConstellationResult,
 } from './instanced-constellation';
 
+// Mock Three.js WebGPU modules
+vi.mock('three/webgpu', () => {
+  class MockMeshBasicNodeMaterial {
+    public dispose = vi.fn();
+    public colorNode: unknown = null;
+    public transparent = false;
+    public side = 0;
+    public depthWrite = true;
+  }
+
+  return {
+    MeshBasicNodeMaterial: MockMeshBasicNodeMaterial,
+  };
+});
+
 // Mock Three.js TSL modules
 vi.mock('three/tsl', () => {
   function createMockNode(): Record<string, unknown> {
@@ -63,7 +78,25 @@ vi.mock('three/tsl', () => {
       node.type = 'vec3';
       return node;
     }),
+    vec4: vi.fn((x, y, z, w) => {
+      const node = createMockNode();
+      node.x = x;
+      node.y = y;
+      node.z = z;
+      node.w = w;
+      node.type = 'vec4';
+      return node;
+    }),
+    wgslFn: vi.fn((code: string) => {
+      // Returns a function that when called with inputs, returns a mock node
+      return vi.fn((_inputs: Record<string, unknown>) => createMockNode());
+    }),
+    Fn: vi.fn((fn: () => unknown) => {
+      // Execute the function and return a mock node
+      return createMockNode();
+    }),
     sin: vi.fn(() => createMockNode()),
+    cos: vi.fn(() => createMockNode()),
     mul: vi.fn(() => createMockNode()),
     add: vi.fn(() => createMockNode()),
     sub: vi.fn(() => createMockNode()),
@@ -72,6 +105,7 @@ vi.mock('three/tsl', () => {
     dot: vi.fn(() => createMockNode()),
     normalize: vi.fn(() => createMockNode()),
     mix: vi.fn(() => createMockNode()),
+    clamp: vi.fn(() => createMockNode()),
     floor: vi.fn(() => createMockNode()),
     fract: vi.fn(() => createMockNode()),
     smoothstep: vi.fn(() => createMockNode()),
@@ -79,12 +113,12 @@ vi.mock('three/tsl', () => {
     length: vi.fn(() => createMockNode()),
     vec2: vi.fn(() => createMockNode()),
     atan2: vi.fn(() => createMockNode()),
-    cos: vi.fn(() => createMockNode()),
     cameraPosition: createMockNode(),
     positionWorld: createMockNode(),
     normalWorld: createMockNode(),
     positionLocal: createMockNode(),
     normalLocal: createMockNode(),
+    modelWorldMatrix: createMockNode(),
     ShaderNodeObject: {},
     Node: {},
   };

@@ -315,6 +315,7 @@ Icon?
 
 # External reference repositories (cloned locally, not tracked)
 webgpu-samples/
+webgpu-metaballs/
 .env.gcp
 .playwright-mcp/
 data/example-genealogy.backup.json

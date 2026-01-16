@@ -22,6 +22,7 @@ import {
   createBiographyConstellation,
   updateAnyConstellationTime,
   updateSelectionState,
+  updateNodePulseIntensity,
   disposeInstancedConstellation,
   type ConstellationData,
   type InstancedConstellationResult,
@@ -65,9 +66,14 @@ import {
   createEdgeSystem,
   updateEdgeSystemTime,
   disposeEdgeSystem,
+  updateEdgePulseIntensities,
+  updateEdgePulseIntensitiesSmooth,
   type EdgeSystemData,
   type EdgeSystemResult,
 } from '@/visualization/edges';
+import {
+  PathPulseAnimator,
+} from '@/visualization/path-pulse';
 import {
   createBackgroundParticles,
   updateBackgroundParticlesTime,
@@ -121,11 +127,13 @@ function createFocusIndicator(): THREE.Mesh {
 }
 
 /**
- * Result of layout calculation including positions and edges
+ * Result of layout calculation including positions, edges, and graph
  */
 interface LayoutResult {
   people: PlaceholderPerson[];
   edges: GraphEdge[];
+  /** FamilyGraph reference for pulse animation path-finding */
+  graph: FamilyGraph | null;
 }
 
 /**
@@ -141,7 +149,7 @@ function peopleToPlacelderPeople(
   centeredPersonId?: string,
   spouseRelationships: SpouseInput[] = []
 ): LayoutResult {
-  if (people.length === 0) return { people: [], edges: [] };
+  if (people.length === 0) return { people: [], edges: [], graph: null };
 
   // Convert to PersonInput format for FamilyGraph
   const personInputs: PersonInput[] = people.map(person => ({
@@ -228,7 +236,7 @@ function peopleToPlacelderPeople(
     };
   });
 
-  return { people: result, edges };
+  return { people: result, edges, graph };
 }
 
 export function ConstellationCanvas(): React.ReactElement {
@@ -250,6 +258,9 @@ export function ConstellationCanvas(): React.ReactElement {
   const eventFirefliesRef = useRef<EventFireflyResult | null>(null);
   const sacredGeometryGridRef = useRef<THREE.Group | null>(null);
   const postProcessingRef = useRef<PostProcessingPipelineResult | null>(null);
+  // Pulse animation for selection transitions
+  const pulseAnimatorRef = useRef<PathPulseAnimator | null>(null);
+  const graphRef = useRef<FamilyGraph | null>(null);
 
   // WebGPU error state for user-friendly error display
   const [webGPUError, setWebGPUError] = useState<string | null>(null);
@@ -349,11 +360,26 @@ export function ConstellationCanvas(): React.ReactElement {
             graphData.spouseRelationships
           )
         : isLoading
-          ? { people: [], edges: [] } // Don't show anything while loading
-          : { people: generatePlaceholderPeople(10), edges: [] }; // Only show placeholder if no data after load
+          ? { people: [], edges: [], graph: null } // Don't show anything while loading
+          : { people: generatePlaceholderPeople(10), edges: [], graph: null }; // Only show placeholder if no data after load
 
     const constellationPeople = layoutResult.people;
     const graphEdges = layoutResult.edges;
+
+    // Store graph reference for pulse animation path-finding
+    graphRef.current = layoutResult.graph;
+
+    // Create pulse animator for selection transitions
+    // Slow, organic pulse with breathing effect at target
+    pulseAnimatorRef.current = new PathPulseAnimator({
+      hopDuration: 0.4,
+      minDuration: 0.8,
+      maxDuration: 4.0,
+      easing: 'easeInOutCubic',
+      pulseWidth: 0.35,
+      breathingDuration: 1.5,
+      breathingCycles: 2,
+    });
 
     // Split nodes by biography presence (not family relationships)
     // - Ghost nodes: no biography - small, semi-transparent, blue mandala
@@ -447,6 +473,8 @@ export function ConstellationCanvas(): React.ReactElement {
           if (!sourcePos || !targetPos) return null;
           return {
             id: edge.id,
+            sourceId: edge.sourceId,
+            targetId: edge.targetId,
             sourcePosition: sourcePos,
             targetPosition: targetPos,
             type: edge.type,
@@ -573,6 +601,79 @@ export function ConstellationCanvas(): React.ReactElement {
       }
     };
 
+    // Helper to update pulse intensities from animator state
+    const updatePulseIntensities = (): void => {
+      if (!pulseAnimatorRef.current?.isAnimating()) return;
+
+      const nodeIntensities = pulseAnimatorRef.current.getAllNodeIntensities();
+
+      // Update ghost constellation node pulse intensities
+      if (ghostConstellationRef.current) {
+        const ghostPersonIds = ghostConstellationRef.current.mesh.userData.personIds as string[];
+        updateNodePulseIntensity(
+          ghostConstellationRef.current.pulseIntensityAttribute,
+          ghostPersonIds,
+          nodeIntensities
+        );
+      }
+
+      // Update biography constellation node pulse intensities
+      if (biographyConstellationRef.current) {
+        const bioPersonIds = biographyConstellationRef.current.mesh.userData.personIds as string[];
+        updateNodePulseIntensity(
+          biographyConstellationRef.current.pulseIntensityAttribute,
+          bioPersonIds,
+          nodeIntensities
+        );
+      }
+
+      // Update edge pulse intensities with smooth per-vertex falloff (light orb effect)
+      if (edgeSystemRef.current) {
+        const pulseDetails = pulseAnimatorRef.current.getEdgePulseDetails();
+        const progressAttribute = edgeSystemRef.current.mesh.geometry.getAttribute('aProgress') as THREE.BufferAttribute | null;
+        if (progressAttribute) {
+          updateEdgePulseIntensitiesSmooth(
+            edgeSystemRef.current.pulseIntensityAttribute,
+            progressAttribute,
+            edgeSystemRef.current.segmentMapping,
+            pulseDetails,
+            0.4 // Pulse width - controls how wide the orb glow is
+          );
+        }
+      }
+    };
+
+    // Helper to clear all pulse intensities
+    const clearPulseIntensities = (): void => {
+      const emptyMap = new Map<string, number>();
+
+      if (ghostConstellationRef.current) {
+        const ghostPersonIds = ghostConstellationRef.current.mesh.userData.personIds as string[];
+        updateNodePulseIntensity(
+          ghostConstellationRef.current.pulseIntensityAttribute,
+          ghostPersonIds,
+          emptyMap
+        );
+      }
+
+      if (biographyConstellationRef.current) {
+        const bioPersonIds = biographyConstellationRef.current.mesh.userData.personIds as string[];
+        updateNodePulseIntensity(
+          biographyConstellationRef.current.pulseIntensityAttribute,
+          bioPersonIds,
+          emptyMap
+        );
+      }
+
+      if (edgeSystemRef.current) {
+        updateEdgePulseIntensities(
+          edgeSystemRef.current.pulseIntensityAttribute,
+          edgeSystemRef.current.segmentMapping,
+          emptyMap
+        );
+      }
+    };
+
     // Click handler for selection
     const handleClick = (event: MouseEvent): void => {
       if (!selectionRef.current || !canvasRef.current) return;
@@ -590,6 +691,27 @@ export function ConstellationCanvas(): React.ReactElement {
           graphData?.spouseRelationships ?? []
         );
 
+        // Get previous selection for pulse animation
+        const previousId = useSelectionStore.getState().selectedPersonId;
+
+        // Check if we should trigger a pulse animation
+        if (previousId && previousId !== personId && graphRef.current) {
+          // Find path between previous and new selection
+          const path = graphRef.current.findPath(previousId, personId);
+
+          if (path && path.length > 1) {
+            // Cancel any existing animation
+            pulseAnimatorRef.current?.cancel();
+            clearPulseIntensities();
+
+            // Start pulse animation
+            pulseAnimatorRef.current?.start(path, () => {
+              // Pulse complete - clear pulse intensities
+              clearPulseIntensities();
+            });
+          }
+        }
+
         // Update Zustand store
         selectPerson(personId, connectedIds);
 
@@ -599,6 +721,10 @@ export function ConstellationCanvas(): React.ReactElement {
         // Clicked on empty space - clear selection
         clearSelection();
         updateConstellationSelectionState(null, []);
+
+        // Cancel any pulse animation
+        pulseAnimatorRef.current?.cancel();
+        clearPulseIntensities();
       }
     };
 
@@ -686,6 +812,12 @@ export function ConstellationCanvas(): React.ReactElement {
       // Update camera animation
       if (cameraAnimatorRef.current) {
         cameraAnimatorRef.current.update(deltaTime);
+      }
+
+      // Update pulse animation for selection transitions
+      if (pulseAnimatorRef.current?.isAnimating()) {
+        pulseAnimatorRef.current.update(deltaTime);
+        updatePulseIntensities();
       }
 
       // Update ghost constellation time uniform for mandala animation

@@ -2,8 +2,61 @@
  * Constellation Selection (3D Raycasting)
  *
  * Handles click/tap detection on 3D star meshes using Three.js raycasting.
+ * Also provides utilities for finding connected nodes in the family graph.
  */
 import * as THREE from 'three';
+
+/**
+ * Relationship types for finding connected nodes
+ */
+export interface ParentChildRelation {
+  parentId: string;
+  childId: string;
+}
+
+export interface SpouseRelation {
+  person1Id: string;
+  person2Id: string;
+}
+
+/**
+ * Gets all person IDs that are directly connected to the given person.
+ * Direct connections include: parents, children, and spouses.
+ *
+ * @param personId - The ID of the person to find connections for
+ * @param parentChildRelations - Array of parent-child relationships
+ * @param spouseRelations - Array of spouse relationships
+ * @returns Array of connected person IDs (excluding the input personId)
+ */
+export function getConnectedPersonIds(
+  personId: string,
+  parentChildRelations: ParentChildRelation[],
+  spouseRelations: SpouseRelation[]
+): string[] {
+  const connected = new Set<string>();
+
+  // Find parents and children
+  for (const rel of parentChildRelations) {
+    if (rel.parentId === personId) {
+      connected.add(rel.childId);
+    }
+    if (rel.childId === personId) {
+      connected.add(rel.parentId);
+    }
+  }
+
+  // Find spouses
+  for (const rel of spouseRelations) {
+    if (rel.person1Id === personId) {
+      connected.add(rel.person2Id);
+    }
+    if (rel.person2Id === personId) {
+      connected.add(rel.person1Id);
+    }
+  }
+
+  return Array.from(connected);
+}
 
 /**
  * ConstellationSelection - Handles 3D selection via raycasting
@@ -50,8 +103,9 @@ export class ConstellationSelection {
         intersect.instanceId !== undefined
       ) {
         const personIds = intersect.object.userData.personIds as string[] | undefined;
-        if (personIds && personIds[intersect.instanceId]) {
-          return personIds[intersect.instanceId];
+        const personId = personIds?.[intersect.instanceId];
+        if (personId) {
+          return personId;
         }
       }
 

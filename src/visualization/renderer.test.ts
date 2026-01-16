@@ -1,44 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { isWebGPUSupported } from './renderer';
-
-// Create mock functions outside the class
-const mockSetPixelRatio = vi.fn();
-const mockSetSize = vi.fn();
-const mockGetPixelRatio = vi.fn().mockReturnValue(1);
-const mockGetSize = vi.fn().mockImplementation((target) => {
-  target.x = 800;
-  target.y = 600;
-  return target;
-});
-const mockSetAnimationLoop = vi.fn();
-const mockRender = vi.fn();
-const mockDispose = vi.fn();
-
-// Mock Three.js WebGLRenderer with a class
-vi.mock('three', async () => {
-  const actual = await vi.importActual<typeof import('three')>('three');
-
-  // Create a mock class that can be instantiated with `new`
-  class MockWebGLRenderer {
-    public domElement: HTMLCanvasElement;
-    public setPixelRatio = mockSetPixelRatio;
-    public setSize = mockSetSize;
-    public getPixelRatio = mockGetPixelRatio;
-    public getSize = mockGetSize;
-    public setAnimationLoop = mockSetAnimationLoop;
-    public render = mockRender;
-    public dispose = mockDispose;
-
-    constructor(options: { canvas: HTMLCanvasElement }) {
-      this.domElement = options.canvas;
-    }
-  }
-
-  return {
-    ...actual,
-    WebGLRenderer: MockWebGLRenderer,
-  };
-});
+import { isWebGPUSupported, WebGPUNotSupportedError } from './renderer';
 
 describe('Renderer', () => {
   let originalNavigator: Navigator;
@@ -52,12 +13,6 @@ describe('Renderer', () => {
 
     // Store original navigator
     originalNavigator = globalThis.navigator;
-
-    // Reset mocks
-    mockSetPixelRatio.mockClear();
-    mockSetSize.mockClear();
-    mockGetPixelRatio.mockClear();
-    mockGetSize.mockClear();
   });
 
   afterEach(() => {
@@ -68,6 +23,26 @@ describe('Renderer', () => {
       value: originalNavigator,
       writable: true,
       configurable: true,
+    });
+  });
+
+  describe('WebGPUNotSupportedError', () => {
+    it('should create error with default message', () => {
+      const error = new WebGPUNotSupportedError();
+      expect(error.name).toBe('WebGPUNotSupportedError');
+      expect(error.message).toContain('WebGPU is not supported');
+      expect(error.message).toContain('Chrome 113+');
+    });
+
+    it('should create error with custom reason', () => {
+      const error = new WebGPUNotSupportedError('adapter failed');
+      expect(error.name).toBe('WebGPUNotSupportedError');
+      expect(error.message).toContain('adapter failed');
+    });
+
+    it('should be instance of Error', () => {
+      const error = new WebGPUNotSupportedError();
+      expect(error).toBeInstanceOf(Error);
     });
   });
 
@@ -137,84 +112,53 @@ describe('Renderer', () => {
       const supported = await isWebGPUSupported();
       expect(supported).toBe(false);
     });
+
+    it('should return false when navigator is undefined', async () => {
+      Object.defineProperty(globalThis, 'navigator', {
+        value: undefined,
+        writable: true,
+        configurable: true,
+      });
+
+      const supported = await isWebGPUSupported();
+      expect(supported).toBe(false);
+    });
   });
 
   describe('createRenderer', () => {
-    it('should initialize renderer asynchronously', async () => {
-      // Force WebGL fallback for testing
+    it('should throw WebGPUNotSupportedError when WebGPU is not available', async () => {
       Object.defineProperty(globalThis, 'navigator', {
         value: { ...originalNavigator, gpu: undefined },
         writable: true,
         configurable: true,
       });
 
-      // Dynamic import to get the mocked version
+      // Dynamic import to get fresh module
       const { createRenderer } = await import('./renderer');
       const canvas = document.querySelector('canvas')!;
-      const renderer = await createRenderer(canvas);
 
-      expect(renderer).toBeDefined();
-      expect(renderer.domElement).toBe(canvas);
+      await expect(createRenderer(canvas)).rejects.toThrow(WebGPUNotSupportedError);
     });
 
-    it('should set correct pixel ratio (clamped to max 2)', async () => {
+    it('should throw WebGPUNotSupportedError with reason when adapter fails', async () => {
+      const mockNavigator = {
+        ...originalNavigator,
+        gpu: {
+          requestAdapter: vi.fn().mockResolvedValue(null),
+        },
+      };
       Object.defineProperty(globalThis, 'navigator', {
-        value: { ...originalNavigator, gpu: undefined },
+        value: mockNavigator,
         writable: true,
         configurable: true,
       });
 
       const { createRenderer } = await import('./renderer');
       const canvas = document.querySelector('canvas')!;
-      const renderer = await createRenderer(canvas);
 
-      // Mock returns 1, which is <= 2
-      expect(renderer.getPixelRatio()).toBeLessThanOrEqual(2);
-    });
-
-    it('should set renderer size to canvas dimensions', async () => {
-      Object.defineProperty(globalThis, 'navigator', {
-        value: { ...originalNavigator, gpu: undefined },
-        writable: true,
-        configurable: true,
-      });
-
-      const { createRenderer } = await import('./renderer');
-      const canvas = document.querySelector('canvas')!;
-      const renderer = await createRenderer(canvas);
-
-      const THREE = await import('three');
-      const size = renderer.getSize(new THREE.Vector2());
-      expect(size.x).toBeGreaterThan(0);
-      expect(size.y).toBeGreaterThan(0);
-    });
-
-    it('should call setPixelRatio on renderer', async () => {
-      Object.defineProperty(globalThis, 'navigator', {
-        value: { ...originalNavigator, gpu: undefined },
-        writable: true,
-        configurable: true,
-      });
-
-      const { createRenderer } = await import('./renderer');
-      const canvas = document.querySelector('canvas')!;
-      await createRenderer(canvas);
-
-      expect(mockSetPixelRatio).toHaveBeenCalled();
-    });
-
-    it('should call setSize on renderer', async () => {
-      Object.defineProperty(globalThis, 'navigator', {
-        value: { ...originalNavigator, gpu: undefined },
-        writable: true,
-        configurable: true,
-      });
-
-      const { createRenderer } = await import('./renderer');
-      const canvas = document.querySelector('canvas')!;
-      await createRenderer(canvas);
-
-      expect(mockSetSize).toHaveBeenCalled();
+      await expect(createRenderer(canvas)).rejects.toThrow(
+        /navigator\.gpu not available|adapter request failed/
+      );
     });
   });
 });

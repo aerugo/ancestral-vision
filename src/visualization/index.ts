@@ -1,31 +1,18 @@
 /**
  * Visualization module exports
+ *
+ * Note: WebGL support has been deprecated. This module only supports WebGPU.
  */
 
 // Core rendering
-export { createRenderer, isWebGPUSupported, isWebGPURenderer, disposeRenderer } from './renderer';
+export {
+  createRenderer,
+  isWebGPUSupported,
+  disposeRenderer,
+  WebGPUNotSupportedError,
+  type WebGPURendererType,
+} from './renderer';
 export { createScene, createCamera, createControls, disposeScene } from './scene';
-export {
-  createConstellationMesh,
-  updateConstellation,
-  generatePlaceholderPeople,
-  disposeConstellation,
-  type PlaceholderPerson,
-} from './constellation';
-
-// Visualization Engine (orchestrates all systems)
-export {
-  createVisualizationEngine,
-  disposeVisualizationEngine,
-  type VisualizationEngine,
-  type VisualizationData,
-  type VisualizationConfig,
-  type NodeData,
-  type EdgeData as EngineEdgeData,
-  type NodeConfig,
-  type EdgeConfig,
-  type ParticleConfig,
-} from './engine';
 
 // TSL Shaders
 export { createNoiseFunction, defaultNoise, type NoiseConfig, type NoiseFunction } from './shaders/noise';
@@ -34,18 +21,19 @@ export { createFresnelNode, defaultFresnel, type FresnelConfig } from './shaders
 // TSL Materials
 export { createNodeMaterial, disposeNodeMaterial, type NodeMaterialConfig } from './materials/node-material';
 export { createEdgeMaterial, disposeEdgeMaterial, type EdgeMaterialConfig } from './materials/edge-material';
-
-// Custom GLSL Materials (for visual parity with prototype)
 export {
-  createCustomNodeMaterial,
-  updateCustomNodeMaterialTime,
-  updateCustomNodeMaterialColors,
-  updateCustomNodeMaterialTheme,
-  disposeCustomNodeMaterial,
-  type CustomNodeMaterialConfig,
-  type CustomNodeMaterialUniforms,
-  type CustomNodeMaterialResult,
-} from './materials/custom-node-material';
+  createTSLCloudMaterial,
+  updateTSLCloudMaterialTime,
+  disposeTSLCloudMaterial,
+  createTSLCloudMaterialWithPreset,
+  getTSLCloudPresetNames,
+  getRandomTSLCloudPreset,
+  TSL_CLOUD_PRESETS,
+  type TSLCloudPreset,
+  type TSLCloudMaterialConfig,
+  type TSLCloudMaterialUniforms,
+  type TSLCloudMaterialResult,
+} from './materials/tsl-cloud-material';
 
 // Edges
 export {
@@ -77,34 +65,28 @@ export {
 // Effects
 export {
   createSacredGeometryGrid,
+  updateSacredGeometryGrid,
   disposeSacredGeometryGrid,
   type SacredGeometryConfig,
 } from './effects/sacred-geometry-grid';
+
+// TSL Post-Processing Pipeline (WebGPU-only)
 export {
-  createPostProcessing,
+  createPostProcessingPipeline,
   updatePostProcessingSize,
   renderWithPostProcessing,
-  disposePostProcessing,
-  type PostProcessingConfig,
-  type PostProcessingResult,
+  disposePostProcessingPipeline,
+  type PostProcessingPipelineConfig,
+  type PostProcessingPipelineResult,
+  type PostProcessingPipelineUniforms,
   type BloomConfig,
   type VignetteConfig,
-} from './effects/post-processing';
+  type DepthOfFieldConfig,
+  type ChromaticAberrationConfig,
+  type FilmGrainConfig,
+} from './tsl-pipeline';
 
-// TSL Post-Processing (WebGPU-compatible, Phase 9.3)
-export {
-  createTSLPostProcessing,
-  updateTSLPostProcessingSize,
-  renderWithTSLPostProcessing,
-  disposeTSLPostProcessing,
-  type TSLPostProcessingConfig,
-  type TSLPostProcessingResult,
-  type TSLBloomConfig,
-  type TSLVignetteConfig,
-  type TSLPostProcessingUniforms,
-} from './effects/webgpu-post-processing';
-
-// Instanced constellation (advanced)
+// Instanced constellation
 export {
   createInstancedConstellation,
   updateConstellationTime,
@@ -116,6 +98,12 @@ export {
   type ConstellationUniforms,
   type InstancedConstellationResult,
 } from './instanced-constellation';
+
+// Selection
+export { ConstellationSelection } from './selection';
+
+// Camera animation
+export { CameraAnimator } from './camera-animation';
 
 // Performance monitoring and LOD
 export {

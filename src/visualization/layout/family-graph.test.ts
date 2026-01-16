@@ -4,7 +4,7 @@
  * Tests for graph construction from family data with relationship inference.
  */
 import { describe, it, expect } from 'vitest';
-import { FamilyGraph, calculateBiographyWeight, type PersonInput, type ParentChildInput } from './family-graph';
+import { FamilyGraph, calculateBiographyWeight, type PersonInput, type ParentChildInput, type SpouseInput } from './family-graph';
 import { EDGE_STRENGTH_DEFAULTS } from './types';
 
 describe('calculateBiographyWeight', () => {
@@ -254,6 +254,134 @@ describe('FamilyGraph', () => {
       const range = graph.getGenerationRange();
       expect(range.min).toBe(-1);
       expect(range.max).toBe(1);
+    });
+  });
+
+  describe('spouse relationships', () => {
+    it('should create spouse edges from spouse relationships', () => {
+      const people: PersonInput[] = [
+        { id: 'husband', name: 'Husband' },
+        { id: 'wife', name: 'Wife' },
+      ];
+      const spouse: SpouseInput[] = [
+        { person1Id: 'husband', person2Id: 'wife' },
+      ];
+
+      const graph = new FamilyGraph(people, [], undefined, spouse);
+
+      expect(graph.edges.length).toBe(1);
+      const spouseEdge = graph.edges[0]!;
+      expect(spouseEdge.type).toBe('spouse');
+      expect(spouseEdge.strength).toBe(EDGE_STRENGTH_DEFAULTS['spouse']);
+    });
+
+    it('should assign spouses to the same generation', () => {
+      const people: PersonInput[] = [
+        { id: 'self', name: 'Self' },
+        { id: 'spouse', name: 'Spouse' },
+      ];
+      const spouse: SpouseInput[] = [
+        { person1Id: 'self', person2Id: 'spouse' },
+      ];
+
+      const graph = new FamilyGraph(people, [], 'self', spouse);
+
+      expect(graph.nodes.get('self')?.generation).toBe(0);
+      expect(graph.nodes.get('spouse')?.generation).toBe(0);
+    });
+
+    it('should handle spouses with parent-child relationships', () => {
+      const people: PersonInput[] = [
+        { id: 'parent1', name: 'Parent 1' },
+        { id: 'parent2', name: 'Parent 2' },
+        { id: 'child', name: 'Child' },
+      ];
+      const parentChild: ParentChildInput[] = [
+        { parentId: 'parent1', childId: 'child' },
+        { parentId: 'parent2', childId: 'child' },
+      ];
+      const spouse: SpouseInput[] = [
+        { person1Id: 'parent1', person2Id: 'parent2' },
+      ];
+
+      const graph = new FamilyGraph(people, parentChild, 'child', spouse);
+
+      // Both parents should be in same generation (-1)
+      expect(graph.nodes.get('parent1')?.generation).toBe(-1);
+      expect(graph.nodes.get('parent2')?.generation).toBe(-1);
+      expect(graph.nodes.get('child')?.generation).toBe(0);
+    });
+
+    it('should add connections for spouse edges', () => {
+      const people: PersonInput[] = [
+        { id: 'husband', name: 'Husband' },
+        { id: 'wife', name: 'Wife' },
+      ];
+      const spouse: SpouseInput[] = [
+        { person1Id: 'husband', person2Id: 'wife' },
+      ];
+
+      const graph = new FamilyGraph(people, [], undefined, spouse);
+
+      expect(graph.nodes.get('husband')?.connections).toContain('wife');
+      expect(graph.nodes.get('wife')?.connections).toContain('husband');
+    });
+
+    it('should not create duplicate edges for same person pair', () => {
+      const people: PersonInput[] = [
+        { id: 'person1', name: 'Person 1' },
+        { id: 'person2', name: 'Person 2' },
+      ];
+      const spouse: SpouseInput[] = [
+        { person1Id: 'person1', person2Id: 'person2' },
+        { person1Id: 'person2', person2Id: 'person1' }, // Duplicate in reverse
+      ];
+
+      const graph = new FamilyGraph(people, [], undefined, spouse);
+
+      expect(graph.edges.length).toBe(1);
+    });
+
+    it('should infer spouse relationship from shared child (co-parents)', () => {
+      const people: PersonInput[] = [
+        { id: 'parent1', name: 'Parent 1' },
+        { id: 'parent2', name: 'Parent 2' },
+        { id: 'child', name: 'Child' },
+      ];
+      const parentChild: ParentChildInput[] = [
+        { parentId: 'parent1', childId: 'child' },
+        { parentId: 'parent2', childId: 'child' },
+      ];
+
+      // No explicit spouse relationship provided
+      const graph = new FamilyGraph(people, parentChild, 'child');
+
+      // Should have 2 parent-child edges + 1 inferred spouse edge
+      const spouseEdges = graph.edges.filter(e => e.type === 'spouse');
+      expect(spouseEdges.length).toBe(1);
+      expect(spouseEdges[0]!.sourceId).toBe('parent1');
+      expect(spouseEdges[0]!.targetId).toBe('parent2');
+    });
+
+    it('should not duplicate spouse edge when both explicit and inferred', () => {
+      const people: PersonInput[] = [
+        { id: 'parent1', name: 'Parent 1' },
+        { id: 'parent2', name: 'Parent 2' },
+        { id: 'child', name: 'Child' },
+      ];
+      const parentChild: ParentChildInput[] = [
+        { parentId: 'parent1', childId: 'child' },
+        { parentId: 'parent2', childId: 'child' },
+      ];
+      const spouse: SpouseInput[] = [
+        { person1Id: 'parent1', person2Id: 'parent2' },
+      ];
+
+      const graph = new FamilyGraph(people, parentChild, 'child', spouse);
+
+      // Should have only 1 spouse edge (inferred + explicit should not duplicate)
+      const spouseEdges = graph.edges.filter(e => e.type === 'spouse');
+      expect(spouseEdges.length).toBe(1);
     });
   });
 });

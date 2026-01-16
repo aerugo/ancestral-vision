@@ -7,7 +7,11 @@
  */
 
 import type { GraphNode, GraphEdge, Vec3, LayoutConfig } from './types';
-import { DEFAULT_LAYOUT_CONFIG } from './types';
+import {
+  DEFAULT_LAYOUT_CONFIG,
+  EDGE_IDEAL_DISTANCE_MULTIPLIERS,
+  MIN_NODE_DISTANCE,
+} from './types';
 import { BarnesHutTree } from './barnes-hut';
 
 /** Threshold for using Barnes-Hut algorithm (n > 100 nodes) */
@@ -224,7 +228,8 @@ export class ForceDirectedLayout {
 
   /**
    * Attraction force along edges
-   * All edges use generation spacing as ideal distance
+   * Uses edge-type-specific ideal distances and strength multipliers
+   * Spouse edges: strong attraction with collision prevention
    */
   private _applyAttraction(nodes: GraphNode[], edges: GraphEdge[]): void {
     const nodeMap = new Map(nodes.map((n) => [n.id, n]));
@@ -241,8 +246,27 @@ export class ForceDirectedLayout {
 
       const dist = Math.sqrt(dx * dx + dy * dy + dz * dz) + 0.1;
 
-      // Ideal distance is generation spacing for parent-child edges
-      const idealDist = this._config.generationSpacing;
+      // Ideal distance based on edge type
+      const distanceMultiplier = EDGE_IDEAL_DISTANCE_MULTIPLIERS[edge.type];
+      const idealDist = this._config.generationSpacing * distanceMultiplier;
+
+      // For spouse edges: enforce minimum distance to prevent collision
+      if (edge.type === 'spouse' && dist < MIN_NODE_DISTANCE) {
+        // Apply repulsion force to push apart if too close
+        const repulsionForce = (MIN_NODE_DISTANCE - dist) * 0.5;
+        const rfx = (dx / dist) * repulsionForce;
+        const rfy = (dy / dist) * repulsionForce;
+        const rfz = (dz / dist) * repulsionForce;
+
+        // Push nodes apart (opposite direction from attraction)
+        source.velocity.x -= rfx;
+        source.velocity.y -= rfy;
+        source.velocity.z -= rfz;
+        target.velocity.x += rfx;
+        target.velocity.y += rfy;
+        target.velocity.z += rfz;
+        continue; // Skip attraction when enforcing minimum distance
+      }
 
       // Force with edge strength multiplier
       const force =

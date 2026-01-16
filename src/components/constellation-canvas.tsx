@@ -59,6 +59,7 @@ import {
   ForceDirectedLayout,
   type PersonInput,
   type ParentChildInput,
+  type SpouseInput,
   type GraphEdge,
 } from '@/visualization/layout';
 import { useConstellationGraph } from '@/hooks/use-constellation-graph';
@@ -94,12 +95,13 @@ interface LayoutResult {
  * Uses force-directed layout with golden angle distribution
  * Layout algorithm ported from: reference_prototypes/family-constellations/
  *
- * Uses FamilyGraph to build parent-child edges for tree structure
+ * Uses FamilyGraph to build parent-child and spouse edges for layout
  */
 function peopleToPlacelderPeople(
   people: Array<{ id: string; givenName: string | null; surname: string | null; generation: number; biography?: string | null }>,
   parentChildRelationships: ParentChildInput[] = [],
-  centeredPersonId?: string
+  centeredPersonId?: string,
+  spouseRelationships: SpouseInput[] = []
 ): LayoutResult {
   if (people.length === 0) return { people: [], edges: [] };
 
@@ -153,18 +155,21 @@ function peopleToPlacelderPeople(
     }
   }
 
-  // Build the graph with parent-child relationships
+  // Build the graph with parent-child and spouse relationships
   const graph = new FamilyGraph(
     personInputs,
     parentChild,
-    centeredPersonId ?? people[0]?.id
+    centeredPersonId ?? people[0]?.id,
+    spouseRelationships
   );
 
   // Get nodes array and edges
   const nodes = graph.getNodesArray();
   const edges = graph.edges;
 
-  console.log(`[peopleToPlacelderPeople] Graph built: ${nodes.length} nodes, ${edges.length} parent-child edges`);
+  const spouseEdgeCount = edges.filter(e => e.type === 'spouse').length;
+  const parentChildEdgeCount = edges.filter(e => e.type === 'parent-child').length;
+  console.log(`[peopleToPlacelderPeople] Graph built: ${nodes.length} nodes, ${parentChildEdgeCount} parent-child edges, ${spouseEdgeCount} spouse edges (invisible)`);
 
   // Run force-directed layout
   const layout = new ForceDirectedLayout();
@@ -273,7 +278,8 @@ export function ConstellationCanvas(): React.ReactElement {
         ? peopleToPlacelderPeople(
             graphData.rawPeople,
             graphData.parentChildRelationships,
-            graphData.centeredPersonId
+            graphData.centeredPersonId,
+            graphData.spouseRelationships
           )
         : isLoading
           ? { people: [], edges: [] } // Don't show anything while loading
@@ -306,8 +312,10 @@ export function ConstellationCanvas(): React.ReactElement {
     }
 
     // Add edge system (Phase 2) - use REAL edges from FamilyGraph with proper types
+    // Filter out spouse edges (invisible - for layout clustering only)
     if (positions.length > 1 && graphEdges.length > 0) {
       const visualEdges: EdgeSystemData['edges'] = graphEdges
+        .filter((edge): edge is GraphEdge & { type: 'parent-child' } => edge.type === 'parent-child')
         .map(edge => {
           const sourcePos = positionMap.get(edge.sourceId);
           const targetPos = positionMap.get(edge.targetId);

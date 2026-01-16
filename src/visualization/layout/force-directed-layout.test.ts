@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import { ForceDirectedLayout, GOLDEN_ANGLE, BARNES_HUT_THRESHOLD } from './force-directed-layout';
 import type { GraphNode, GraphEdge, Vec3 } from './types';
-import { EDGE_STRENGTH_DEFAULTS } from './types';
+import { EDGE_STRENGTH_DEFAULTS, MIN_NODE_DISTANCE } from './types';
 
 function createTestNode(id: string, generation: number, biographyWeight = 0.5): GraphNode {
   return {
@@ -221,6 +221,75 @@ describe('ForceDirectedLayout', () => {
       const radiusVariation = (heavyWeight - lightWeight) * 5;
 
       expect(radiusVariation).toBe(5);
+    });
+  });
+
+  describe('spouse clustering', () => {
+    it('should place spouses closer together than parent-child pairs', () => {
+      const nodes = [
+        createTestNode('self', 0),
+        createTestNode('spouse', 0),
+        createTestNode('parent', -1),
+      ];
+      const edges = [
+        createEdge('self', 'spouse', 'spouse'),
+        createEdge('parent', 'self', 'parent-child'),
+      ];
+
+      const layout = new ForceDirectedLayout();
+      layout.calculate(nodes, edges, 'self');
+
+      const self = nodes.find(n => n.id === 'self')!;
+      const spouse = nodes.find(n => n.id === 'spouse')!;
+      const parent = nodes.find(n => n.id === 'parent')!;
+
+      const spouseDistance = distance(self.position, spouse.position);
+      const parentDistance = distance(self.position, parent.position);
+
+      // Spouses should be significantly closer than parent
+      expect(spouseDistance).toBeLessThan(parentDistance);
+    });
+
+    it('should maintain minimum distance between spouses (collision prevention)', () => {
+      const nodes = [
+        createTestNode('spouse1', 0),
+        createTestNode('spouse2', 0),
+      ];
+      const edges = [
+        createEdge('spouse1', 'spouse2', 'spouse'),
+      ];
+
+      const layout = new ForceDirectedLayout();
+      layout.calculate(nodes, edges, 'spouse1');
+
+      const spouse1 = nodes.find(n => n.id === 'spouse1')!;
+      const spouse2 = nodes.find(n => n.id === 'spouse2')!;
+
+      const spouseDistance = distance(spouse1.position, spouse2.position);
+
+      // Should maintain minimum distance to prevent collision
+      expect(spouseDistance).toBeGreaterThanOrEqual(MIN_NODE_DISTANCE * 0.8); // Allow small tolerance
+    });
+
+    it('should keep spouse pairs on same Y level', () => {
+      const nodes = [
+        createTestNode('self', 0),
+        createTestNode('spouse', 0),
+        createTestNode('child', 1),
+      ];
+      const edges = [
+        createEdge('self', 'spouse', 'spouse'),
+        createEdge('self', 'child', 'parent-child'),
+      ];
+
+      const layout = new ForceDirectedLayout();
+      layout.calculate(nodes, edges, 'self');
+
+      const self = nodes.find(n => n.id === 'self')!;
+      const spouse = nodes.find(n => n.id === 'spouse')!;
+
+      // Spouses should be at approximately same Y level
+      expect(Math.abs(self.position.y - spouse.position.y)).toBeLessThan(15);
     });
   });
 });

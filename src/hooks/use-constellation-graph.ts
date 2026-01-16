@@ -9,7 +9,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { gql } from '@/lib/graphql-client';
 import { useAuthStore } from '@/store/auth-store';
-import type { ParentChildInput, PersonInput } from '@/visualization/layout';
+import type { ParentChildInput, PersonInput, SpouseInput } from '@/visualization/layout';
 
 /**
  * Person data for layout calculation
@@ -28,6 +28,7 @@ export interface ConstellationPerson {
 interface PersonWithRelationships extends ConstellationPerson {
   parents: Array<{ id: string }>;
   children: Array<{ id: string }>;
+  spouses: Array<{ id: string }>;
 }
 
 /**
@@ -38,6 +39,8 @@ export interface ConstellationGraphData {
   people: PersonInput[];
   /** Parent-child relationships */
   parentChildRelationships: ParentChildInput[];
+  /** Spouse relationships for clustering */
+  spouseRelationships: SpouseInput[];
   /** ID of the centered person for the mandala */
   centeredPersonId: string | undefined;
   /** Raw people data with API types */
@@ -62,6 +65,9 @@ const CONSTELLATION_GRAPH_QUERY = `
           id
         }
         children {
+          id
+        }
+        spouses {
           id
         }
       }
@@ -158,6 +164,24 @@ export function useConstellationGraph() {
         }
       }
 
+      // Extract spouse relationships (avoiding duplicates)
+      const spouseSet = new Set<string>();
+      const spouseRelationships: SpouseInput[] = [];
+
+      for (const person of people) {
+        for (const spouse of person.spouses) {
+          // Create a consistent key regardless of order
+          const key = [person.id, spouse.id].sort().join('-');
+          if (!spouseSet.has(key)) {
+            spouseSet.add(key);
+            spouseRelationships.push({
+              person1Id: person.id,
+              person2Id: spouse.id,
+            });
+          }
+        }
+      }
+
       // Convert to PersonInput format
       const personInputs: PersonInput[] = people.map(person => ({
         id: person.id,
@@ -177,6 +201,7 @@ export function useConstellationGraph() {
       return {
         people: personInputs,
         parentChildRelationships,
+        spouseRelationships,
         centeredPersonId: centeredPersonId ?? undefined,
         rawPeople,
       };

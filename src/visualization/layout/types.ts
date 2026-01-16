@@ -49,9 +49,10 @@ export interface GraphNode {
 
 /**
  * Edge type for family relationships
- * Only parent-child edges are created - the tree structure is defined by lineage
+ * - 'parent-child': Lineage connection (standard spacing)
+ * - 'spouse': Marriage connection (close clustering, collision prevention)
  */
-export type EdgeType = 'parent-child';
+export type EdgeType = 'parent-child' | 'spouse';
 
 /**
  * Edge connecting two nodes in the graph
@@ -101,13 +102,25 @@ export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
 };
 
 /**
- * Ideal distance multiplier for parent-child edges
+ * Ideal distance multiplier for edge types (relative to generationSpacing)
+ * Spouse edges use much smaller distance to create tight clustering
  */
-export const EDGE_IDEAL_DISTANCE_MULTIPLIER = 1.0;
+export const EDGE_IDEAL_DISTANCE_MULTIPLIERS: Record<EdgeType, number> = {
+  'parent-child': 1.0,
+  'spouse': 0.2, // Very close clustering (20% of generation spacing)
+};
 
 /**
- * Default strength for parent-child edges
+ * Minimum distance between nodes to prevent collision
+ * This is the absolute minimum separation regardless of attraction forces
+ */
+export const MIN_NODE_DISTANCE = 12;
+
+/**
+ * Default strength for edge types
+ * Spouse edges have higher strength for tight clustering
  */
 export const EDGE_STRENGTH_DEFAULTS: Record<EdgeType, number> = {
   'parent-child': 1.0,
+  'spouse': 2.0, // Strong attraction for spouse clustering
 };

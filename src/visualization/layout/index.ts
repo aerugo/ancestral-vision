@@ -26,6 +26,7 @@ export {
   calculateBiographyWeight,
   type PersonInput,
   type ParentChildInput,
+  type SpouseInput,
 } from './family-graph';
 
 export {
@@ -36,7 +37,8 @@ export {
   type LayoutPerson,
   type LayoutConfig,
   DEFAULT_LAYOUT_CONFIG,
-  EDGE_IDEAL_DISTANCE_MULTIPLIER,
+  EDGE_IDEAL_DISTANCE_MULTIPLIERS,
+  MIN_NODE_DISTANCE,
   EDGE_STRENGTH_DEFAULTS,
 } from './types';
 

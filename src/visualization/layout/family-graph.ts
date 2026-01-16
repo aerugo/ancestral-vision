@@ -18,6 +18,14 @@ export interface ParentChildInput {
 }
 
 /**
+ * Input data for spouse relationship
+ */
+export interface SpouseInput {
+  person1Id: string;
+  person2Id: string;
+}
+
+/**
  * Input data for a person in the graph
  */
 export interface PersonInput {
@@ -60,15 +68,17 @@ export class FamilyGraph {
   public centeredId: string;
 
   /**
-   * Create a family graph from people and parent-child relationships
+   * Create a family graph from people and relationships
    * @param people Array of people with their data
    * @param parentChildRelationships Array of parent-child relationships
    * @param centeredPersonId ID of the person at the center of the mandala
+   * @param spouseRelationships Optional array of spouse relationships for clustering
    */
   constructor(
     people: PersonInput[],
     parentChildRelationships: ParentChildInput[],
-    centeredPersonId?: string
+    centeredPersonId?: string,
+    spouseRelationships?: SpouseInput[]
   ) {
     // Determine centered person: prefer provided ID, then first person
     this.centeredId = centeredPersonId ?? people[0]?.id ?? '';
@@ -78,6 +88,14 @@ export class FamilyGraph {
 
     // Build edges from parent-child relationships
     this._buildEdges(parentChildRelationships);
+
+    // Infer spouse relationships from shared children (co-parents)
+    this._inferSpousesFromChildren(parentChildRelationships);
+
+    // Build edges from explicit spouse relationships (if provided)
+    if (spouseRelationships) {
+      this._buildSpouseEdges(spouseRelationships);
+    }
 
     // Calculate generations via BFS from centered person
     this._calculateGenerations();
@@ -138,8 +156,98 @@ export class FamilyGraph {
   }
 
   /**
+   * Infer spouse relationships from shared children (co-parents)
+   * If two people are both parents of the same child, they are treated as spouses
+   */
+  private _inferSpousesFromChildren(
+    parentChildRelationships: ParentChildInput[]
+  ): void {
+    // Group parents by child
+    const parentsByChild = new Map<string, string[]>();
+    for (const rel of parentChildRelationships) {
+      if (!parentsByChild.has(rel.childId)) {
+        parentsByChild.set(rel.childId, []);
+      }
+      parentsByChild.get(rel.childId)!.push(rel.parentId);
+    }
+
+    // Track existing edges to avoid duplicates
+    const existingPairs = new Set(
+      this.edges.map((e) => [e.sourceId, e.targetId].sort().join('-'))
+    );
+
+    // For each child with multiple parents, create spouse edges between the parents
+    for (const [_childId, parents] of parentsByChild) {
+      if (parents.length < 2) continue;
+
+      // Create spouse edges for all pairs of co-parents
+      for (let i = 0; i < parents.length; i++) {
+        for (let j = i + 1; j < parents.length; j++) {
+          const parent1 = parents[i]!;
+          const parent2 = parents[j]!;
+          const pairKey = [parent1, parent2].sort().join('-');
+
+          if (existingPairs.has(pairKey)) continue;
+          existingPairs.add(pairKey);
+
+          // Skip if either node doesn't exist
+          if (!this.nodes.has(parent1) || !this.nodes.has(parent2)) continue;
+
+          const edge: GraphEdge = {
+            id: pairKey + '-spouse-inferred',
+            sourceId: parent1,
+            targetId: parent2,
+            type: 'spouse',
+            strength: EDGE_STRENGTH_DEFAULTS['spouse'],
+          };
+          this.edges.push(edge);
+
+          // Add connections to nodes
+          this.nodes.get(parent1)?.connections.push(parent2);
+          this.nodes.get(parent2)?.connections.push(parent1);
+        }
+      }
+    }
+  }
+
+  /**
+   * Build spouse edges for tight clustering
+   * Spouse edges are invisible (not rendered) but affect layout
+   */
+  private _buildSpouseEdges(spouseRelationships: SpouseInput[]): void {
+    // Track existing edges to avoid duplicates
+    const existingPairs = new Set(
+      this.edges.map((e) => [e.sourceId, e.targetId].sort().join('-'))
+    );
+
+    for (const rel of spouseRelationships) {
+      const pairKey = [rel.person1Id, rel.person2Id].sort().join('-');
+      if (existingPairs.has(pairKey)) continue;
+      existingPairs.add(pairKey);
+
+      // Skip if either node doesn't exist
+      if (!this.nodes.has(rel.person1Id) || !this.nodes.has(rel.person2Id))
+        continue;
+
+      const edge: GraphEdge = {
+        id: pairKey + '-spouse',
+        sourceId: rel.person1Id,
+        targetId: rel.person2Id,
+        type: 'spouse',
+        strength: EDGE_STRENGTH_DEFAULTS['spouse'],
+      };
+      this.edges.push(edge);
+
+      // Add connections to nodes
+      this.nodes.get(rel.person1Id)?.connections.push(rel.person2Id);
+      this.nodes.get(rel.person2Id)?.connections.push(rel.person1Id);
+    }
+  }
+
+  /**
    * Calculate generations via BFS from centered person
    * Parent = -1 generation, Child = +1 generation
+   * Spouses are placed in the same generation
    */
   private _calculateGenerations(): void {
     const visited = new Set<string>();
@@ -157,19 +265,31 @@ export class FamilyGraph {
       const node = this.nodes.get(id);
       if (!node) continue;
 
-      // Process parent-child edges to determine generation direction
+      // Process edges to determine generation
       for (const edge of this.edges) {
         let neighborId: string | null = null;
         let genOffset = 0;
 
-        if (edge.sourceId === id && !visited.has(edge.targetId)) {
-          // This node is parent, target is child
-          neighborId = edge.targetId;
-          genOffset = 1;
-        } else if (edge.targetId === id && !visited.has(edge.sourceId)) {
-          // This node is child, source is parent
-          neighborId = edge.sourceId;
-          genOffset = -1;
+        if (edge.type === 'spouse') {
+          // Spouses share the same generation
+          if (edge.sourceId === id && !visited.has(edge.targetId)) {
+            neighborId = edge.targetId;
+            genOffset = 0; // Same generation
+          } else if (edge.targetId === id && !visited.has(edge.sourceId)) {
+            neighborId = edge.sourceId;
+            genOffset = 0; // Same generation
+          }
+        } else {
+          // Parent-child edges determine generation direction
+          if (edge.sourceId === id && !visited.has(edge.targetId)) {
+            // This node is parent, target is child
+            neighborId = edge.targetId;
+            genOffset = 1;
+          } else if (edge.targetId === id && !visited.has(edge.sourceId)) {
+            // This node is child, source is parent
+            neighborId = edge.sourceId;
+            genOffset = -1;
+          }
         }
 
         if (neighborId) {

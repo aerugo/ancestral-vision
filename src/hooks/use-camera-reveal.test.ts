@@ -10,37 +10,37 @@ import {
 } from './use-camera-reveal';
 
 describe('Camera Reveal Hook', () => {
-  const mockStorage: Record<string, string> = {};
+  const mockStorage = new Map<string, string>();
+
+  const mockLocalStorage = {
+    getItem: vi.fn((key: string) => mockStorage.get(key) ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      mockStorage.set(key, value);
+    }),
+    removeItem: vi.fn((key: string) => {
+      mockStorage.delete(key);
+    }),
+    clear: vi.fn(() => mockStorage.clear()),
+    length: 0,
+    key: vi.fn(() => null),
+  };
 
   beforeEach(() => {
-    // Mock localStorage
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(
-      (key: string) => mockStorage[key] || null
-    );
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(
-      (key: string, value: string) => {
-        mockStorage[key] = value;
-      }
-    );
-    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(
-      (key: string) => {
-        delete mockStorage[key];
-      }
-    );
-
-    // Clear storage before each test
-    Object.keys(mockStorage).forEach((key) => delete mockStorage[key]);
+    // Mock localStorage using stubGlobal (works with happy-dom)
+    vi.stubGlobal('localStorage', mockLocalStorage);
+    mockStorage.clear();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   describe('triggerCameraReveal', () => {
     it('should set reveal flag in localStorage', () => {
       triggerCameraReveal();
 
-      expect(localStorage.setItem).toHaveBeenCalledWith(
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
         'ancestral-vision:pending-reveal',
         'true'
       );
@@ -55,7 +55,7 @@ describe('Camera Reveal Hook', () => {
     });
 
     it('should return shouldReveal as true when flag is set', () => {
-      mockStorage['ancestral-vision:pending-reveal'] = 'true';
+      mockStorage.set('ancestral-vision:pending-reveal', 'true');
 
       const { result } = renderHook(() => useCameraReveal());
 
@@ -63,7 +63,7 @@ describe('Camera Reveal Hook', () => {
     });
 
     it('should clear reveal flag when clearReveal is called', () => {
-      mockStorage['ancestral-vision:pending-reveal'] = 'true';
+      mockStorage.set('ancestral-vision:pending-reveal', 'true');
 
       const { result } = renderHook(() => useCameraReveal());
 
@@ -71,7 +71,7 @@ describe('Camera Reveal Hook', () => {
         result.current.clearReveal();
       });
 
-      expect(localStorage.removeItem).toHaveBeenCalledWith(
+      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith(
         'ancestral-vision:pending-reveal'
       );
       expect(result.current.shouldReveal).toBe(false);

@@ -216,7 +216,7 @@ describe('PersonProfilePanel', () => {
           patronymic: null,
           nameOrder: 'GIVEN_FIRST' as const,
           speculative: false,
-          birthDate: '1980-05-15',
+          birthDate: { type: 'exact', year: 1980, month: 5, day: 15 },
           deathDate: null,
         },
         isLoading: false,

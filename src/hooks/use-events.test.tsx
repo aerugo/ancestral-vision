@@ -7,6 +7,28 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+
+// Mock the auth store FIRST (before importing hooks that use it)
+vi.mock('@/store/auth-store', () => ({
+  useAuthStore: vi.fn((selector) => {
+    const state = { token: 'mock-token', user: null, isAuthenticated: true };
+    return selector ? selector(state) : state;
+  }),
+}));
+
+// Mock the GraphQL client
+vi.mock('@/lib/graphql-client', () => ({
+  graphqlClient: {
+    request: vi.fn(),
+  },
+}));
+
+// Mock graphql-request gql (used for query templates)
+vi.mock('graphql-request', () => ({
+  gql: (strings: TemplateStringsArray, ...values: unknown[]) =>
+    strings.reduce((acc, str, i) => acc + str + (values[i] ?? ''), ''),
+}));
+
 import {
   usePersonEvents,
   useEvent,
@@ -16,13 +38,6 @@ import {
   useAddEventParticipant,
   useRemoveEventParticipant,
 } from './use-events';
-
-// Mock the GraphQL client
-vi.mock('@/lib/graphql-client', () => ({
-  graphqlClient: {
-    request: vi.fn(),
-  },
-}));
 
 import { graphqlClient } from '@/lib/graphql-client';
 

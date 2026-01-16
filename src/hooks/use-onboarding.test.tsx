@@ -7,6 +7,26 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+
+// Mock the auth store FIRST (before importing hooks that use it)
+// Inline everything to avoid hoisting issues
+vi.mock('@/store/auth-store', () => {
+  const mockState = { token: 'mock-token', user: null, isAuthenticated: true };
+  const hookFn = (selector: (state: typeof mockState) => unknown) => {
+    return selector ? selector(mockState) : mockState;
+  };
+  // Add getState static method for hooks that use useAuthStore.getState()
+  (hookFn as unknown as { getState: () => typeof mockState }).getState = () => mockState;
+  return { useAuthStore: hookFn };
+});
+
+// Mock the GraphQL client
+vi.mock('@/lib/graphql-client', () => ({
+  graphqlClient: {
+    request: vi.fn(),
+  },
+}));
+
 import {
   useOnboarding,
   useStartOnboarding,
@@ -19,14 +39,6 @@ import {
   useSkipOnboarding,
   type OnboardingProgress,
 } from './use-onboarding';
-
-// Mock the GraphQL client
-vi.mock('@/lib/graphql-client', () => ({
-  graphqlClient: {
-    request: vi.fn(),
-  },
-}));
-
 import { graphqlClient } from '@/lib/graphql-client';
 
 const mockOnboardingProgress: OnboardingProgress = {

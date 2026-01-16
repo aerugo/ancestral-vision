@@ -202,19 +202,19 @@ describe('node-material module', () => {
       expect(uniforms.uMandalaIntensity).toBeDefined();
     });
 
-    it('should default inner glow intensity to 0.8', () => {
+    it('should default inner glow intensity to 2.0 (Phase 6 tuned)', () => {
       const { uniforms } = createNodeMaterial({ enhancedMode: true });
-      expect(uniforms.uInnerGlowIntensity.value).toBe(0.8);
+      expect(uniforms.uInnerGlowIntensity.value).toBe(2.0);
     });
 
-    it('should default SSS strength to 0.3', () => {
+    it('should default SSS strength to 0.5 (Phase 6 tuned)', () => {
       const { uniforms } = createNodeMaterial({ enhancedMode: true });
-      expect(uniforms.uSSSStrength.value).toBe(0.3);
+      expect(uniforms.uSSSStrength.value).toBe(0.5);
     });
 
-    it('should default mandala intensity to 0.4 (Phase 6 tuned)', () => {
+    it('should default mandala intensity to 1.0 (Phase 6 tuned)', () => {
       const { uniforms } = createNodeMaterial({ enhancedMode: true });
-      expect(uniforms.uMandalaIntensity.value).toBe(0.4);
+      expect(uniforms.uMandalaIntensity.value).toBe(1.0);
     });
 
     it('should accept custom inner glow intensity', () => {
@@ -258,19 +258,19 @@ describe('node-material module', () => {
       expect(uniforms.uMandalaIntensity).toBeDefined();
     });
 
-    it('should have default inner glow intensity of 0.8 when using defaults', () => {
+    it('should have default inner glow intensity of 2.0 when using defaults (Phase 6 tuned)', () => {
       const { uniforms } = createNodeMaterial();
-      expect(uniforms.uInnerGlowIntensity?.value).toBe(0.8);
+      expect(uniforms.uInnerGlowIntensity?.value).toBe(2.0);
     });
 
-    it('should have default SSS strength of 0.3 when using defaults', () => {
+    it('should have default SSS strength of 0.5 when using defaults (Phase 6 tuned)', () => {
       const { uniforms } = createNodeMaterial();
-      expect(uniforms.uSSSStrength?.value).toBe(0.3);
+      expect(uniforms.uSSSStrength?.value).toBe(0.5);
     });
 
-    it('should have default mandala intensity of 0.4 when using defaults (Phase 6 tuned)', () => {
+    it('should have default mandala intensity of 1.0 when using defaults (Phase 6 tuned)', () => {
       const { uniforms } = createNodeMaterial();
-      expect(uniforms.uMandalaIntensity?.value).toBe(0.4);
+      expect(uniforms.uMandalaIntensity?.value).toBe(1.0);
     });
 
     it('should allow disabling enhanced mode explicitly', () => {

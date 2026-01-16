@@ -1,38 +1,44 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { NoteEditor } from './note-editor';
 
-// Mock Tiptap - it doesn't work well in JSDOM
-const mockUseEditor = vi.fn(() => ({
-  chain: () => ({
-    focus: () => ({
-      toggleBold: () => ({ run: vi.fn() }),
-      toggleItalic: () => ({ run: vi.fn() }),
-      toggleHeading: () => ({ run: vi.fn() }),
-      toggleBulletList: () => ({ run: vi.fn() }),
-      toggleOrderedList: () => ({ run: vi.fn() }),
-    }),
-  }),
-  isActive: vi.fn(() => false),
-  getJSON: vi.fn(() => ({ type: 'doc', content: [] })),
-  getText: vi.fn(() => ''),
-  storage: {
-    characterCount: {
-      characters: () => 0,
-    },
-  },
-  commands: {
-    setContent: vi.fn(),
-  },
-}));
+// Track calls to useEditor for assertions
+let useEditorCalls: unknown[] = [];
 
+// Mock Tiptap - inline the implementation to avoid hoisting issues
 vi.mock('@tiptap/react', () => ({
-  useEditor: mockUseEditor,
+  useEditor: vi.fn((config: unknown) => {
+    useEditorCalls.push(config);
+    return {
+      chain: () => ({
+        focus: () => ({
+          toggleBold: () => ({ run: vi.fn() }),
+          toggleItalic: () => ({ run: vi.fn() }),
+          toggleHeading: () => ({ run: vi.fn() }),
+          toggleBulletList: () => ({ run: vi.fn() }),
+          toggleOrderedList: () => ({ run: vi.fn() }),
+        }),
+      }),
+      isActive: vi.fn(() => false),
+      getJSON: vi.fn(() => ({ type: 'doc', content: [] })),
+      getText: vi.fn(() => ''),
+      storage: {
+        characterCount: {
+          characters: () => 0,
+        },
+      },
+      commands: {
+        setContent: vi.fn(),
+      },
+    };
+  }),
   EditorContent: ({ editor }: { editor: unknown }) => (
     <div data-testid="editor-content" role="textbox" />
   ),
 }));
+
+import { NoteEditor } from './note-editor';
+import { useEditor } from '@tiptap/react';
 
 describe('NoteEditor', () => {
   const mockOnSave = vi.fn();
@@ -41,6 +47,7 @@ describe('NoteEditor', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    useEditorCalls = [];
   });
 
   it('should render editor container', () => {
@@ -232,10 +239,9 @@ describe('NoteEditor', () => {
     );
 
     // Verify useEditor was called with immediatelyRender: false
-    expect(mockUseEditor).toHaveBeenCalledWith(
-      expect.objectContaining({
-        immediatelyRender: false,
-      })
-    );
+    expect(useEditorCalls.length).toBeGreaterThan(0);
+    expect(useEditorCalls[0]).toMatchObject({
+      immediatelyRender: false,
+    });
   });
 });

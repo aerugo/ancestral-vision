@@ -3,6 +3,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+// Mock the auth store FIRST (before importing hooks that use it)
+vi.mock('@/store/auth-store', () => ({
+  useAuthStore: vi.fn((selector) => {
+    const state = { token: 'mock-token', user: null, isAuthenticated: true };
+    return selector ? selector(state) : state;
+  }),
+}));
+
 // Mock the GraphQL client
 vi.mock('@/lib/graphql-client', () => ({
   gql: vi.fn(),

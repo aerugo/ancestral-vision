@@ -108,10 +108,11 @@ describe('Project Configuration', () => {
   });
 
   describe('Vitest Configuration', () => {
-    it('should have jsdom environment configured for React testing', () => {
+    it('should have happy-dom environment configured for React testing', () => {
       const vitestPath = path.join(process.cwd(), 'vitest.config.ts');
       const vitestContent = fs.readFileSync(vitestPath, 'utf-8');
-      expect(vitestContent).toContain("environment: 'jsdom'");
+      // Using happy-dom instead of jsdom for ESM compatibility
+      expect(vitestContent).toContain("environment: 'happy-dom'");
     });
   });
 });

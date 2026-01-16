@@ -2,6 +2,91 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+
+// Mock Three.js WebGPU and TSL modules FIRST (before any imports that use them)
+vi.mock('three/webgpu', () => ({
+  MeshStandardNodeMaterial: vi.fn().mockImplementation(() => ({
+    colorNode: null,
+    emissiveNode: null,
+    dispose: vi.fn(),
+  })),
+  PointsNodeMaterial: vi.fn().mockImplementation(() => ({
+    colorNode: null,
+    sizeNode: null,
+    dispose: vi.fn(),
+  })),
+  LineNodeMaterial: vi.fn().mockImplementation(() => ({
+    colorNode: null,
+    dispose: vi.fn(),
+  })),
+  PostProcessing: vi.fn().mockImplementation(() => ({
+    outputNode: null,
+    render: vi.fn(),
+    dispose: vi.fn(),
+  })),
+}));
+
+vi.mock('three/tsl', () => {
+  const mockNode = () => ({
+    add: vi.fn().mockReturnThis(),
+    mul: vi.fn().mockReturnThis(),
+    sub: vi.fn().mockReturnThis(),
+    div: vi.fn().mockReturnThis(),
+    pow: vi.fn().mockReturnThis(),
+    sin: vi.fn().mockReturnThis(),
+    cos: vi.fn().mockReturnThis(),
+    mix: vi.fn().mockReturnThis(),
+    clamp: vi.fn().mockReturnThis(),
+    getTextureNode: vi.fn().mockReturnThis(),
+  });
+  return {
+    uniform: vi.fn((v) => ({ value: v })),
+    attribute: vi.fn(() => mockNode()),
+    float: vi.fn(() => mockNode()),
+    vec2: vi.fn(() => mockNode()),
+    vec3: vi.fn(() => mockNode()),
+    vec4: vi.fn(() => mockNode()),
+    color: vi.fn(() => mockNode()),
+    uv: vi.fn(() => mockNode()),
+    sin: vi.fn(() => mockNode()),
+    cos: vi.fn(() => mockNode()),
+    mix: vi.fn(() => mockNode()),
+    smoothstep: vi.fn(() => mockNode()),
+    step: vi.fn(() => mockNode()),
+    length: vi.fn(() => mockNode()),
+    normalize: vi.fn(() => mockNode()),
+    dot: vi.fn(() => mockNode()),
+    cross: vi.fn(() => mockNode()),
+    abs: vi.fn(() => mockNode()),
+    add: vi.fn(() => mockNode()),
+    sub: vi.fn(() => mockNode()),
+    mul: vi.fn(() => mockNode()),
+    div: vi.fn(() => mockNode()),
+    pow: vi.fn(() => mockNode()),
+    min: vi.fn(() => mockNode()),
+    max: vi.fn(() => mockNode()),
+    clamp: vi.fn(() => mockNode()),
+    fract: vi.fn(() => mockNode()),
+    floor: vi.fn(() => mockNode()),
+    mod: vi.fn(() => mockNode()),
+    positionLocal: mockNode(),
+    positionWorld: mockNode(),
+    screenUV: mockNode(),
+    time: vi.fn(() => mockNode()),
+    pass: vi.fn(() => mockNode()),
+    instanceIndex: mockNode(),
+  };
+});
+
+vi.mock('three/addons/tsl/display/BloomNode.js', () => ({
+  bloom: vi.fn(() => ({
+    strength: { value: 1 },
+    radius: { value: 0 },
+    threshold: { value: 0 },
+    dispose: vi.fn(),
+  })),
+}));
+
 import { ConstellationCanvas } from './constellation-canvas';
 
 // Mock the selection store
@@ -20,6 +105,24 @@ vi.mock('@/hooks/use-people', () => ({
       { id: 'person-2', givenName: 'Jane', surname: 'Doe', generation: 1 },
     ],
     isLoading: false,
+  })),
+}));
+
+// Mock useConstellationGraph hook (used by ConstellationCanvas)
+vi.mock('@/hooks/use-constellation-graph', () => ({
+  useConstellationGraph: vi.fn(() => ({
+    data: {
+      rawPeople: [
+        { id: 'person-1', givenName: 'John', surname: 'Doe', generation: 0, biography: null },
+        { id: 'person-2', givenName: 'Jane', surname: 'Doe', generation: 1, biography: null },
+      ],
+      parentChildRelationships: [{ parentId: 'person-1', childId: 'person-2' }],
+      spouseRelationships: [],
+      centeredPersonId: 'person-1',
+    },
+    isLoading: false,
+    isError: false,
+    error: null,
   })),
 }));
 
@@ -60,6 +163,52 @@ vi.mock('@/visualization/constellation', () => ({
   generatePlaceholderPeople: vi.fn().mockReturnValue([]),
 }));
 
+// Mock instanced constellation (uses TSL materials)
+vi.mock('@/visualization/instanced-constellation', () => ({
+  createInstancedConstellation: vi.fn().mockReturnValue({
+    mesh: { position: { set: vi.fn() } },
+    uniforms: { uTime: { value: 0 } },
+  }),
+  updateConstellationTime: vi.fn(),
+  disposeInstancedConstellation: vi.fn(),
+}));
+
+// Mock edge system (uses TSL materials)
+vi.mock('@/visualization/edges', () => ({
+  createEdgeSystem: vi.fn().mockReturnValue({
+    mesh: { position: { set: vi.fn() } },
+    uniforms: { uTime: { value: 0 } },
+  }),
+  updateEdgeSystemTime: vi.fn(),
+  disposeEdgeSystem: vi.fn(),
+}));
+
+// Mock particles (uses TSL materials)
+vi.mock('@/visualization/particles', () => ({
+  createBackgroundParticles: vi.fn().mockReturnValue({
+    mesh: { position: { set: vi.fn() } },
+    uniforms: { uTime: { value: 0 } },
+  }),
+  updateBackgroundParticlesTime: vi.fn(),
+  disposeBackgroundParticles: vi.fn(),
+  createEventFireflies: vi.fn().mockReturnValue({
+    mesh: { position: { set: vi.fn() } },
+    uniforms: { uTime: { value: 0 } },
+  }),
+  updateEventFirefliesTime: vi.fn(),
+  disposeEventFireflies: vi.fn(),
+}));
+
+// Mock effects (sacred geometry, etc.)
+vi.mock('@/visualization/effects', () => ({
+  createSacredGeometryGrid: vi.fn().mockReturnValue({
+    position: { set: vi.fn() },
+    children: [],
+  }),
+  updateSacredGeometryGrid: vi.fn(),
+  disposeSacredGeometryGrid: vi.fn(),
+}));
+
 // Track ConstellationSelection instantiation
 const mockConstellationSelectionInstances: Array<{
   getIntersectedPerson: ReturnType<typeof vi.fn>;
@@ -87,6 +236,35 @@ const mockCameraAnimatorInstances: Array<{
   isAnimating: ReturnType<typeof vi.fn>;
   stop: ReturnType<typeof vi.fn>;
 }> = [];
+
+// Mock the new TSL post-processing pipeline (Phase 2)
+// Note: vi.mock is hoisted, so inline the mock data to avoid reference errors
+vi.mock('@/visualization/tsl-pipeline', () => ({
+  createPostProcessingPipeline: vi.fn().mockReturnValue({
+    postProcessing: {
+      render: vi.fn(),
+      dispose: vi.fn(),
+    },
+    config: {
+      bloom: { enabled: true, strength: 1.5, radius: 0.6, threshold: 0.2 },
+      vignette: { enabled: true, darkness: 0.4, offset: 0.3 },
+    },
+    uniforms: {
+      bloomStrength: { value: 1.5 },
+      bloomRadius: { value: 0.6 },
+      bloomThreshold: { value: 0.2 },
+      vignetteDarkness: { value: 0.4 },
+      vignetteOffset: { value: 0.3 },
+    },
+    bloomNode: {
+      dispose: vi.fn(),
+      setSize: vi.fn(),
+    },
+  }),
+  renderWithPostProcessing: vi.fn(),
+  updatePostProcessingSize: vi.fn(),
+  disposePostProcessingPipeline: vi.fn(),
+}));
 
 // Mock camera animation
 vi.mock('@/visualization/camera-animation', () => ({
@@ -123,13 +301,13 @@ describe('ConstellationCanvas', () => {
   });
 
   it('should render a container element', () => {
-    render(<ConstellationCanvas />);
+    render(<ConstellationCanvas />, { wrapper: createWrapper() });
 
     expect(screen.getByTestId('constellation-canvas')).toBeInTheDocument();
   });
 
   it('should have full width and height styling', () => {
-    render(<ConstellationCanvas />);
+    render(<ConstellationCanvas />, { wrapper: createWrapper() });
 
     const container = screen.getByTestId('constellation-canvas');
     expect(container).toHaveClass('w-full');
@@ -139,17 +317,17 @@ describe('ConstellationCanvas', () => {
   it('should initialize the 3D scene', async () => {
     const { createRenderer } = await import('@/visualization/renderer');
     const { createScene, createCamera, createControls } = await import('@/visualization/scene');
-    const { createConstellationMesh } = await import('@/visualization/constellation');
+    const { createInstancedConstellation } = await import('@/visualization/instanced-constellation');
 
-    render(<ConstellationCanvas />);
+    render(<ConstellationCanvas />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(createRenderer).toHaveBeenCalled();
       expect(createScene).toHaveBeenCalled();
       expect(createCamera).toHaveBeenCalled();
       expect(createControls).toHaveBeenCalled();
-      // createConstellationMesh is called with real or placeholder data
-      expect(createConstellationMesh).toHaveBeenCalled();
+      // createInstancedConstellation is called with real or placeholder data
+      expect(createInstancedConstellation).toHaveBeenCalled();
     });
   });
 
@@ -163,7 +341,7 @@ describe('ConstellationCanvas', () => {
     };
     (createRenderer as ReturnType<typeof vi.fn>).mockResolvedValue(mockRenderer);
 
-    render(<ConstellationCanvas />);
+    render(<ConstellationCanvas />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(mockRenderer.setAnimationLoop).toHaveBeenCalled();
@@ -205,23 +383,23 @@ describe('ConstellationCanvas', () => {
   });
 
   describe('People Data Integration', () => {
-    it('should use usePeople hook to fetch data', async () => {
-      const { usePeople } = await import('@/hooks/use-people');
+    it('should use useConstellationGraph hook to fetch data', async () => {
+      const { useConstellationGraph } = await import('@/hooks/use-constellation-graph');
 
       render(<ConstellationCanvas />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(usePeople).toHaveBeenCalled();
+        expect(useConstellationGraph).toHaveBeenCalled();
       });
     });
 
     it('should create constellation mesh with people data', async () => {
-      const { createConstellationMesh } = await import('@/visualization/constellation');
+      const { createInstancedConstellation } = await import('@/visualization/instanced-constellation');
 
       render(<ConstellationCanvas />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(createConstellationMesh).toHaveBeenCalled();
+        expect(createInstancedConstellation).toHaveBeenCalled();
       });
     });
   });
@@ -264,6 +442,93 @@ describe('ConstellationCanvas', () => {
       // The handler uses ConstellationSelection.getIntersectedPerson
       // and calls selectPerson if a person is found
       // This structure is verified by the ConstellationSelection being called
+    });
+  });
+
+  describe('TSL Post-Processing Pipeline (Phase 2)', () => {
+    it('should import from visualization/engine for post-processing', async () => {
+      const engineModule = await import('@/visualization/tsl-pipeline');
+      expect(engineModule.createPostProcessingPipeline).toBeDefined();
+      expect(engineModule.renderWithPostProcessing).toBeDefined();
+      expect(engineModule.disposePostProcessingPipeline).toBeDefined();
+    });
+
+    it('should create TSL post-processing pipeline on init', async () => {
+      const { createPostProcessingPipeline } = await import('@/visualization/tsl-pipeline');
+
+      render(<ConstellationCanvas />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        expect(createPostProcessingPipeline).toHaveBeenCalled();
+      });
+    });
+
+    it('should pass correct bloom config to post-processing pipeline', async () => {
+      const { createPostProcessingPipeline } = await import('@/visualization/tsl-pipeline');
+
+      render(<ConstellationCanvas />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        expect(createPostProcessingPipeline).toHaveBeenCalledWith(
+          expect.anything(), // renderer
+          expect.anything(), // scene
+          expect.anything(), // camera
+          expect.objectContaining({
+            bloom: expect.objectContaining({
+              enabled: true,
+              strength: expect.any(Number),
+              threshold: expect.any(Number),
+            }),
+          })
+        );
+      });
+    });
+
+    it('should use renderWithPostProcessing in animation loop', async () => {
+      const { createRenderer } = await import('@/visualization/renderer');
+      const { renderWithPostProcessing } = await import('@/visualization/tsl-pipeline');
+
+      let capturedAnimationCallback: (() => void) | null = null;
+      const mockRenderer = {
+        setAnimationLoop: vi.fn((callback: (() => void) | null) => {
+          capturedAnimationCallback = callback;
+        }),
+        render: vi.fn(),
+        dispose: vi.fn(),
+        setSize: vi.fn(),
+        constructor: { name: 'WebGLRenderer' },
+      };
+      (createRenderer as ReturnType<typeof vi.fn>).mockResolvedValue(mockRenderer);
+
+      render(<ConstellationCanvas />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        expect(mockRenderer.setAnimationLoop).toHaveBeenCalled();
+      });
+
+      // Execute one frame of the animation loop
+      if (capturedAnimationCallback) {
+        (capturedAnimationCallback as () => void)();
+      }
+
+      expect(renderWithPostProcessing).toHaveBeenCalled();
+    });
+
+    it('should dispose post-processing pipeline on unmount (INV-A009)', async () => {
+      const { disposePostProcessingPipeline } = await import('@/visualization/tsl-pipeline');
+
+      const { unmount } = render(<ConstellationCanvas />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        const container = screen.getByTestId('constellation-canvas');
+        expect(container.querySelector('canvas')).toBeInTheDocument();
+      });
+
+      unmount();
+
+      await waitFor(() => {
+        expect(disposePostProcessingPipeline).toHaveBeenCalled();
+      });
     });
   });
 

@@ -7,7 +7,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { useSearchPeople, useDebouncedValue } from './use-search';
+
+// Mock the auth store FIRST (before importing hooks that use it)
+vi.mock('@/store/auth-store', () => ({
+  useAuthStore: vi.fn((selector) => {
+    const state = { token: 'mock-token', user: null, isAuthenticated: true };
+    return selector ? selector(state) : state;
+  }),
+}));
 
 // Mock the GraphQL client
 vi.mock('@/lib/graphql-client', () => ({
@@ -16,6 +23,7 @@ vi.mock('@/lib/graphql-client', () => ({
   },
 }));
 
+import { useSearchPeople, useDebouncedValue } from './use-search';
 import { graphqlClient } from '@/lib/graphql-client';
 
 const mockSearchResults = [

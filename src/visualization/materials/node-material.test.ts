@@ -80,6 +80,12 @@ vi.mock('three/tsl', () => {
     length: vi.fn(() => createMockNode()),
     vec2: vi.fn(() => createMockNode()),
     atan2: vi.fn(() => createMockNode()),
+    atan: vi.fn(() => createMockNode()),
+    abs: vi.fn(() => createMockNode()),
+    clamp: vi.fn(() => createMockNode()),
+    mod: vi.fn(() => createMockNode()),
+    min: vi.fn(() => createMockNode()),
+    step: vi.fn(() => createMockNode()),
     cameraPosition: createMockNode(),
     positionWorld: createMockNode(),
     positionLocal: createMockNode(),
@@ -202,17 +208,17 @@ describe('node-material module', () => {
       expect(uniforms.uMandalaIntensity).toBeDefined();
     });
 
-    it('should default inner glow intensity to 2.0 (Phase 6 tuned)', () => {
+    it('should default inner glow intensity to 1.0 (prototype-matched)', () => {
       const { uniforms } = createNodeMaterial({ enhancedMode: true });
-      expect(uniforms.uInnerGlowIntensity.value).toBe(2.0);
+      expect(uniforms.uInnerGlowIntensity.value).toBe(1.0);
     });
 
-    it('should default SSS strength to 0.5 (Phase 6 tuned)', () => {
+    it('should default SSS strength to 0.3 (prototype-matched)', () => {
       const { uniforms } = createNodeMaterial({ enhancedMode: true });
-      expect(uniforms.uSSSStrength.value).toBe(0.5);
+      expect(uniforms.uSSSStrength.value).toBe(0.3);
     });
 
-    it('should default mandala intensity to 1.0 (Phase 6 tuned)', () => {
+    it('should default mandala intensity to 1.0 (prototype-matched)', () => {
       const { uniforms } = createNodeMaterial({ enhancedMode: true });
       expect(uniforms.uMandalaIntensity.value).toBe(1.0);
     });
@@ -258,17 +264,17 @@ describe('node-material module', () => {
       expect(uniforms.uMandalaIntensity).toBeDefined();
     });
 
-    it('should have default inner glow intensity of 2.0 when using defaults (Phase 6 tuned)', () => {
+    it('should have default inner glow intensity of 1.0 when using defaults (prototype-matched)', () => {
       const { uniforms } = createNodeMaterial();
-      expect(uniforms.uInnerGlowIntensity?.value).toBe(2.0);
+      expect(uniforms.uInnerGlowIntensity?.value).toBe(1.0);
     });
 
-    it('should have default SSS strength of 0.5 when using defaults (Phase 6 tuned)', () => {
+    it('should have default SSS strength of 0.3 when using defaults (prototype-matched)', () => {
       const { uniforms } = createNodeMaterial();
-      expect(uniforms.uSSSStrength?.value).toBe(0.5);
+      expect(uniforms.uSSSStrength?.value).toBe(0.3);
     });
 
-    it('should have default mandala intensity of 1.0 when using defaults (Phase 6 tuned)', () => {
+    it('should have default mandala intensity of 1.0 when using defaults (prototype-matched)', () => {
       const { uniforms } = createNodeMaterial();
       expect(uniforms.uMandalaIntensity?.value).toBe(1.0);
     });

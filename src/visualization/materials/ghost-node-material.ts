@@ -93,6 +93,7 @@ export function createGhostNodeMaterial(
 
   // Instance attributes
   const selectionState = attribute('aSelectionState');
+  const pulseIntensity = attribute('aPulseIntensity');
 
   // Calculate glow multiplier based on selection state
   // selectionState: 0 = none, 0.5 = connected, 1 = selected
@@ -176,6 +177,14 @@ export function createGhostNodeMaterial(
     mul(selectionState, mul(fresnel, float(0.4)))
   );
   finalColor = add(finalColor, selectionHighlight);
+
+  // Pulse glow: warm white when pulse is passing through
+  const pulseGlowColor = vec3(1.0, 0.95, 0.85); // Warm white
+  const pulseGlow = mul(
+    pulseGlowColor,
+    mul(pulseIntensity, mul(add(fresnel, float(0.3)), float(3.0)))
+  );
+  finalColor = add(finalColor, pulseGlow);
 
   // Clamp to prevent oversaturation
   const clampedColor = finalColor.clamp(vec3(float(0)), vec3(float(0.9)));

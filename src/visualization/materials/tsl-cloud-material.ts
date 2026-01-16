@@ -353,6 +353,7 @@ export function createTSLCloudMaterial(
   // Instance attributes
   const selectionState = attribute('aSelectionState');
   const colorIndex = attribute('aColorIndex');
+  const pulseIntensity = attribute('aPulseIntensity');
 
   // Build the sphere color using TSL Fn
   const sphereColorNode = Fn(() => {
@@ -428,8 +429,18 @@ export function createTSLCloudMaterial(
       return mul(withRimGlow, brightBoost);
     })();
 
+    // Add pulse glow (warm white when pulse is passing through)
+    const viewDir = normalize(sub(cameraPosition, positionWorld));
+    const fresnel = pow(sub(float(1), max(dot(viewDir, normalWorld), 0)), 2.0);
+    const pulseGlowColor = vec3(1.0, 0.95, 0.85); // Warm white
+    const pulseGlow = mul(
+      pulseGlowColor,
+      mul(pulseIntensity, mul(add(fresnel, float(0.4)), float(3.5)))
+    );
+    const withPulseGlow = add(finalSphereCol, pulseGlow);
+
     // Clamp to prevent over-saturation
-    return finalSphereCol.clamp(vec3(float(0.05)), vec3(float(0.95)));
+    return withPulseGlow.clamp(vec3(float(0.05)), vec3(float(0.95)));
   })();
 
   // Create material

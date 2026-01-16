@@ -69,6 +69,8 @@ export interface InstancedConstellationResult {
   selectionStateAttribute: THREE.InstancedBufferAttribute;
   /** Color index attribute (0-4 for palette) - only for tsl-cloud mode */
   colorIndexAttribute?: THREE.InstancedBufferAttribute;
+  /** Pulse intensity attribute for path pulse animation */
+  pulseIntensityAttribute: THREE.InstancedBufferAttribute;
   /** The material mode used */
   materialMode: MaterialMode;
 }
@@ -142,6 +144,12 @@ export function createInstancedConstellation(
   const nodeIndexAttribute = new THREE.InstancedBufferAttribute(nodeIndexArray, 1);
   geometry.setAttribute('aNodeIndex', nodeIndexAttribute);
 
+  // Create pulse intensity instanced attribute for path pulse animation
+  const pulseIntensityArray = new Float32Array(count);
+  pulseIntensityArray.fill(0);
+  const pulseIntensityAttribute = new THREE.InstancedBufferAttribute(pulseIntensityArray, 1);
+  geometry.setAttribute('aPulseIntensity', pulseIntensityAttribute);
+
   // Create material based on mode (TSL only)
   let material: THREE.Material;
   let uniforms: ConstellationUniforms;
@@ -197,6 +205,7 @@ export function createInstancedConstellation(
     biographyWeightAttribute,
     selectionStateAttribute,
     colorIndexAttribute,
+    pulseIntensityAttribute,
     materialMode,
   };
 }
@@ -347,6 +356,12 @@ export function createGhostConstellation(
   const selectionStateAttribute = new THREE.InstancedBufferAttribute(selectionStateArray, 1);
   geometry.setAttribute('aSelectionState', selectionStateAttribute);
 
+  // Create pulse intensity instanced attribute for path pulse animation
+  const pulseIntensityArray = new Float32Array(count);
+  pulseIntensityArray.fill(0);
+  const pulseIntensityAttribute = new THREE.InstancedBufferAttribute(pulseIntensityArray, 1);
+  geometry.setAttribute('aPulseIntensity', pulseIntensityAttribute);
+
   // Create ghost node material
   const result = createGhostNodeMaterial();
   const material = result.material;
@@ -384,6 +399,7 @@ export function createGhostConstellation(
     biographyWeightAttribute,
     selectionStateAttribute,
     colorIndexAttribute: undefined,
+    pulseIntensityAttribute,
     materialMode: 'tsl', // Ghost uses a variant of TSL material
   };
 }
@@ -465,6 +481,12 @@ export function createBiographyConstellation(
   const colorIndexAttribute = new THREE.InstancedBufferAttribute(colorIndexArray, 1);
   geometry.setAttribute('aColorIndex', colorIndexAttribute);
 
+  // Create pulse intensity instanced attribute for path pulse animation
+  const pulseIntensityArray = new Float32Array(count);
+  pulseIntensityArray.fill(0);
+  const pulseIntensityAttribute = new THREE.InstancedBufferAttribute(pulseIntensityArray, 1);
+  geometry.setAttribute('aPulseIntensity', pulseIntensityAttribute);
+
   // Create TSL cloud material with palette colors and selection glow enabled
   // Base glow is very faint (0.1), selected node blazes like a sun
   const result = createTSLCloudMaterial({
@@ -516,8 +538,36 @@ export function createBiographyConstellation(
     biographyWeightAttribute,
     selectionStateAttribute,
     colorIndexAttribute,
+    pulseIntensityAttribute,
     materialMode: 'tsl-cloud',
   };
+}
+
+/**
+ * Update pulse intensity for specific instances based on animator state
+ * @param attribute - Pulse intensity attribute
+ * @param personIds - Array of person IDs corresponding to instance indices
+ * @param intensities - Map of personId to intensity from PathPulseAnimator
+ */
+export function updateNodePulseIntensity(
+  attribute: THREE.InstancedBufferAttribute,
+  personIds: string[],
+  intensities: Map<string, number>
+): void {
+  const array = attribute.array as Float32Array;
+
+  // Reset all to zero
+  array.fill(0);
+
+  // Set intensities for nodes in the pulse path
+  for (const [personId, intensity] of intensities) {
+    const index = personIds.indexOf(personId);
+    if (index >= 0 && index < array.length && intensity > 0) {
+      array[index] = intensity;
+    }
+  }
+
+  attribute.needsUpdate = true;
 }
 
 /**

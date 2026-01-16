@@ -174,12 +174,33 @@ Full control over everything.
    - Desktop or high-powered iPad
    - Clustered lighting still valuable at this scale
 
+### Phase 0 Completion (2026-01-16)
+
+- [x] Created feature branch: `feat/webgpu-engine-v2`
+- [x] device-manager.ts - WebGPU device access with pipeline caching
+- [x] staging-ring.ts - Efficient CPU-to-GPU data transfer
+- [x] three-integration.ts - Three.js render hooks
+- [x] Visual presets (lava, celestial, sacred) with random assignment
+- ⚠️ Diverged: Pulled forward Phase 3 visual preset work
+- ⚠️ Skipped: Phase 0 infrastructure tests (backfill needed)
+
+### Phase 1 Completion (2026-01-16) - TDD
+
+Following TDD principles - tests written before implementation:
+
+- [x] render-pass.ts (21 tests) - Priority-based render pass management
+- [x] pipeline-factory.ts (21 tests) - Async pipeline creation with caching
+- [x] msaa.ts (25 tests) - Multi-sample anti-aliasing texture management
+- [x] camera-uniforms.ts (20 tests) - Camera matrix packing for shaders
+
+**Total: 87 passing tests for Phase 1**
+
 ### Next Session
 
-- [ ] Review plan with user
-- [ ] Get approval for Phase 0 start
-- [ ] Create feature branch
-- [ ] Begin device manager implementation
+- [ ] Phase 2: Clustered Lighting
+  - [ ] Light Manager (add/update/remove lights)
+  - [ ] Cluster Grid (8×8×12 frustum subdivision)
+  - [ ] Light Culling Compute Shader
 
 ---
 

@@ -22,6 +22,55 @@ import type {
   ParentChildRelationship,
   SpouseRelationship,
 } from '@/hooks/use-relationships';
+import type { FlexibleDate } from '@/lib/schemas/person';
+
+/**
+ * Format a FlexibleDate object into a human-readable string
+ */
+function formatFlexibleDate(date: FlexibleDate | null | undefined): string | null {
+  if (!date || !date.year) return null;
+
+  const monthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  let dateStr = '';
+
+  // Format main date part
+  if (date.day && date.month) {
+    dateStr = `${date.day} ${monthNames[date.month - 1]} ${date.year}`;
+  } else if (date.month) {
+    dateStr = `${monthNames[date.month - 1]} ${date.year}`;
+  } else {
+    dateStr = `${date.year}`;
+  }
+
+  // Add prefix/suffix based on type
+  switch (date.type) {
+    case 'approximate':
+      return `c. ${dateStr}`;
+    case 'before':
+      return `before ${dateStr}`;
+    case 'after':
+      return `after ${dateStr}`;
+    case 'range':
+      if (date.endYear) {
+        let endStr = '';
+        if (date.endDay && date.endMonth) {
+          endStr = `${date.endDay} ${monthNames[date.endMonth - 1]} ${date.endYear}`;
+        } else if (date.endMonth) {
+          endStr = `${monthNames[date.endMonth - 1]} ${date.endYear}`;
+        } else {
+          endStr = `${date.endYear}`;
+        }
+        return `${dateStr} – ${endStr}`;
+      }
+      return dateStr;
+    default:
+      return dateStr;
+  }
+}
 
 /**
  * Person type from relationships
@@ -110,7 +159,7 @@ function processRelationships(
  * - Displays immediate family members
  * - Dark theme styling (INV-U001)
  */
-type TabId = 'events' | 'notes' | 'photos';
+type TabId = 'bio' | 'events' | 'notes' | 'photos';
 
 export function PersonProfilePanel(): ReactElement | null {
   const { selectedPersonId, isPanelOpen, clearSelection } = useSelectionStore();
@@ -124,7 +173,7 @@ export function PersonProfilePanel(): ReactElement | null {
     isLoading: isRelationshipsLoading,
     isError: isRelationshipsError,
   } = usePersonRelationships(selectedPersonId);
-  const [activeTab, setActiveTab] = useState<TabId>('events');
+  const [activeTab, setActiveTab] = useState<TabId>('bio');
   const [addingRelation, setAddingRelation] = useState<RelationshipType | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
@@ -201,20 +250,32 @@ export function PersonProfilePanel(): ReactElement | null {
         <div className="p-4 overflow-y-auto h-[calc(100%-65px)]">
           {/* Birth/Death Dates */}
           <div className="space-y-1 mb-4">
-            {person.birthDate && (
+            {person.birthDate && formatFlexibleDate(person.birthDate as FlexibleDate) && (
               <p className="text-sm text-muted-foreground">
-                Born: {person.birthDate}
+                Born: {formatFlexibleDate(person.birthDate as FlexibleDate)}
               </p>
             )}
-            {person.deathDate && (
+            {person.deathDate && formatFlexibleDate(person.deathDate as FlexibleDate) && (
               <p className="text-sm text-muted-foreground">
-                Died: {person.deathDate}
+                Died: {formatFlexibleDate(person.deathDate as FlexibleDate)}
               </p>
             )}
           </div>
 
           {/* Tabs */}
           <div className="border-b mb-4" role="tablist">
+            <button
+              role="tab"
+              aria-selected={activeTab === 'bio'}
+              onClick={() => setActiveTab('bio')}
+              className={`px-4 py-2 text-sm font-medium ${
+                activeTab === 'bio'
+                  ? 'border-b-2 border-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Bio
+            </button>
             <button
               role="tab"
               aria-selected={activeTab === 'events'}
@@ -255,6 +316,19 @@ export function PersonProfilePanel(): ReactElement | null {
 
           {/* Tab Content */}
           <div className="mb-4 flex-1 overflow-hidden">
+            {activeTab === 'bio' && (
+              <div className="prose prose-sm prose-invert max-w-none">
+                {person.biography ? (
+                  <p className="text-sm text-foreground whitespace-pre-wrap">
+                    {person.biography}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">
+                    No biography available.
+                  </p>
+                )}
+              </div>
+            )}
             {activeTab === 'events' && selectedPersonId && (
               <PersonEventsTab personId={selectedPersonId} />
             )}

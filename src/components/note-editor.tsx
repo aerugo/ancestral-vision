@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, type Content } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import CharacterCount from '@tiptap/extension-character-count';
 import {
@@ -21,6 +21,44 @@ const MAX_CHARACTERS = 50000;
 const WARNING_THRESHOLD = 45000;
 
 type PrivacyLevel = 'PRIVATE' | 'CONNECTIONS' | 'PUBLIC';
+
+/**
+ * Parse note content that may be either Tiptap JSON or plain text
+ * Returns Tiptap-compatible content structure
+ */
+function parseNoteContent(content: string | undefined): Content | undefined {
+  if (!content) return undefined;
+
+  try {
+    // Try to parse as JSON (Tiptap format)
+    const parsed = JSON.parse(content) as Content;
+    // Verify it looks like Tiptap JSON (has type property)
+    if (parsed && typeof parsed === 'object' && 'type' in parsed) {
+      return parsed;
+    }
+    // If it's valid JSON but not Tiptap format, treat as plain text
+    return convertPlainTextToTiptap(content);
+  } catch {
+    // Not valid JSON, treat as plain text
+    return convertPlainTextToTiptap(content);
+  }
+}
+
+/**
+ * Convert plain text to Tiptap document format
+ */
+function convertPlainTextToTiptap(text: string): Content {
+  // Split by newlines and create paragraph nodes
+  const paragraphs = text.split('\n').map(line => ({
+    type: 'paragraph',
+    content: line.trim() ? [{ type: 'text', text: line }] : [],
+  }));
+
+  return {
+    type: 'doc',
+    content: paragraphs,
+  };
+}
 
 interface NoteEditorProps {
   initialContent?: string;
@@ -54,7 +92,7 @@ export function NoteEditor({
       StarterKit,
       CharacterCount.configure({ limit: MAX_CHARACTERS }),
     ],
-    content: initialContent ? JSON.parse(initialContent) : undefined,
+    content: parseNoteContent(initialContent),
     editable: !disabled,
     immediatelyRender: false, // Prevents SSR hydration errors in Next.js App Router
     onUpdate: ({ editor }) => {

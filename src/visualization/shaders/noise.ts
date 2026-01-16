@@ -27,7 +27,50 @@ export type TSLNode = any;
 export type NoiseFunction = (position: TSLNode) => TSLNode;
 
 /**
+ * Hash function for noise generation
+ * Returns pseudo-random value in [0, 1] for a given vec3
+ */
+function hash3(p: TSLNode): TSLNode {
+  const n = dot(p, vec3(1.0, 57.0, 113.0));
+  return fract(sin(n.mul(43758.5453)).add(0.5));
+}
+
+/**
+ * 3D Value noise with smooth interpolation
+ * Produces smooth, continuous noise values
+ */
+function valueNoise3D(p: TSLNode): TSLNode {
+  const floorP = floor(p);
+  const fractP = fract(p);
+
+  // Smooth interpolation curve (smoothstep-like: 3t^2 - 2t^3)
+  const u = fractP.mul(fractP).mul(float(3).sub(fractP.mul(2)));
+
+  // Hash values at 8 corners of the unit cube
+  const n000 = hash3(floorP.add(vec3(0, 0, 0)));
+  const n100 = hash3(floorP.add(vec3(1, 0, 0)));
+  const n010 = hash3(floorP.add(vec3(0, 1, 0)));
+  const n110 = hash3(floorP.add(vec3(1, 1, 0)));
+  const n001 = hash3(floorP.add(vec3(0, 0, 1)));
+  const n101 = hash3(floorP.add(vec3(1, 0, 1)));
+  const n011 = hash3(floorP.add(vec3(0, 1, 1)));
+  const n111 = hash3(floorP.add(vec3(1, 1, 1)));
+
+  // Trilinear interpolation
+  const nx00 = n000.add(n100.sub(n000).mul(u.x));
+  const nx10 = n010.add(n110.sub(n010).mul(u.x));
+  const nx01 = n001.add(n101.sub(n001).mul(u.x));
+  const nx11 = n011.add(n111.sub(n011).mul(u.x));
+
+  const nxy0 = nx00.add(nx10.sub(nx00).mul(u.y));
+  const nxy1 = nx01.add(nx11.sub(nx01).mul(u.y));
+
+  return nxy0.add(nxy1.sub(nxy0).mul(u.z));
+}
+
+/**
  * Creates a TSL noise function with configurable parameters
+ * Uses smooth value noise with fractal octaves
  * @param config - Noise configuration options
  * @returns A function that generates noise from a vec3 position
  */
@@ -35,32 +78,22 @@ export function createNoiseFunction(config: NoiseConfig = {}): NoiseFunction {
   const { scale = 1.0, octaves = 1, persistence = 0.5 } = config;
 
   return (position: TSLNode): TSLNode => {
-    // Simplex-like noise using TSL built-in functions
-    // This is a simplified version using position-based pseudo-random pattern
     const scaledPos = position.mul(scale);
 
     let noise: TSLNode = float(0);
-    let amplitude: TSLNode = float(1);
-    let frequency: TSLNode = float(1);
-    let maxValue: TSLNode = float(0);
+    let amplitude = 1.0;
+    let frequency = 1.0;
+    let maxValue = 0.0;
 
     for (let i = 0; i < octaves; i++) {
-      // Use position-based pseudo-random pattern
+      // Get smooth noise value at this frequency
       const p = scaledPos.mul(frequency);
-      const floorP = floor(p);
-      const fractP = fract(p);
+      const n = valueNoise3D(p);
 
-      // Smooth interpolation (unused but kept for potential enhancement)
-      // const u = fractP.mul(fractP).mul(float(3).sub(fractP.mul(2)));
-
-      // Hash-like function using dot products
-      const n = dot(floorP, vec3(1.0, 57.0, 113.0));
-      const hash = fract(sin(n.mul(0.1031)).mul(43758.5453));
-
-      noise = noise.add(hash.mul(amplitude));
-      maxValue = maxValue.add(amplitude);
-      amplitude = amplitude.mul(persistence);
-      frequency = frequency.mul(2);
+      noise = noise.add(n.mul(amplitude));
+      maxValue += amplitude;
+      amplitude *= persistence;
+      frequency *= 2;
     }
 
     // Normalize to [-1, 1] range

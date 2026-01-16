@@ -195,12 +195,27 @@ Following TDD principles - tests written before implementation:
 
 **Total: 87 passing tests for Phase 1**
 
+### Phase 2 Completion (2026-01-16) - TDD
+
+Implemented clustered deferred lighting system following strict TDD:
+
+- [x] light-manager.ts (41 tests) - Point light storage and GPU buffer sync
+- [x] cluster-grid.ts (32 tests) - 3D cluster subdivision (8×8×12 = 768 clusters)
+- [x] cluster-compute.ts (25 tests) - Compute shader dispatch for light culling
+
+WGSL Shaders created:
+- cluster-bounds.wgsl - Computes AABB bounds using logarithmic depth slicing
+- light-assignment.wgsl - Sphere-AABB intersection with atomic operations
+- lighting.wgsl - Fragment utilities for PBR (Lambertian + Blinn-Phong)
+
+**Total: 98 passing tests for Phase 2 (185 total engine tests)**
+
 ### Next Session
 
-- [ ] Phase 2: Clustered Lighting
-  - [ ] Light Manager (add/update/remove lights)
-  - [ ] Cluster Grid (8×8×12 frustum subdivision)
-  - [ ] Light Culling Compute Shader
+- [ ] Phase 3: Visual Effects
+  - [ ] Tri-planar texturing with flow animation
+  - [ ] Emissive/self-illumination
+  - [ ] Light sprites
 
 ---
 

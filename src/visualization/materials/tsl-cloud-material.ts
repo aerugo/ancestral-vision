@@ -20,7 +20,19 @@ import {
   normalLocal,
   wgslFn,
   Fn,
+  mix,
+  mul,
+  add,
+  pow,
+  sub,
+  max,
+  dot,
+  normalize,
+  cameraPosition,
+  positionWorld,
+  normalWorld,
 } from 'three/tsl';
+import { SCIFI_PALETTE, SELECTION_STATE } from './palette';
 
 /** Preset names for mystical sphere materials */
 export type TSLCloudPreset = 'lava' | 'celestial' | 'sacred';
@@ -28,9 +40,9 @@ export type TSLCloudPreset = 'lava' | 'celestial' | 'sacred';
 export interface TSLCloudMaterialConfig {
   /** Use a preset instead of custom colors */
   preset?: TSLCloudPreset;
-  /** Primary cloud color tint */
+  /** Primary cloud color tint (ignored when usePaletteColors is true) */
   colorPrimary?: THREE.Color;
-  /** Secondary accent color */
+  /** Secondary accent color (ignored when usePaletteColors is true) */
   colorSecondary?: THREE.Color;
   /** Highlight color for shimmer/accents */
   colorHighlight?: THREE.Color;
@@ -38,8 +50,18 @@ export interface TSLCloudMaterialConfig {
   flowSpeed?: number;
   /** Cloud density multiplier (default: 1.0) */
   cloudDensity?: number;
-  /** Glow intensity (default: 1.0) */
+  /** Glow intensity (default: 1.0) - base glow before selection modulation */
   glowIntensity?: number;
+  /** Enable selection-based glow modulation (default: false) */
+  selectionGlowEnabled?: boolean;
+  /** Base glow intensity when not selected (default: 0.3) */
+  baseGlowIntensity?: number;
+  /** Glow multiplier when selected (default: 3.0) */
+  selectedGlowMultiplier?: number;
+  /** Glow multiplier for connected nodes (default: 1.8) */
+  connectedGlowMultiplier?: number;
+  /** Use sci-fi palette colors based on aColorIndex attribute (default: false) */
+  usePaletteColors?: boolean;
 }
 
 export interface TSLCloudMaterialUniforms {
@@ -50,6 +72,16 @@ export interface TSLCloudMaterialUniforms {
   uColorPrimary: { value: THREE.Color };
   uColorSecondary: { value: THREE.Color };
   uColorHighlight: { value: THREE.Color };
+  /** Selection glow uniforms (only present when selectionGlowEnabled=true) */
+  uBaseGlow?: { value: number };
+  uConnectedGlowMult?: { value: number };
+  uSelectedGlowMult?: { value: number };
+  /** Palette color uniforms (only present when usePaletteColors=true) */
+  uPaletteColor0?: { value: THREE.Color };
+  uPaletteColor1?: { value: THREE.Color };
+  uPaletteColor2?: { value: THREE.Color };
+  uPaletteColor3?: { value: THREE.Color };
+  uPaletteColor4?: { value: THREE.Color };
 }
 
 export interface TSLCloudMaterialResult {
@@ -290,9 +322,14 @@ export function createTSLCloudMaterial(
     flowSpeed = preset?.flowSpeed ?? 1.0,
     cloudDensity = preset?.cloudDensity ?? 1.0,
     glowIntensity = preset?.glowIntensity ?? 1.0,
+    selectionGlowEnabled = false,
+    baseGlowIntensity = 0.3,
+    selectedGlowMultiplier = 3.0,
+    connectedGlowMultiplier = 1.8,
+    usePaletteColors = false,
   } = config;
 
-  // Create uniforms
+  // Create base uniforms
   const uTime = uniform(0);
   const uFlowSpeed = uniform(flowSpeed);
   const uCloudDensity = uniform(cloudDensity);
@@ -301,11 +338,49 @@ export function createTSLCloudMaterial(
   const uColorSecondary = uniform(colorSecondary);
   const uColorHighlight = uniform(colorHighlight);
 
-  // Biography weight from instance attribute
-  const biographyWeight = attribute('aBiographyWeight');
+  // Selection glow uniforms (only when enabled)
+  const uBaseGlow = selectionGlowEnabled ? uniform(baseGlowIntensity) : null;
+  const uConnectedGlowMult = selectionGlowEnabled ? uniform(connectedGlowMultiplier) : null;
+  const uSelectedGlowMult = selectionGlowEnabled ? uniform(selectedGlowMultiplier) : null;
+
+  // Palette color uniforms (only when using palette)
+  const uPaletteColor0 = usePaletteColors ? uniform(SCIFI_PALETTE[0].clone()) : null;
+  const uPaletteColor1 = usePaletteColors ? uniform(SCIFI_PALETTE[1].clone()) : null;
+  const uPaletteColor2 = usePaletteColors ? uniform(SCIFI_PALETTE[2].clone()) : null;
+  const uPaletteColor3 = usePaletteColors ? uniform(SCIFI_PALETTE[3].clone()) : null;
+  const uPaletteColor4 = usePaletteColors ? uniform(SCIFI_PALETTE[4].clone()) : null;
+
+  // Instance attributes
+  const selectionState = attribute('aSelectionState');
+  const colorIndex = attribute('aColorIndex');
 
   // Build the sphere color using TSL Fn
   const sphereColorNode = Fn(() => {
+    // Determine colors to use
+    let effectivePrimary = vec3(uColorPrimary);
+    let effectiveSecondary = vec3(uColorSecondary);
+
+    // If using palette colors, select based on colorIndex
+    if (usePaletteColors && uPaletteColor0 && uPaletteColor1 && uPaletteColor2 && uPaletteColor3 && uPaletteColor4) {
+      // Select primary color from palette based on index
+      // Using conditional mixing since TSL doesn't have array indexing
+      const idx = colorIndex;
+      const c0 = vec3(uPaletteColor0);
+      const c1 = vec3(uPaletteColor1);
+      const c2 = vec3(uPaletteColor2);
+      const c3 = vec3(uPaletteColor3);
+      const c4 = vec3(uPaletteColor4);
+
+      // Select primary: idx < 0.5 -> c0, idx < 1.5 -> c1, etc.
+      effectivePrimary = mix(c0, c1, idx.sub(0).clamp(0, 1));
+      effectivePrimary = mix(effectivePrimary, c2, idx.sub(1).clamp(0, 1));
+      effectivePrimary = mix(effectivePrimary, c3, idx.sub(2).clamp(0, 1));
+      effectivePrimary = mix(effectivePrimary, c4, idx.sub(3).clamp(0, 1));
+
+      // Secondary is a darker version of the primary
+      effectiveSecondary = effectivePrimary.mul(float(0.6));
+    }
+
     // Call mystical sphere shader
     const result = mysticalSphere({
       localPos: positionLocal,
@@ -314,19 +389,47 @@ export function createTSLCloudMaterial(
       flowSpeed: uFlowSpeed,
       densityMult: uCloudDensity,
       glowIntensity: uGlowIntensity,
-      colorPrimary: vec3(uColorPrimary),
-      colorSecondary: vec3(uColorSecondary),
+      colorPrimary: effectivePrimary,
+      colorSecondary: effectiveSecondary,
       colorHighlight: vec3(uColorHighlight),
     });
 
-    // Extract color and modulate by biography weight
-    const sphereCol = vec3(result.x, result.y, result.z);
-    // Biography weight influence (0.85 to 1.05)
-    const bioBoost = float(0.85).add(biographyWeight.mul(float(0.2)));
-    const finalColor = sphereCol.mul(bioBoost);
+    // Extract base sphere color
+    const baseSphereCol = vec3(result.x, result.y, result.z);
 
-    // Allow full brightness range
-    return finalColor.clamp(vec3(float(0.05)), vec3(float(0.95)));
+    // Add selection-based rim glow (if enabled)
+    const finalSphereCol = (() => {
+      if (!selectionGlowEnabled || !uBaseGlow || !uConnectedGlowMult || !uSelectedGlowMult) {
+        return baseSphereCol;
+      }
+
+      // Calculate glow multiplier based on selection state
+      // selectionState: 0 = none (1x), 0.5 = connected (connectedMult), 1 = selected (selectedMult)
+      const glowMult = mix(
+        float(1.0),
+        mix(uConnectedGlowMult, uSelectedGlowMult, selectionState.mul(2).sub(1).clamp(0, 1)),
+        selectionState.mul(2).clamp(0, 1)
+      );
+
+      // Fresnel for rim glow
+      const viewDir = normalize(sub(cameraPosition, positionWorld));
+      const fresnel = pow(sub(float(1), max(dot(viewDir, normalWorld), 0)), 2.5);
+
+      // Effective glow intensity
+      const effectiveGlow = mul(uBaseGlow, glowMult);
+
+      // Add rim glow to the sphere color
+      const rimGlow = mul(mul(fresnel, effectiveGlow), float(1.5));
+      const rimColor = mix(effectivePrimary, vec3(uColorHighlight), float(0.5));
+      const withRimGlow = add(baseSphereCol, mul(rimColor, rimGlow));
+
+      // Add slight overall brightness boost when selected
+      const brightBoost = float(1.0).add(selectionState.mul(float(0.15)));
+      return mul(withRimGlow, brightBoost);
+    })();
+
+    // Clamp to prevent over-saturation
+    return finalSphereCol.clamp(vec3(float(0.05)), vec3(float(0.95)));
   })();
 
   // Create material
@@ -336,7 +439,7 @@ export function createTSLCloudMaterial(
   material.side = THREE.FrontSide;
   material.depthWrite = true;
 
-  // Return uniforms object matching the expected interface
+  // Build uniforms object
   const uniforms: TSLCloudMaterialUniforms = {
     uTime: uTime as unknown as { value: number },
     uFlowSpeed: uFlowSpeed as unknown as { value: number },
@@ -345,6 +448,32 @@ export function createTSLCloudMaterial(
     uColorPrimary: uColorPrimary as unknown as { value: THREE.Color },
     uColorSecondary: uColorSecondary as unknown as { value: THREE.Color },
     uColorHighlight: uColorHighlight as unknown as { value: THREE.Color },
+    // Add selection glow uniforms if enabled
+    ...(selectionGlowEnabled && uBaseGlow && {
+      uBaseGlow: uBaseGlow as unknown as { value: number },
+    }),
+    ...(selectionGlowEnabled && uConnectedGlowMult && {
+      uConnectedGlowMult: uConnectedGlowMult as unknown as { value: number },
+    }),
+    ...(selectionGlowEnabled && uSelectedGlowMult && {
+      uSelectedGlowMult: uSelectedGlowMult as unknown as { value: number },
+    }),
+    // Add palette color uniforms if using palette
+    ...(usePaletteColors && uPaletteColor0 && {
+      uPaletteColor0: uPaletteColor0 as unknown as { value: THREE.Color },
+    }),
+    ...(usePaletteColors && uPaletteColor1 && {
+      uPaletteColor1: uPaletteColor1 as unknown as { value: THREE.Color },
+    }),
+    ...(usePaletteColors && uPaletteColor2 && {
+      uPaletteColor2: uPaletteColor2 as unknown as { value: THREE.Color },
+    }),
+    ...(usePaletteColors && uPaletteColor3 && {
+      uPaletteColor3: uPaletteColor3 as unknown as { value: THREE.Color },
+    }),
+    ...(usePaletteColors && uPaletteColor4 && {
+      uPaletteColor4: uPaletteColor4 as unknown as { value: THREE.Color },
+    }),
   };
 
   return { material, uniforms };
@@ -395,7 +524,9 @@ export function getTSLCloudPresetNames(): TSLCloudPreset[] {
  */
 export function getRandomTSLCloudPreset(): TSLCloudPreset {
   const presets = getTSLCloudPresetNames();
-  return presets[Math.floor(Math.random() * presets.length)];
+  const preset = presets[Math.floor(Math.random() * presets.length)];
+  // Safety: presets array is always non-empty (defined in getTSLCloudPresetNames)
+  return preset ?? 'celestial';
 }
 
 /**

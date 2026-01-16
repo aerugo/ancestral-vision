@@ -7,17 +7,16 @@
  * - INV-A001: WebGPURenderer must be initialized with `await renderer.init()`
  * - INV-A002: Use `renderer.setAnimationLoop()` not `requestAnimationFrame()`
  * - INV-A009: Scene cleanup on component unmount (dispose geometry, materials, textures)
+ *
+ * Note: WebGL support has been deprecated. This component requires WebGPU.
+ * Users with unsupported browsers will see an error message.
  */
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import type { WebGLRenderer, PerspectiveCamera, Scene } from 'three';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { createRenderer } from '@/visualization/renderer';
+import { createRenderer, WebGPUNotSupportedError } from '@/visualization/renderer';
 import { createScene, createCamera, createControls, disposeScene } from '@/visualization/scene';
-import {
-  generatePlaceholderPeople,
-  type PlaceholderPerson,
-} from '@/visualization/constellation';
 import {
   createInstancedConstellation,
   updateConstellationTime,
@@ -26,8 +25,40 @@ import {
   type InstancedConstellationResult,
   type MaterialMode,
 } from '@/visualization/instanced-constellation';
-import type { CloudPreset, TSLCloudPreset } from '@/visualization/materials';
+import type { TSLCloudPreset } from '@/visualization/materials';
 import { getTSLCloudPresetNames } from '@/visualization/materials';
+
+/**
+ * Placeholder person data for visualization
+ */
+interface PlaceholderPerson {
+  id: string;
+  givenName: string;
+  position: { x: number; y: number; z: number };
+}
+
+/**
+ * Generate placeholder people for testing/demo purposes
+ * Creates people arranged in a spiral pattern
+ */
+function generatePlaceholderPeople(count: number): PlaceholderPerson[] {
+  const people: PlaceholderPerson[] = [];
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 4;
+    const radius = 20 + i * 2;
+    const height = (i % 5) * 10 - 20;
+    people.push({
+      id: `placeholder-${i}`,
+      givenName: `Person ${i + 1}`,
+      position: {
+        x: Math.cos(angle) * radius,
+        y: height,
+        z: Math.sin(angle) * radius,
+      },
+    });
+  }
+  return people;
+}
 import {
   createEdgeSystem,
   updateEdgeSystemTime,
@@ -217,6 +248,9 @@ export function ConstellationCanvas(): React.ReactElement {
   const sacredGeometryGridRef = useRef<THREE.Group | null>(null);
   const postProcessingRef = useRef<PostProcessingPipelineResult | null>(null);
 
+  // WebGPU error state for user-friendly error display
+  const [webGPUError, setWebGPUError] = useState<string | null>(null);
+
   // Fetch constellation graph data (people + relationships) for layout
   const { data: graphData, isLoading, isError, error } = useConstellationGraph();
   const { selectPerson, clearSelection } = useSelectionStore();
@@ -263,15 +297,20 @@ export function ConstellationCanvas(): React.ReactElement {
       renderer = await createRenderer(canvas);
       console.log('[initScene] Renderer created:', renderer);
       rendererRef.current = renderer;
-    } catch (error) {
-      console.error('[initScene] Renderer creation failed:', error);
+    } catch (err) {
+      if (err instanceof WebGPUNotSupportedError) {
+        console.warn('[initScene] WebGPU not supported:', err.message);
+        setWebGPUError(err.message);
+      } else {
+        console.error('[initScene] Renderer creation failed:', err);
+        setWebGPUError('Failed to initialize 3D renderer. Please try refreshing the page.');
+      }
+      // Clean up canvas on error
+      if (canvas.parentNode) {
+        canvas.parentNode.removeChild(canvas);
+      }
       return undefined;
     }
-
-    // Detect renderer type for material selection
-    // WebGPU renderer has 'backend' property, WebGL does not
-    const isWebGPU = 'backend' in renderer;
-    console.log(`[initScene] Renderer type: ${isWebGPU ? 'WebGPU' : 'WebGL'}`);
 
     console.log('[initScene] Creating scene and camera...');
     // Create scene
@@ -378,9 +417,8 @@ export function ConstellationCanvas(): React.ReactElement {
       });
 
       // Create constellation for central nodes (mystical flowing gas spheres)
-      // Use TSL cloud material for WebGPU with random preset assignment
-      // Use GLSL cloud material for WebGL fallback
-      if (centralPeople.length > 0 && isWebGPU) {
+      // Uses TSL cloud material with random preset assignment
+      if (centralPeople.length > 0) {
         // Split central nodes into preset groups (lava, celestial, sacred)
         const presets = getTSLCloudPresetNames();
         const presetGroups = new Map<TSLCloudPreset, PlaceholderPerson[]>();
@@ -420,31 +458,9 @@ export function ConstellationCanvas(): React.ReactElement {
         });
 
         console.log(`[initScene] Total central nodes: ${centralPeople.length} across ${cloudConstellationsRef.current.size} presets`);
-      } else if (centralPeople.length > 0) {
-        // WebGL fallback: single mesh with GLSL cloud material
-        const cloudData: ConstellationData = {
-          positions: centralPeople.map(p => new THREE.Vector3(p.position.x, p.position.y, p.position.z)),
-          biographyWeights: centralPeople.map(() => Math.random() * 0.3 + 0.7),
-          personIds: centralPeople.map(p => p.id),
-        };
-
-        const cloudResult = createInstancedConstellation(cloudData, {
-          materialMode: 'cloud' as MaterialMode,
-          cloudPreset: 'gasGiant' as CloudPreset,
-          cloudConfig: {
-            flowSpeed: 0.8,
-            glowIntensity: 1.2,
-          },
-        });
-
-        // Store in the map with a default key for WebGL fallback
-        cloudConstellationsRef.current.clear();
-        cloudConstellationsRef.current.set('sacred', cloudResult);
-        scene.add(cloudResult.mesh);
-        console.log(`[initScene] Central constellation (WebGL fallback): ${centralPeople.length} nodes`);
       }
 
-      // Create standard constellation for peripheral nodes
+      // Create standard constellation for peripheral nodes (TSL materials)
       if (peripheralPeople.length > 0) {
         const peripheralData: ConstellationData = {
           positions: peripheralPeople.map(p => new THREE.Vector3(p.position.x, p.position.y, p.position.z)),
@@ -452,20 +468,18 @@ export function ConstellationCanvas(): React.ReactElement {
           personIds: peripheralPeople.map(p => p.id),
         };
 
-        // Use TSL materials for WebGPU, custom GLSL ShaderMaterial for WebGL fallback
         const instancedResult = createInstancedConstellation(peripheralData, {
-          materialMode: isWebGPU ? 'tsl' : 'custom',
+          materialMode: 'tsl',
         });
         instancedConstellationRef.current = instancedResult;
-        console.log(`[initScene] Peripheral constellation created: ${peripheralPeople.length} nodes with ${instancedResult.materialMode} materials`);
+        console.log(`[initScene] Peripheral constellation created: ${peripheralPeople.length} nodes`);
         scene.add(instancedResult.mesh);
       }
     }
 
-    // Add edge system (Phase 2) - use REAL edges from FamilyGraph with proper types
+    // Add edge system - use REAL edges from FamilyGraph with proper types
     // Filter out spouse edges (invisible - for layout clustering only)
-    // NOTE: TSL-based LineBasicNodeMaterial only works with WebGPU
-    if (isWebGPU && positions.length > 1 && graphEdges.length > 0) {
+    if (positions.length > 1 && graphEdges.length > 0) {
       const visualEdges: EdgeSystemData['edges'] = graphEdges
         .filter((edge): edge is GraphEdge & { type: 'parent-child' } => edge.type === 'parent-child')
         .map(edge => {
@@ -487,30 +501,19 @@ export function ConstellationCanvas(): React.ReactElement {
         edgeSystemRef.current = edgeResult;
         scene.add(edgeResult.mesh);
       }
-    } else if (positions.length > 1) {
-      console.log('[initScene] Skipping edge system (WebGL fallback - TSL not supported)');
-      edgeSystemRef.current = null;
     }
 
-    // Add background particles (Phase 3) - atmospheric Haeckel-inspired particles
-    // Phase 6: Use default pointSize (15) to match prototype
-    // NOTE: TSL-based PointsNodeMaterial only works with WebGPU
-    if (isWebGPU) {
-      const particleResult = createBackgroundParticles({
-        count: 300,
-        innerRadius: 100,
-        outerRadius: 400,
-      });
-      backgroundParticlesRef.current = particleResult;
-      scene.add(particleResult.mesh);
-    } else {
-      console.log('[initScene] Skipping background particles (WebGL fallback - TSL not supported)');
-      backgroundParticlesRef.current = null;
-    }
+    // Add background particles - atmospheric Haeckel-inspired particles
+    const particleResult = createBackgroundParticles({
+      count: 300,
+      innerRadius: 100,
+      outerRadius: 400,
+    });
+    backgroundParticlesRef.current = particleResult;
+    scene.add(particleResult.mesh);
 
-    // Add event fireflies (Phase 4) - orbital particles representing life events
-    // NOTE: TSL-based PointsNodeMaterial only works with WebGPU
-    if (isWebGPU && positions.length > 0) {
+    // Add event fireflies - orbital particles representing life events
+    if (positions.length > 0) {
       // Demo event types for each node
       const demoEventTypes = [
         ['birth', 'marriage'],
@@ -531,9 +534,6 @@ export function ConstellationCanvas(): React.ReactElement {
       });
       eventFirefliesRef.current = fireflyResult;
       scene.add(fireflyResult.mesh);
-    } else if (positions.length > 0) {
-      console.log('[initScene] Skipping event fireflies (WebGL fallback - TSL not supported)');
-      eventFirefliesRef.current = null;
     }
 
     // Add sacred geometry grid (Phase 5) - mandala-style background reference grid
@@ -547,33 +547,25 @@ export function ConstellationCanvas(): React.ReactElement {
     sacredGeometryGridRef.current = gridGroup;
     scene.add(gridGroup);
 
-    // Setup post-processing (Phase 2 WebGPU Graphics Engine) - unified TSL bloom and vignette
-    // INV-A012: Bloom imported from three/addons/tsl/display/BloomNode.js
-    // INV-A013: TSL PostProcessing works with both WebGPU and WebGL renderers
-    // NOTE: TSL PostProcessing has compatibility issues with pure WebGL - skip for WebGL
-    if (isWebGPU) {
-      try {
-        const postProcessingResult = createPostProcessingPipeline(renderer, scene, camera, {
-          bloom: {
-            enabled: true,
-            strength: 1.5,  // Phase 6: Increased for prototype-matching halos
-            radius: 0.6,
-            threshold: 0.2,  // Phase 6: Lowered to capture more glow
-          },
-          vignette: {
-            enabled: true,
-            darkness: 0.4,
-            offset: 0.3,
-          },
-        });
-        postProcessingRef.current = postProcessingResult;
-        console.log('[ConstellationCanvas] TSL post-processing enabled (WebGPU pipeline)');
-      } catch (error) {
-        console.warn('[ConstellationCanvas] Post-processing setup failed:', error);
-        postProcessingRef.current = null;
-      }
-    } else {
-      console.log('[ConstellationCanvas] Skipping TSL post-processing (WebGL fallback - no post-processing)');
+    // Setup post-processing - TSL bloom and vignette
+    try {
+      const postProcessingResult = createPostProcessingPipeline(renderer, scene, camera, {
+        bloom: {
+          enabled: true,
+          strength: 1.5,
+          radius: 0.6,
+          threshold: 0.2,
+        },
+        vignette: {
+          enabled: true,
+          darkness: 0.4,
+          offset: 0.3,
+        },
+      });
+      postProcessingRef.current = postProcessingResult;
+      console.log('[ConstellationCanvas] TSL post-processing enabled');
+    } catch (error) {
+      console.warn('[ConstellationCanvas] Post-processing setup failed:', error);
       postProcessingRef.current = null;
     }
 
@@ -835,6 +827,29 @@ export function ConstellationCanvas(): React.ReactElement {
       }
     };
   }, [initScene]);
+
+  // Show error message if WebGPU is not supported
+  if (webGPUError) {
+    return (
+      <div
+        className="w-full h-full flex items-center justify-center bg-gradient-to-b from-slate-900 to-slate-950"
+        data-testid="constellation-canvas-error"
+      >
+        <div className="max-w-md p-8 text-center">
+          <div className="text-6xl mb-4">🌌</div>
+          <h2 className="text-xl font-semibold text-white mb-2">
+            WebGPU Required
+          </h2>
+          <p className="text-slate-400 mb-4">
+            {webGPUError}
+          </p>
+          <p className="text-sm text-slate-500">
+            Supported browsers: Chrome 113+, Edge 113+, or other WebGPU-enabled browsers.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

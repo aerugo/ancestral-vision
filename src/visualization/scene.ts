@@ -30,9 +30,8 @@ export function createScene(): THREE.Scene {
   const scene = new THREE.Scene();
   scene.background = COLORS.background;
 
-  // Atmospheric fog for depth perception (Phase 5: Visual parity)
-  // Creates sense of infinite cosmic space with objects fading at distance
-  scene.fog = new THREE.FogExp2(COLORS.fog.getHex(), FOG_DENSITY);
+  // Fog disabled - was creating unwanted haze around objects
+  // scene.fog = new THREE.FogExp2(COLORS.fog.getHex(), FOG_DENSITY);
 
   // Add ambient light for base visibility
   const ambientLight = new THREE.AmbientLight(0x404040, 0.5);

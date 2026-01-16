@@ -18,15 +18,17 @@ import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js
 import { createRenderer, WebGPUNotSupportedError } from '@/visualization/renderer';
 import { createScene, createCamera, createControls, disposeScene } from '@/visualization/scene';
 import {
-  createInstancedConstellation,
-  updateConstellationTime,
+  createGhostConstellation,
+  createBiographyConstellation,
+  updateAnyConstellationTime,
+  updateSelectionState,
   disposeInstancedConstellation,
   type ConstellationData,
   type InstancedConstellationResult,
-  type MaterialMode,
 } from '@/visualization/instanced-constellation';
-import type { TSLCloudPreset } from '@/visualization/materials';
-import { getTSLCloudPresetNames } from '@/visualization/materials';
+import { getConnectedPersonIds } from '@/visualization/selection';
+import { calculateBiographyWeight } from '@/visualization/layout';
+import { getRandomColorIndex } from '@/visualization/materials';
 
 /**
  * Placeholder person data for visualization
@@ -239,9 +241,10 @@ export function ConstellationCanvas(): React.ReactElement {
   const selectionRef = useRef<ConstellationSelection | null>(null);
   const cameraAnimatorRef = useRef<CameraAnimator | null>(null);
   const clockRef = useRef<THREE.Clock | null>(null);
-  const instancedConstellationRef = useRef<InstancedConstellationResult | null>(null);
-  // Multiple cloud constellation refs - one per preset (lava, celestial, sacred)
-  const cloudConstellationsRef = useRef<Map<TSLCloudPreset, InstancedConstellationResult>>(new Map());
+  // Ghost constellation for nodes without biography (small, semi-transparent, blue mandala)
+  const ghostConstellationRef = useRef<InstancedConstellationResult | null>(null);
+  // Biography constellation for nodes with biography (cloud effect with palette colors)
+  const biographyConstellationRef = useRef<InstancedConstellationResult | null>(null);
   const edgeSystemRef = useRef<EdgeSystemResult | null>(null);
   const backgroundParticlesRef = useRef<BackgroundParticleResult | null>(null);
   const eventFirefliesRef = useRef<EventFireflyResult | null>(null);
@@ -352,130 +355,86 @@ export function ConstellationCanvas(): React.ReactElement {
     const constellationPeople = layoutResult.people;
     const graphEdges = layoutResult.edges;
 
-    // Use new instanced constellation with TSL materials (Phase 1)
-    // Split nodes into central (cloud material) and peripheral (custom material) groups
+    // Split nodes by biography presence (not family relationships)
+    // - Ghost nodes: no biography - small, semi-transparent, blue mandala
+    // - Biography nodes: has biography - cloud effect with palette colors
     const positions: THREE.Vector3[] = [];
     const biographyWeights: number[] = [];
     const positionMap = new Map<string, THREE.Vector3>(); // Map person ID to position for edge rendering
+    const personIdToIndex = new Map<string, number>(); // Map person ID to index in positions array
+
     if (constellationPeople.length > 0) {
-      // Identify central nodes: centered person + their direct relatives (parents, children, spouses)
-      const centeredId = graphData?.centeredPersonId;
-      const centralNodeIds = new Set<string>();
-
-      if (centeredId) {
-        centralNodeIds.add(centeredId);
-
-        // Add direct relatives from parent-child relationships
-        graphData?.parentChildRelationships?.forEach(rel => {
-          if (rel.parentId === centeredId) {
-            centralNodeIds.add(rel.childId); // Children of centered person
-          }
-          if (rel.childId === centeredId) {
-            centralNodeIds.add(rel.parentId); // Parents of centered person
-          }
-        });
-
-        // Add spouses
-        graphData?.spouseRelationships?.forEach(rel => {
-          if (rel.person1Id === centeredId) {
-            centralNodeIds.add(rel.person2Id);
-          }
-          if (rel.person2Id === centeredId) {
-            centralNodeIds.add(rel.person1Id);
-          }
-        });
+      // Split by biography presence
+      interface PersonWithBio extends PlaceholderPerson {
+        hasBiography: boolean;
+        biographyWeight: number;
       }
 
-      // If no centered person or no relationships, use first few nodes as central
-      if (centralNodeIds.size === 0 && constellationPeople.length > 0) {
-        // Use first 3 nodes as central (demo fallback)
-        constellationPeople.slice(0, Math.min(3, constellationPeople.length)).forEach(p => {
-          centralNodeIds.add(p.id);
-        });
-      }
+      const ghostPeople: PersonWithBio[] = [];
+      const biographyPeople: PersonWithBio[] = [];
 
-      console.log(`[initScene] Central nodes (cloud material): ${centralNodeIds.size} nodes`);
+      constellationPeople.forEach((p, idx) => {
+        // Look up the raw person data to check for biography
+        const rawPerson = graphData?.rawPeople?.find(rp => rp.id === p.id);
+        const biography = rawPerson?.biography;
+        const hasBio = Boolean(biography && biography.trim().length > 0);
+        const bioWeight = calculateBiographyWeight(biography ?? undefined);
 
-      // Split constellation people into central and peripheral groups
-      const centralPeople: PlaceholderPerson[] = [];
-      const peripheralPeople: PlaceholderPerson[] = [];
-
-      constellationPeople.forEach(p => {
-        if (centralNodeIds.has(p.id)) {
-          centralPeople.push(p);
-        } else {
-          peripheralPeople.push(p);
-        }
-      });
-
-      // Build position map for edge rendering (all nodes)
-      constellationPeople.forEach(p => {
         const pos = new THREE.Vector3(p.position.x, p.position.y, p.position.z);
         positionMap.set(p.id, pos);
         positions.push(pos);
-        biographyWeights.push(Math.random() * 0.8 + 0.2); // Random weights for demo
-      });
+        biographyWeights.push(bioWeight);
+        personIdToIndex.set(p.id, idx);
 
-      // Create constellation for central nodes (mystical flowing gas spheres)
-      // Uses TSL cloud material with random preset assignment
-      if (centralPeople.length > 0) {
-        // Split central nodes into preset groups (lava, celestial, sacred)
-        const presets = getTSLCloudPresetNames();
-        const presetGroups = new Map<TSLCloudPreset, PlaceholderPerson[]>();
-        presets.forEach(preset => presetGroups.set(preset, []));
-
-        // Randomly assign each central person to a preset
-        centralPeople.forEach(p => {
-          const presetIndex = Math.floor(Math.random() * presets.length);
-          const preset = presets[presetIndex] as TSLCloudPreset;
-          presetGroups.get(preset)!.push(p);
-        });
-
-        // Create a separate mesh for each preset group
-        cloudConstellationsRef.current.clear();
-        presets.forEach(preset => {
-          const people = presetGroups.get(preset)!;
-          if (people.length === 0) return;
-
-          const cloudData: ConstellationData = {
-            positions: people.map(p => new THREE.Vector3(p.position.x, p.position.y, p.position.z)),
-            biographyWeights: people.map(() => Math.random() * 0.3 + 0.7),
-            personIds: people.map(p => p.id),
-          };
-
-          const cloudResult = createInstancedConstellation(cloudData, {
-            materialMode: 'tsl-cloud' as MaterialMode,
-            tslCloudConfig: {
-              preset,
-              flowSpeed: 0.8,
-              glowIntensity: 1.2,
-            },
-          });
-
-          cloudConstellationsRef.current.set(preset, cloudResult);
-          scene.add(cloudResult.mesh);
-          console.log(`[initScene] Cloud constellation (${preset}): ${people.length} nodes`);
-        });
-
-        console.log(`[initScene] Total central nodes: ${centralPeople.length} across ${cloudConstellationsRef.current.size} presets`);
-      }
-
-      // Create standard constellation for peripheral nodes (TSL materials)
-      if (peripheralPeople.length > 0) {
-        const peripheralData: ConstellationData = {
-          positions: peripheralPeople.map(p => new THREE.Vector3(p.position.x, p.position.y, p.position.z)),
-          biographyWeights: peripheralPeople.map(() => Math.random() * 0.8 + 0.2),
-          personIds: peripheralPeople.map(p => p.id),
+        const personWithBio: PersonWithBio = {
+          ...p,
+          hasBiography: hasBio ?? false,
+          biographyWeight: bioWeight,
         };
 
-        const instancedResult = createInstancedConstellation(peripheralData, {
-          materialMode: 'tsl',
-        });
-        instancedConstellationRef.current = instancedResult;
-        console.log(`[initScene] Peripheral constellation created: ${peripheralPeople.length} nodes`);
-        scene.add(instancedResult.mesh);
+        if (hasBio) {
+          biographyPeople.push(personWithBio);
+        } else {
+          ghostPeople.push(personWithBio);
+        }
+      });
+
+      console.log(`[initScene] Biography-based split: ${biographyPeople.length} with biography, ${ghostPeople.length} ghost nodes`);
+
+      // Create ghost constellation for nodes without biography
+      // Small, semi-transparent, ghostly blue with swirling mandala pattern
+      if (ghostPeople.length > 0) {
+        const ghostData = {
+          positions: ghostPeople.map(p => new THREE.Vector3(p.position.x, p.position.y, p.position.z)),
+          biographyWeights: ghostPeople.map(() => 0), // No biography weight for ghosts
+          personIds: ghostPeople.map(p => p.id),
+        };
+
+        const ghostResult = createGhostConstellation(ghostData);
+        ghostConstellationRef.current = ghostResult;
+        scene.add(ghostResult.mesh);
+        console.log(`[initScene] Ghost constellation created: ${ghostPeople.length} nodes`);
+      }
+
+      // Create biography constellation for nodes with biography
+      // Cloud effect with palette colors and selection glow
+      if (biographyPeople.length > 0) {
+        const bioData: ConstellationData = {
+          positions: biographyPeople.map(p => new THREE.Vector3(p.position.x, p.position.y, p.position.z)),
+          biographyWeights: biographyPeople.map(p => p.biographyWeight),
+          personIds: biographyPeople.map(p => p.id),
+          colorIndices: biographyPeople.map(() => getRandomColorIndex()),
+        };
+
+        const bioResult = createBiographyConstellation(bioData);
+        biographyConstellationRef.current = bioResult;
+        scene.add(bioResult.mesh);
+        console.log(`[initScene] Biography constellation created: ${biographyPeople.length} nodes`);
       }
     }
+
+    // Store person ID to index mapping for selection state updates
+    const personIdToIndexRef = personIdToIndex;
 
     // Add edge system - use REAL edges from FamilyGraph with proper types
     // Filter out spouse edges (invisible - for layout clustering only)
@@ -548,13 +507,14 @@ export function ConstellationCanvas(): React.ReactElement {
     scene.add(gridGroup);
 
     // Setup post-processing - TSL bloom and vignette
+    // Higher threshold (0.5) ensures only bright selected/connected nodes bloom
     try {
       const postProcessingResult = createPostProcessingPipeline(renderer, scene, camera, {
         bloom: {
           enabled: true,
-          strength: 1.5,
-          radius: 0.6,
-          threshold: 0.2,
+          strength: 2.0,
+          radius: 0.8,
+          threshold: 0.4,
         },
         vignette: {
           enabled: true,
@@ -577,6 +537,42 @@ export function ConstellationCanvas(): React.ReactElement {
     focusIndicatorRef.current = focusIndicator;
     scene.add(focusIndicator);
 
+    // Helper function to update selection state on constellation meshes
+    const updateConstellationSelectionState = (
+      selectedPersonId: string | null,
+      connectedIds: string[]
+    ): void => {
+      // Update ghost constellation selection state
+      if (ghostConstellationRef.current) {
+        const ghostPersonIds = ghostConstellationRef.current.mesh.userData.personIds as string[];
+        const selectedIdx = selectedPersonId ? ghostPersonIds.indexOf(selectedPersonId) : -1;
+        const connectedIdxs = connectedIds
+          .map(id => ghostPersonIds.indexOf(id))
+          .filter(idx => idx >= 0);
+
+        updateSelectionState(
+          ghostConstellationRef.current.selectionStateAttribute,
+          selectedIdx >= 0 ? selectedIdx : null,
+          connectedIdxs
+        );
+      }
+
+      // Update biography constellation selection state
+      if (biographyConstellationRef.current) {
+        const bioPersonIds = biographyConstellationRef.current.mesh.userData.personIds as string[];
+        const selectedIdx = selectedPersonId ? bioPersonIds.indexOf(selectedPersonId) : -1;
+        const connectedIdxs = connectedIds
+          .map(id => bioPersonIds.indexOf(id))
+          .filter(idx => idx >= 0);
+
+        updateSelectionState(
+          biographyConstellationRef.current.selectionStateAttribute,
+          selectedIdx >= 0 ? selectedIdx : null,
+          connectedIdxs
+        );
+      }
+    };
+
     // Click handler for selection
     const handleClick = (event: MouseEvent): void => {
       if (!selectionRef.current || !canvasRef.current) return;
@@ -587,25 +583,22 @@ export function ConstellationCanvas(): React.ReactElement {
 
       const personId = selectionRef.current.getIntersectedPerson(x, y);
       if (personId) {
-        selectPerson(personId, []);
+        // Get connected person IDs from the graph for selection highlighting
+        const connectedIds = getConnectedPersonIds(
+          personId,
+          graphData?.parentChildRelationships ?? [],
+          graphData?.spouseRelationships ?? []
+        );
 
-        // Animate camera to focus on the selected person
-        const position = selectionRef.current.getIntersectedPosition(x, y);
-        if (position && cameraAnimatorRef.current) {
-          // Calculate camera target position (offset from the star)
-          const cameraOffset = new THREE.Vector3(0, 10, 40);
-          const targetPosition = new THREE.Vector3(
-            position.x + cameraOffset.x,
-            position.y + cameraOffset.y,
-            position.z + cameraOffset.z
-          );
-          const lookAtTarget = new THREE.Vector3(position.x, position.y, position.z);
+        // Update Zustand store
+        selectPerson(personId, connectedIds);
 
-          cameraAnimatorRef.current.animateTo(targetPosition, lookAtTarget, {
-            duration: 1.5,
-            easing: 'easeInOutCubic',
-          });
-        }
+        // Update selection state on constellation meshes for glow highlighting
+        updateConstellationSelectionState(personId, connectedIds);
+      } else {
+        // Clicked on empty space - clear selection
+        clearSelection();
+        updateConstellationSelectionState(null, []);
       }
     };
 
@@ -695,15 +688,15 @@ export function ConstellationCanvas(): React.ReactElement {
         cameraAnimatorRef.current.update(deltaTime);
       }
 
-      // Update instanced constellation time uniform for animation
-      if (instancedConstellationRef.current) {
-        updateConstellationTime(instancedConstellationRef.current.uniforms, elapsedTime);
+      // Update ghost constellation time uniform for mandala animation
+      if (ghostConstellationRef.current) {
+        updateAnyConstellationTime(ghostConstellationRef.current.uniforms, elapsedTime);
       }
 
-      // Update cloud constellation time uniforms for flowing gas animation (all presets)
-      cloudConstellationsRef.current.forEach((result) => {
-        updateConstellationTime(result.uniforms, elapsedTime);
-      });
+      // Update biography constellation time uniform for cloud flow animation
+      if (biographyConstellationRef.current) {
+        updateAnyConstellationTime(biographyConstellationRef.current.uniforms, elapsedTime);
+      }
 
       // Update edge system time uniform for flowing animation (Phase 2)
       if (edgeSystemRef.current) {
@@ -764,16 +757,16 @@ export function ConstellationCanvas(): React.ReactElement {
       controls.dispose();
       selectionRef.current?.dispose();
       focusIndicatorRef.current = null;
-      // Dispose instanced constellation (Phase 1 resources)
-      if (instancedConstellationRef.current) {
-        disposeInstancedConstellation(instancedConstellationRef.current.mesh);
-        instancedConstellationRef.current = null;
+      // Dispose ghost constellation (nodes without biography - mandala pattern)
+      if (ghostConstellationRef.current) {
+        disposeInstancedConstellation(ghostConstellationRef.current.mesh);
+        ghostConstellationRef.current = null;
       }
-      // Dispose cloud constellations (central nodes with flowing gas effect - all presets)
-      cloudConstellationsRef.current.forEach((result) => {
-        disposeInstancedConstellation(result.mesh);
-      });
-      cloudConstellationsRef.current.clear();
+      // Dispose biography constellation (nodes with biography - cloud effect)
+      if (biographyConstellationRef.current) {
+        disposeInstancedConstellation(biographyConstellationRef.current.mesh);
+        biographyConstellationRef.current = null;
+      }
       // Dispose edge system (Phase 2 resources)
       if (edgeSystemRef.current) {
         disposeEdgeSystem(edgeSystemRef.current.mesh);

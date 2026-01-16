@@ -217,46 +217,46 @@ const mysticalSphere = wgslFn(`
     finalColor = mix(finalColor, accentLight, flowerPattern * positionHue * 0.3);
 
     // === SELF-ILLUMINATION (inner glow) ===
-    // The sphere glows from within - no dark side!
-    let innerGlow = 0.4 + patternIntensity * 0.4; // Base illumination 40-80%
+    // Good base glow for visible luminous spheres
+    let innerGlow = 0.35 + patternIntensity * 0.35; // Base illumination 35-70%
     finalColor = finalColor * innerGlow;
 
-    // === SURFACE LIGHTING (subtle, not dominant) ===
-    // Multiple soft lights for even illumination
+    // === SURFACE LIGHTING (subtle directional) ===
+    // Soft directional lights for depth and form
     let light1 = normalize(vec3<f32>(1.0, 1.0, 0.5));
     let light2 = normalize(vec3<f32>(-0.5, 0.5, -1.0));
     let light3 = normalize(vec3<f32>(0.0, -1.0, 0.0));
 
-    let diffuse1 = max(dot(localNormal, light1), 0.0) * 0.2;
-    let diffuse2 = max(dot(localNormal, light2), 0.0) * 0.15;
-    let diffuse3 = max(dot(localNormal, light3), 0.0) * 0.1;
+    let diffuse1 = max(dot(localNormal, light1), 0.0) * 0.15;
+    let diffuse2 = max(dot(localNormal, light2), 0.0) * 0.12;
+    let diffuse3 = max(dot(localNormal, light3), 0.0) * 0.08;
 
-    // Wrap lighting for softer falloff (no harsh shadows)
+    // Wrap lighting for softer falloff
     let wrap1 = (dot(localNormal, light1) * 0.5 + 0.5);
     let wrap2 = (dot(localNormal, light2) * 0.5 + 0.5);
-    let wrapLight = wrap1 * 0.15 + wrap2 * 0.1;
+    let wrapLight = wrap1 * 0.1 + wrap2 * 0.08;
 
     let surfaceLight = diffuse1 + diffuse2 + diffuse3 + wrapLight;
     finalColor = finalColor + finalColor * surfaceLight;
 
-    // === RIM GLOW (Fresnel) ===
+    // === RIM GLOW (Fresnel) - edge highlight for form definition ===
     let viewDot = abs(dot(normalize(localPos), localNormal));
     let fresnel = pow(1.0 - viewDot, 2.5);
-    let rimColor = mix(colorPrimary, colorHighlight, 0.5) * fresnel * glowIntensity * 0.5;
+    let rimColor = mix(colorPrimary, colorHighlight, 0.5) * fresnel * glowIntensity * 0.2;
     finalColor = finalColor + rimColor;
 
     // === SHIMMER (animated sparkles) ===
     let shimmerPos = spherePos * 20.0 + vec3<f32>(flowTime * 0.3, flowTime * 0.2, flowTime * 0.25);
-    let shimmer = sin(shimmerPos.x) * sin(shimmerPos.y) * sin(shimmerPos.z);
-    shimmer = pow(max(shimmer, 0.0), 8.0) * 0.15;
+    var shimmer = sin(shimmerPos.x) * sin(shimmerPos.y) * sin(shimmerPos.z);
+    shimmer = pow(max(shimmer, 0.0), 8.0) * 0.1;
     finalColor = finalColor + colorHighlight * shimmer;
 
     // === FINAL OUTPUT ===
-    // Ensure minimum brightness (self-illuminated, never dark)
-    finalColor = max(finalColor, vec3<f32>(0.15, 0.12, 0.08));
+    // Minimum brightness for visibility
+    finalColor = max(finalColor, vec3<f32>(0.05, 0.04, 0.03));
 
-    // Soft clamp to prevent bloom blowout while keeping luminous
-    finalColor = clamp(finalColor, vec3<f32>(0.0), vec3<f32>(0.95));
+    // Clamp to prevent over-saturation
+    finalColor = clamp(finalColor, vec3<f32>(0.0), vec3<f32>(0.9));
 
     return vec4<f32>(finalColor, 1.0);
   }
@@ -320,10 +320,12 @@ export function createTSLCloudMaterial(
 
     // Extract color and modulate by biography weight
     const sphereCol = vec3(result.x, result.y, result.z);
-    const bioBoost = float(0.9).add(biographyWeight.mul(float(0.2)));
+    // Biography weight influence (0.85 to 1.05)
+    const bioBoost = float(0.85).add(biographyWeight.mul(float(0.2)));
     const finalColor = sphereCol.mul(bioBoost);
 
-    return finalColor.clamp(vec3(float(0.1)), vec3(float(0.95)));
+    // Allow full brightness range
+    return finalColor.clamp(vec3(float(0.05)), vec3(float(0.95)));
   })();
 
   // Create material

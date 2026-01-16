@@ -21,6 +21,24 @@ vi.mock('three/tsl', () => {
     node.add = vi.fn(mockFn);
     node.sub = vi.fn(mockFn);
     node.div = vi.fn(mockFn);
+    node.clamp = vi.fn(mockFn);
+    // These can be either getters or set explicitly
+    let _x: unknown, _y: unknown, _z: unknown;
+    Object.defineProperty(node, 'x', {
+      get: () => _x ?? createMockNode(),
+      set: (v) => { _x = v; },
+      enumerable: true
+    });
+    Object.defineProperty(node, 'y', {
+      get: () => _y ?? createMockNode(),
+      set: (v) => { _y = v; },
+      enumerable: true
+    });
+    Object.defineProperty(node, 'z', {
+      get: () => _z ?? createMockNode(),
+      set: (v) => { _z = v; },
+      enumerable: true
+    });
     return node;
   }
 
@@ -57,9 +75,10 @@ vi.mock('three/tsl', () => {
     }),
     vec3: vi.fn((x, y, z) => {
       const node = createMockNode();
-      node.x = x;
-      node.y = y;
-      node.z = z;
+      // Set the values using the setter
+      if (x !== undefined) node.x = x;
+      if (y !== undefined) node.y = y;
+      if (z !== undefined) node.z = z;
       node.type = 'vec3';
       return node;
     }),

@@ -124,9 +124,9 @@ describe('edge-material module', () => {
       expect(material.transparent).toBe(true);
     });
 
-    it('should use additive blending by default', () => {
+    it('should use normal blending by default (fog fix)', () => {
       const { material } = createEdgeMaterial();
-      expect(material.blending).toBe(THREE.AdditiveBlending);
+      expect(material.blending).toBe(THREE.NormalBlending);
     });
   });
 

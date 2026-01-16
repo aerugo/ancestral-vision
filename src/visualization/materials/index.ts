@@ -1,6 +1,8 @@
 /**
  * TSL Materials
  * Re-exports all material-related functions for constellation visualization
+ *
+ * Note: WebGL/GLSL materials have been deprecated. All materials now use TSL (WebGPU).
  */
 
 export {
@@ -11,32 +13,6 @@ export {
   type NodeMaterialUniforms,
   type NodeMaterialResult,
 } from './node-material';
-
-export {
-  createCustomNodeMaterial,
-  updateCustomNodeMaterialTime,
-  updateCustomNodeMaterialColors,
-  updateCustomNodeMaterialTheme,
-  disposeCustomNodeMaterial,
-  type CustomNodeMaterialConfig,
-  type CustomNodeMaterialUniforms,
-  type CustomNodeMaterialResult,
-} from './custom-node-material';
-
-export {
-  createCloudNodeMaterial,
-  createCloudNodeMaterialWithPreset,
-  updateCloudNodeMaterialTime,
-  updateCloudNodeMaterialColors,
-  updateCloudNodeMaterialTheme,
-  updateCloudNodeMaterialParams,
-  disposeCloudNodeMaterial,
-  CLOUD_PRESETS,
-  type CloudNodeMaterialConfig,
-  type CloudNodeMaterialUniforms,
-  type CloudNodeMaterialResult,
-  type CloudPreset,
-} from './cloud-node-material';
 
 export {
   createTSLCloudMaterial,

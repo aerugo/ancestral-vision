@@ -139,7 +139,8 @@ export function createEdgeMaterial(config: EdgeMaterialConfig = {}): EdgeMateria
   material.colorNode = edgeColor;
   material.opacityNode = finalOpacity;
   material.transparent = true;
-  material.blending = THREE.AdditiveBlending;
+  // Use NormalBlending instead of AdditiveBlending to eliminate the glowing fog
+  material.blending = THREE.NormalBlending;
   material.depthWrite = false;
 
   // Return material and uniforms

@@ -5,7 +5,7 @@
  * INV-A008: Use three/webgpu for material classes, three/tsl for shader nodes
  */
 import * as THREE from "three";
-import { MeshStandardNodeMaterial } from "three/webgpu";
+import { MeshBasicNodeMaterial } from "three/webgpu";
 import {
   uniform,
   attribute,
@@ -230,49 +230,44 @@ export function createNodeMaterial(config: NodeMaterialConfig = {}): NodeMateria
     );
   }
 
-  // Create material
-  const material = new MeshStandardNodeMaterial();
+  // Create material - use MeshBasicNodeMaterial so it doesn't require scene lighting
+  const material = new MeshBasicNodeMaterial();
 
   // Sacred geometry colors (prototype lines 483-486)
   const sacredGold = vec3(0.83, 0.66, 0.29);
   const etherealRose = vec3(0.79, 0.55, 0.55);
   const mysticTeal = vec3(0.29, 0.49, 0.44);
 
-  // Prototype approach: finalColor = baseColor * innerGlow + rimGlow * 1.5
   // Inner glow: smoothstep(0.0, 0.8, 1.0 - fresnel) - bright at center
   const innerGlow = smoothstep(float(0), float(0.8), sub(float(1), fresnel));
 
-  // Start with base color scaled by inner glow (prototype line 479)
-  let finalColor = mul(baseColor, innerGlow);
+  // Start with base color scaled by inner glow - good brightness for visible nodes
+  let finalColor = mul(mul(baseColor, innerGlow), float(0.6));
 
-  // Add sacred geometry pattern colors - ALL scaled by biographyWeight (prototype approach)
+  // Add sacred geometry pattern colors
   if (enhancedMode) {
-    // Mandala patterns - scaled by biographyWeight (prototype lines 508-510)
-    finalColor = add(finalColor, mul(sacredGold, mul(enhancedColorContrib, float(0.3))));
-    finalColor = add(finalColor, mul(etherealRose, mul(enhancedColorContrib, float(0.25))));
-    finalColor = add(finalColor, mul(mysticTeal, mul(enhancedColorContrib, float(0.15))));
+    finalColor = add(finalColor, mul(sacredGold, mul(enhancedColorContrib, float(0.15))));
+    finalColor = add(finalColor, mul(etherealRose, mul(enhancedColorContrib, float(0.12))));
+    finalColor = add(finalColor, mul(mysticTeal, mul(enhancedColorContrib, float(0.08))));
   }
-  material.colorNode = finalColor;
 
-  // Emissive: rim glow + sss effects (prototype lines 480-481)
-  // Prototype uses: finalColor += baseColor * rimGlow * 1.5 + uColorSecondary * sss
-  const baseEmissive = mul(baseColor, mul(rimGlow, float(1.5)));
+  // For MeshBasicNodeMaterial, add rim glow for visual interest
+  const baseEmissive = mul(baseColor, mul(rimGlow, float(0.2)));
   let finalEmissive = baseEmissive;
   if (enhancedMode) {
-    // Add SSS effect scaled by biography weight (prototype line 481)
     finalEmissive = add(
       finalEmissive,
-      mul(uColorSecondary, mul(enhancedEmissiveContrib, float(0.3)))
+      mul(uColorSecondary, mul(enhancedEmissiveContrib, float(0.08)))
     );
-    // Add bioluminescent spots (prototype lines 512-513)
-    finalEmissive = add(finalEmissive, mul(sacredGold, mul(enhancedEmissiveContrib, float(0.4))));
+    finalEmissive = add(finalEmissive, mul(sacredGold, mul(enhancedEmissiveContrib, float(0.1))));
   }
-  material.emissiveNode = finalEmissive;
-  material.metalness = 0.0; // No metalness for soft, organic look
-  material.roughness = 0.4; // Lower roughness for brighter appearance
+
+  // Combine and clamp - allow brighter colors since we fixed the edge fog
+  const combinedColor = add(finalColor, finalEmissive);
+  const clampedColor = combinedColor.clamp(vec3(float(0)), vec3(float(0.85)));
+  material.colorNode = clampedColor;
   material.transparent = true;
-  // Prototype alpha: 0.7 + vBioWeight * 0.3 - using 0.85 as middle ground
-  material.opacity = 0.85;
+  material.opacity = 0.9;
   // Use normal blending to preserve patterns, emissive provides the glow
   material.blending = THREE.NormalBlending;
 

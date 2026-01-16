@@ -93,3 +93,32 @@ export {
   type ClusterCompute,
   type ClusterComputeConfig,
 } from './lights';
+
+// Phase 3: Node Materials & Texturing
+export {
+  // Texture Manager
+  createTextureManager,
+  DEFAULT_SAMPLER_CONFIG,
+  type TextureManager,
+  type TextureConfig,
+  type NoiseConfig,
+  type GradientStop,
+} from './textures';
+
+export {
+  // Flowing Material
+  createFlowingMaterial,
+  FLOWING_MATERIAL_UNIFORM_SIZE,
+  type FlowingMaterial,
+  type FlowingMaterialConfig,
+  type FlowingMaterialUniforms,
+  // Material Presets
+  MATERIAL_PRESETS,
+  getPresetNames,
+  getPreset,
+  getRandomPreset,
+  createMaterialFromPreset,
+  applyPresetToMaterial,
+  type MaterialPreset,
+  type MaterialPresetName,
+} from './materials';

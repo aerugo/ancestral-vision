@@ -309,8 +309,13 @@ export class PathPulseAnimator {
     // Convert progress (0-1) to position along path (0 to path.length-1)
     const pathPosition = easedProgress * (this._path.length - 1);
 
-    // Calculate distance from pulse front to this node
-    const distance = Math.abs(pathPosition - nodeIndex);
+    // Node should only glow AFTER the pulse has reached it
+    // The pulse reaches a node when pathPosition >= nodeIndex
+    // This ensures light only reaches a planet after traversing the edge to it
+    if (pathPosition < nodeIndex) return 0;
+
+    // Calculate distance from pulse front to this node (only trailing behind pulse)
+    const distance = pathPosition - nodeIndex;
 
     // Calculate intensity based on distance and pulse width
     // Intensity is 1 at the pulse front, fading to 0 at pulseWidth distance

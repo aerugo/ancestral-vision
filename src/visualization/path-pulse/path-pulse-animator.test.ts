@@ -260,13 +260,17 @@ describe('PathPulseAnimator', () => {
       let intensityE = animator.getNodePulseIntensity('E');
       expect(intensityA).toBeGreaterThan(intensityE);
 
-      // At t=0.8 (near end but still animating), last node should have intensity
+      // At t=0.8 (near end but still animating), pulse is at position 3.2
       animator.update(0.8);
       intensityA = animator.getNodePulseIntensity('A');
       intensityE = animator.getNodePulseIntensity('E');
+      const intensityD = animator.getNodePulseIntensity('D');
       expect(animator.isAnimating()).toBe(true);
-      // At 80% through, pulse is at position 3.2 (near D/E), so E should have some intensity
-      expect(intensityE).toBeGreaterThan(0);
+      // Nodes only glow AFTER the pulse reaches them (pathPosition >= nodeIndex)
+      // At 80% through, pulse is at position 3.2, so D (index 3) should glow
+      // but E (index 4) should NOT glow yet - pulse hasn't reached it
+      expect(intensityD).toBeGreaterThan(0);
+      expect(intensityE).toBe(0);
     });
 
     it('should have all zero intensities after animation completes', () => {

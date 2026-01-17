@@ -818,7 +818,9 @@ export function ConstellationCanvas(): React.ReactElement {
     // Animation loop - use setAnimationLoop per INV-A002
     let elapsedTime = 0;
     renderer.setAnimationLoop(() => {
-      const deltaTime = clockRef.current?.getDelta() ?? 0;
+      // Cap delta time to prevent "catch up" after sleep/tab suspend
+      const rawDelta = clockRef.current?.getDelta() ?? 0;
+      const deltaTime = Math.min(rawDelta, 0.1); // Max 100ms per frame
       elapsedTime += deltaTime;
 
       // Update camera animation

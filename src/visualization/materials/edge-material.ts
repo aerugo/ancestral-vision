@@ -102,8 +102,8 @@ export function createEdgeMaterial(config: EdgeMaterialConfig = {}): EdgeMateria
   // Color mixing along edge
   const edgeColor = mix(uColorPrimary, uColorSecondary, mul(progress, 0.3));
 
-  // Pulse glow: warm white color when pulse intensity is non-zero
-  const pulseGlowColor = vec3(1.0, 0.95, 0.85); // Warm white
+  // Pulse glow: Sacred Gold color when pulse intensity is non-zero (matches edge illumination)
+  const pulseGlowColor = vec3(0.83, 0.66, 0.29); // Sacred Gold
   const pulseGlowStrength = mul(pulseIntensity, float(2.5)); // Amplify for visibility
   const finalColor = mix(edgeColor, pulseGlowColor, pulseGlowStrength);
 

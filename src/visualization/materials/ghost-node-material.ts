@@ -178,8 +178,8 @@ export function createGhostNodeMaterial(
   );
   finalColor = add(finalColor, selectionHighlight);
 
-  // Pulse glow: warm white when pulse is passing through
-  const pulseGlowColor = vec3(1.0, 0.95, 0.85); // Warm white
+  // Pulse glow: Sacred Gold when pulse is passing through (matches edge illumination)
+  const pulseGlowColor = vec3(0.83, 0.66, 0.29); // Sacred Gold
   const pulseGlow = mul(
     pulseGlowColor,
     mul(pulseIntensity, mul(add(fresnel, float(0.3)), float(3.0)))

@@ -55,10 +55,8 @@ export interface PulseAnimatorConfig {
   easing?: PulseEasingName;
   /** How wide the pulse glow spreads (0-1, default: 0.3) */
   pulseWidth?: number;
-  /** Duration of breathing effect at target in seconds (default: 1.2) */
+  /** Duration of breathing effect at target in seconds (default: 1.8) */
   breathingDuration?: number;
-  /** Number of breath cycles at target (default: 2) */
-  breathingCycles?: number;
 }
 
 /**
@@ -70,8 +68,7 @@ const DEFAULT_CONFIG: Required<PulseAnimatorConfig> = {
   maxDuration: 3.0,
   easing: 'easeInOutCubic',
   pulseWidth: 0.3,
-  breathingDuration: 1.2,
-  breathingCycles: 2,
+  breathingDuration: 1.8,
 };
 
 /**
@@ -87,7 +84,9 @@ export class PathPulseAnimator {
   private _progress: number = 1; // Start at 1 (completed state)
   private _duration: number = 0;
   private _easing: EasingFunction;
+  private _onArrival?: () => void;
   private _onComplete?: () => void;
+  private _hasArrivedCallback: boolean = false;
   private _hasCompletedCallback: boolean = false;
   private _breathingProgress: number = 1; // 0-1 breathing phase progress
   private _isBreathing: boolean = false;
@@ -104,17 +103,25 @@ export class PathPulseAnimator {
   /**
    * Start animating a pulse along the given path
    * @param path Array of node IDs from start to end
-   * @param onComplete Optional callback when animation completes
+   * @param onArrival Optional callback when pulse arrives at target (start of breathing)
+   * @param onComplete Optional callback when animation fully completes (end of breathing)
    */
-  public start(path: string[], onComplete?: () => void): void {
+  public start(
+    path: string[],
+    onArrival?: () => void,
+    onComplete?: () => void
+  ): void {
     // Need at least 2 nodes for a meaningful pulse
     if (path.length < 2) {
+      onArrival?.();
       onComplete?.();
       return;
     }
 
     this._path = [...path];
+    this._onArrival = onArrival;
     this._onComplete = onComplete;
+    this._hasArrivedCallback = false;
     this._hasCompletedCallback = false;
     this._progress = 0;
     this._breathingProgress = 0;
@@ -161,6 +168,13 @@ export class PathPulseAnimator {
 
     if (this._progress >= 1) {
       this._progress = 1;
+
+      // Call onArrival when pulse reaches target
+      if (!this._hasArrivedCallback && this._onArrival) {
+        this._hasArrivedCallback = true;
+        this._onArrival();
+      }
+
       // Transition to breathing phase (or complete if breathing disabled)
       if (this._config.breathingDuration <= 0) {
         // No breathing - complete immediately
@@ -183,6 +197,8 @@ export class PathPulseAnimator {
     this._path = [];
     this._isBreathing = false;
     this._breathingProgress = 1;
+    this._hasArrivedCallback = false;
+    this._hasCompletedCallback = false;
   }
 
   /**
@@ -210,24 +226,43 @@ export class PathPulseAnimator {
 
   /**
    * Get the breathing intensity (organic fade in/out) for target node.
-   * Uses sine wave for smooth breathing effect.
+   * Creates a single relaxed breath: brighten → pause → slowly dim.
    *
-   * @returns Intensity 0-1 with smooth organic pulsing
+   * The curve is:
+   * - Phase 1 (0-25%): Ease in from 0.5 to 1.0 (breathe in / brighten)
+   * - Phase 2 (25-40%): Hold at 1.0 (pause at peak)
+   * - Phase 3 (40-100%): Ease out from 1.0 to 0 (breathe out / slowly dim)
+   *
+   * @returns Intensity 0-1 with smooth organic single breath
    */
   public getBreathingIntensity(): number {
     if (!this._isBreathing || this._breathingProgress >= 1) return 0;
 
-    // Sinusoidal breathing with configurable cycles
-    // Starts at 1, fades down and up organically, ends at 0
-    const cycles = this._config.breathingCycles;
     const t = this._breathingProgress;
 
-    // Create smooth breathing: sin wave that starts at 1 and fades to 0
-    // Using: (1 - t) * (0.5 + 0.5 * cos(cycles * 2π * t))
-    // This gives breathing that decays over time
-    const envelope = 1 - t; // Linear fade out envelope
-    const breathCycle = 0.5 + 0.5 * Math.cos(cycles * 2 * Math.PI * t);
-    return envelope * breathCycle;
+    // Phase boundaries
+    const breatheInEnd = 0.25;
+    const pauseEnd = 0.4;
+
+    if (t < breatheInEnd) {
+      // Phase 1: Breathe in - ease from 0.5 to 1.0
+      const phaseT = t / breatheInEnd;
+      // Ease out cubic for smooth arrival at peak
+      const eased = 1 - Math.pow(1 - phaseT, 3);
+      return 0.5 + 0.5 * eased;
+    } else if (t < pauseEnd) {
+      // Phase 2: Hold at peak
+      return 1.0;
+    } else {
+      // Phase 3: Breathe out - ease from 1.0 to 0
+      const phaseT = (t - pauseEnd) / (1 - pauseEnd);
+      // Ease in-out cubic for smooth, relaxed exhale
+      const eased =
+        phaseT < 0.5
+          ? 4 * phaseT * phaseT * phaseT
+          : 1 - Math.pow(-2 * phaseT + 2, 3) / 2;
+      return 1.0 - eased;
+    }
   }
 
   /**

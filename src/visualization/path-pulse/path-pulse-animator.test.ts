@@ -427,19 +427,21 @@ describe('PathPulseAnimator', () => {
       expect(animator.getNodePulseIntensity('C')).toBeGreaterThan(0);
     });
 
-    it('should call onComplete after breathing finishes', () => {
+    it('should call onArrival when pulse reaches target, and onComplete after breathing finishes', () => {
+      const onArrival = vi.fn();
       const onComplete = vi.fn();
       const animator = new PathPulseAnimator({
         minDuration: 0.5,
         breathingDuration: 0.5,
       });
-      animator.start(['A', 'B', 'C'], onComplete);
+      animator.start(['A', 'B', 'C'], onArrival, onComplete);
 
-      // Complete travel
+      // Complete travel - onArrival should be called, onComplete should not
       animator.update(0.6);
+      expect(onArrival).toHaveBeenCalledTimes(1);
       expect(onComplete).not.toHaveBeenCalled();
 
-      // Complete breathing
+      // Complete breathing - onComplete should now be called
       animator.update(0.6);
       expect(onComplete).toHaveBeenCalledTimes(1);
     });
@@ -485,7 +487,6 @@ describe('PathPulseAnimator', () => {
       const animator = new PathPulseAnimator({
         minDuration: 0.5,
         breathingDuration: 1.0,
-        breathingCycles: 2,
       });
       animator.start(['A', 'B', 'C']);
 

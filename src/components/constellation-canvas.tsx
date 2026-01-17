@@ -377,8 +377,7 @@ export function ConstellationCanvas(): React.ReactElement {
       maxDuration: 4.0,
       easing: 'easeInOutCubic',
       pulseWidth: 0.35,
-      breathingDuration: 1.5,
-      breathingCycles: 2,
+      breathingDuration: 1.8,
     });
 
     // Split nodes by biography presence (not family relationships)
@@ -500,24 +499,21 @@ export function ConstellationCanvas(): React.ReactElement {
     scene.add(particleResult.mesh);
 
     // Add event fireflies - orbital particles representing life events
-    if (positions.length > 0) {
-      // Demo event types for each node
-      const demoEventTypes = [
-        ['birth', 'marriage'],
-        ['birth', 'death'],
-        ['birth', 'occupation', 'marriage'],
-        ['birth'],
-        ['birth', 'military', 'death'],
-        ['birth', 'graduation', 'marriage', 'death'],
-        ['birth', 'residence'],
-        ['birth', 'marriage', 'occupation'],
-        ['birth', 'death'],
-        ['birth', 'marriage', 'residence', 'occupation'],
-      ];
+    // Only nodes with events get fireflies
+    if (positions.length > 0 && constellationPeople.length > 0) {
+      // Build event types array based on eventCount from API
+      // For now, use placeholder event type; real event types can be fetched later
+      const nodeEventTypes: string[][] = constellationPeople.map((p) => {
+        const rawPerson = graphData?.rawPeople?.find(rp => rp.id === p.id);
+        const eventCount = rawPerson?.eventCount ?? 0;
+        // Return empty array if no events, otherwise placeholder events
+        return eventCount > 0 ? Array(eventCount).fill('default') : [];
+      });
+
       const fireflyResult = createEventFireflies({
         nodePositions: positions,
         nodeBiographyWeights: biographyWeights,
-        nodeEventTypes: positions.map((_, i) => demoEventTypes[i % demoEventTypes.length] || ['birth']),
+        nodeEventTypes,
       });
       eventFirefliesRef.current = fireflyResult;
       scene.add(fireflyResult.mesh);
@@ -695,20 +691,33 @@ export function ConstellationCanvas(): React.ReactElement {
         const previousId = useSelectionStore.getState().selectedPersonId;
 
         // Check if we should trigger a pulse animation
+        let pulseAnimationStarted = false;
         if (previousId && previousId !== personId && graphRef.current) {
           // Find path between previous and new selection
           const path = graphRef.current.findPath(previousId, personId);
 
           if (path && path.length > 1) {
+            pulseAnimationStarted = true;
+
             // Cancel any existing animation
             pulseAnimatorRef.current?.cancel();
             clearPulseIntensities();
 
-            // Start pulse animation
-            pulseAnimatorRef.current?.start(path, () => {
-              // Pulse complete - clear pulse intensities
-              clearPulseIntensities();
-            });
+            // Start pulse animation with two callbacks:
+            // - onArrival: apply selection glow when pulse reaches target (start of breathing)
+            // - onComplete: clear pulse intensities after breathing ends
+            pulseAnimatorRef.current?.start(
+              path,
+              () => {
+                // Pulse arrived at target - apply selection glow now
+                // This ensures breathing fades seamlessly into the selection state
+                updateConstellationSelectionState(personId, connectedIds);
+              },
+              () => {
+                // Breathing complete - clear pulse intensities
+                clearPulseIntensities();
+              }
+            );
           }
         }
 
@@ -716,7 +725,10 @@ export function ConstellationCanvas(): React.ReactElement {
         selectPerson(personId, connectedIds);
 
         // Update selection state on constellation meshes for glow highlighting
-        updateConstellationSelectionState(personId, connectedIds);
+        // Only update immediately if no pulse animation was started
+        if (!pulseAnimationStarted) {
+          updateConstellationSelectionState(personId, connectedIds);
+        }
       } else {
         // Clicked on empty space - clear selection
         clearSelection();

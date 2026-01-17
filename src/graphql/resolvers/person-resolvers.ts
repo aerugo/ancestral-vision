@@ -260,4 +260,31 @@ export const personFieldResolvers = {
     });
     return relationships.map((r) => (r.person1Id === parent.id ? r.person2 : r.person1));
   },
+
+  /**
+   * Resolve eventCount field on Person type
+   * Counts events where person is primary or a participant (non-deleted only)
+   */
+  eventCount: async (parent: Person): Promise<number> => {
+    // Count events where person is primary
+    const primaryCount = await prisma.event.count({
+      where: {
+        primaryPersonId: parent.id,
+        deletedAt: null,
+      },
+    });
+
+    // Count events where person is a participant (but not primary, to avoid double counting)
+    const participantCount = await prisma.eventParticipant.count({
+      where: {
+        personId: parent.id,
+        event: {
+          deletedAt: null,
+          primaryPersonId: { not: parent.id },
+        },
+      },
+    });
+
+    return primaryCount + participantCount;
+  },
 };

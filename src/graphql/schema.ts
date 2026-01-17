@@ -212,6 +212,8 @@ export const typeDefs = /* GraphQL */ `
     children: [Person!]!
     """Spouses/partners of this person"""
     spouses: [Person!]!
+    """Number of events for this person (as primary or participant)"""
+    eventCount: Int!
   }
 
   """Parent-child relationship type"""

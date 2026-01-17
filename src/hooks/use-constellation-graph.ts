@@ -20,6 +20,8 @@ export interface ConstellationPerson {
   surname: string | null;
   biography: string | null;
   generation: number;
+  /** Number of events for this person (for firefly particles) */
+  eventCount: number;
 }
 
 /**
@@ -29,6 +31,7 @@ interface PersonWithRelationships extends ConstellationPerson {
   parents: Array<{ id: string }>;
   children: Array<{ id: string }>;
   spouses: Array<{ id: string }>;
+  eventCount: number;
 }
 
 /**
@@ -61,6 +64,7 @@ const CONSTELLATION_GRAPH_QUERY = `
         surname
         biography
         generation
+        eventCount
         parents {
           id
         }
@@ -196,6 +200,7 @@ export function useConstellationGraph() {
         surname: person.surname,
         biography: person.biography,
         generation: person.generation,
+        eventCount: person.eventCount,
       }));
 
       return {

@@ -129,6 +129,42 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
     return () => unsubscribe();
   }, []);
 
+  // Proactively refresh token before it expires (every 50 minutes)
+  // Firebase tokens expire after 1 hour, this keeps sessions alive indefinitely
+  useEffect(() => {
+    if (isTemplateMode()) return;
+
+    const REFRESH_INTERVAL = 50 * 60 * 1000; // 50 minutes in milliseconds
+
+    const refreshToken = async () => {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        try {
+          const token = await currentUser.getIdToken(true); // Force refresh
+          useAuthStore.getState().setToken(token);
+          console.log('[AuthProvider] Token refreshed proactively');
+        } catch (err) {
+          console.error('[AuthProvider] Token refresh failed:', err);
+        }
+      }
+    };
+
+    const intervalId = setInterval(refreshToken, REFRESH_INTERVAL);
+
+    // Also refresh when tab becomes visible after being hidden
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshToken();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   /**
    * Login with email and password
    */

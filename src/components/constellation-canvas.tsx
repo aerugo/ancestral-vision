@@ -7,6 +7,7 @@
  * - INV-A001: WebGPURenderer must be initialized with `await renderer.init()`
  * - INV-A002: Use `renderer.setAnimationLoop()` not `requestAnimationFrame()`
  * - INV-A009: Scene cleanup on component unmount (dispose geometry, materials, textures)
+ * - INV-A010: Animation timing flows through central AnimationSystem
  *
  * Note: WebGL support has been deprecated. This component requires WebGPU.
  * Users with unsupported browsers will see an error message.
@@ -58,7 +59,6 @@ function generatePlaceholderPeople(count: number): PlaceholderPerson[] {
 }
 import {
   createEdgeSystem,
-  updateEdgeSystemTime,
   disposeEdgeSystem,
   updateEdgePulseIntensities,
   updateEdgePulseIntensitiesSmooth,
@@ -70,10 +70,8 @@ import {
 } from '@/visualization/path-pulse';
 import {
   createBackgroundParticles,
-  updateBackgroundParticlesTime,
   disposeBackgroundParticles,
   createEventFireflies,
-  updateEventFirefliesTime,
   disposeEventFireflies,
   type BackgroundParticleResult,
   type EventFireflyResult,
@@ -119,8 +117,7 @@ import {
 // ConstellationManager handles ghost/biography pools with dynamic add/remove
 // No longer need direct imports from instanced-constellation
 import * as THREE from 'three';
-// Animation System A/B Test (INV-A010)
-import { useAnimationModeStore } from '@/stores/animation-mode-store';
+// Animation System (INV-A010) - unified timing for all shader animations
 import {
   AnimationSystem,
   ConstellationAnimationSetup,
@@ -292,9 +289,6 @@ export function ConstellationCanvas(): React.ReactElement {
 
   // WebGPU error state for user-friendly error display
   const [webGPUError, setWebGPUError] = useState<string | null>(null);
-
-  // Animation mode for A/B testing (legacy vs AnimationSystem)
-  const animationMode = useAnimationModeStore((state) => state.mode);
 
   // Fetch constellation graph data (people + relationships) for layout
   const { data: graphData, isLoading, isError, error } = useConstellationGraph();
@@ -939,26 +933,15 @@ export function ConstellationCanvas(): React.ReactElement {
     }
 
     // Animation loop - use setAnimationLoop per INV-A002
-    let elapsedTimeLegacy = 0; // Used only in legacy mode
+    // All timing flows through AnimationSystem per INV-A010
     renderer.setAnimationLoop(() => {
       // Cap delta time to prevent "catch up" after sleep/tab suspend
       const rawDelta = clockRef.current?.getDelta() ?? 0;
       const deltaTime = Math.min(rawDelta, 0.1); // Max 100ms per frame
 
-      // Get current animation mode from store
-      const currentMode = useAnimationModeStore.getState().mode;
-
-      // Time management differs based on mode
-      let elapsedTime: number;
-      if (currentMode === 'animation-system') {
-        // AnimationSystem mode: unified time management with pause/resume/timeScale
-        animSystem.update(deltaTime);
-        elapsedTime = animSystem.getElapsedTime();
-      } else {
-        // Legacy mode: manual time accumulation
-        elapsedTimeLegacy += deltaTime;
-        elapsedTime = elapsedTimeLegacy;
-      }
+      // Update AnimationSystem - this updates all registered shader uniforms (edges, particles, fireflies)
+      animSystem.update(deltaTime);
+      const elapsedTime = animSystem.getElapsedTime();
 
       // Update camera animation
       if (cameraAnimatorRef.current) {
@@ -1017,22 +1000,10 @@ export function ConstellationCanvas(): React.ReactElement {
       }
 
       // Update constellation time uniforms for animations (ghost mandala + biography cloud)
+      // Note: These are managed by ConstellationManager, not registered with AnimationSystem
       constellationManagerRef.current?.updateTime(elapsedTime);
 
-      // Update edge system time uniform for flowing animation (Phase 2)
-      if (edgeSystemRef.current) {
-        updateEdgeSystemTime(edgeSystemRef.current.uniforms, elapsedTime);
-      }
-
-      // Update background particles time uniform for animation (Phase 3)
-      if (backgroundParticlesRef.current) {
-        updateBackgroundParticlesTime(backgroundParticlesRef.current.uniforms, elapsedTime);
-      }
-
-      // Update event fireflies time uniform for orbital animation (Phase 4)
-      if (eventFirefliesRef.current) {
-        updateEventFirefliesTime(eventFirefliesRef.current.uniforms, elapsedTime);
-      }
+      // Edge, background particles, and event fireflies are updated via AnimationSystem (INV-A010)
 
       // Update sacred geometry grid animation (Phase 5) - slow rotation
       if (sacredGeometryGridRef.current) {

@@ -21,7 +21,6 @@ import { useSelectionStore } from '@/store/selection-store';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useOnboarding } from '@/hooks/use-onboarding';
 import { DevShortcutsProvider } from '@/hooks/use-dev-shortcuts';
-import { AnimationModeSelector } from '@/components/dev/animation-mode-selector';
 
 export default function ConstellationPage(): React.ReactElement {
   const router = useRouter();
@@ -92,10 +91,6 @@ export default function ConstellationPage(): React.ReactElement {
         <ConstellationCanvas />
         {isPanelOpen && selectedPersonId && <PersonProfilePanel />}
         <DevShortcutsProvider />
-        {/* A/B Test: Animation System Mode Selector (dev only) */}
-        <div className="fixed bottom-4 right-4 z-50">
-          <AnimationModeSelector />
-        </div>
       </AppShell>
     </div>
   );

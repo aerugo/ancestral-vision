@@ -119,6 +119,13 @@ import {
 // ConstellationManager handles ghost/biography pools with dynamic add/remove
 // No longer need direct imports from instanced-constellation
 import * as THREE from 'three';
+// Animation System A/B Test (INV-A010)
+import { useAnimationModeStore } from '@/stores/animation-mode-store';
+import {
+  AnimationSystem,
+  ConstellationAnimationSetup,
+  AnimationInspector,
+} from '@/visualization/animation';
 
 /**
  * Focus indicator mesh for keyboard navigation
@@ -277,8 +284,17 @@ export function ConstellationCanvas(): React.ReactElement {
   // Camera state to restore after scene rebuild (preserves position during biography transition)
   const cameraStateToRestoreRef = useRef<{ position: THREE.Vector3; target: THREE.Vector3 } | null>(null);
 
+  // Animation System A/B Test (INV-A010)
+  // These refs allow switching between legacy manual updates and unified AnimationSystem
+  const animationSystemRef = useRef<AnimationSystem | null>(null);
+  const animationSetupRef = useRef<ConstellationAnimationSetup | null>(null);
+  const animationInspectorRef = useRef<AnimationInspector | null>(null);
+
   // WebGPU error state for user-friendly error display
   const [webGPUError, setWebGPUError] = useState<string | null>(null);
+
+  // Animation mode for A/B testing (legacy vs AnimationSystem)
+  const animationMode = useAnimationModeStore((state) => state.mode);
 
   // Fetch constellation graph data (people + relationships) for layout
   const { data: graphData, isLoading, isError, error } = useConstellationGraph();
@@ -898,13 +914,51 @@ export function ConstellationCanvas(): React.ReactElement {
       });
     });
 
+    // Animation System A/B Test (INV-A010)
+    // Initialize AnimationSystem for unified time management
+    const animSystem = new AnimationSystem();
+    animationSystemRef.current = animSystem;
+    animationSetupRef.current = new ConstellationAnimationSetup(animSystem);
+    animationInspectorRef.current = new AnimationInspector(animSystem);
+
+    // Expose animation controls to console in development
+    if (process.env.NODE_ENV === 'development') {
+      animationInspectorRef.current.exposeGlobally('__animationSystem');
+    }
+
+    // Register uniforms with AnimationSystem for unified updates
+    // Note: ghost/biography uniforms are managed internally by ConstellationManager
+    if (edgeSystemRef.current) {
+      animationSetupRef.current.registerEdges(edgeSystemRef.current.uniforms);
+    }
+    if (backgroundParticlesRef.current) {
+      animationSetupRef.current.registerBackgroundParticles(backgroundParticlesRef.current.uniforms);
+    }
+    if (eventFirefliesRef.current) {
+      animationSetupRef.current.registerEventFireflies(eventFirefliesRef.current.uniforms);
+    }
+
     // Animation loop - use setAnimationLoop per INV-A002
-    let elapsedTime = 0;
+    let elapsedTimeLegacy = 0; // Used only in legacy mode
     renderer.setAnimationLoop(() => {
       // Cap delta time to prevent "catch up" after sleep/tab suspend
       const rawDelta = clockRef.current?.getDelta() ?? 0;
       const deltaTime = Math.min(rawDelta, 0.1); // Max 100ms per frame
-      elapsedTime += deltaTime;
+
+      // Get current animation mode from store
+      const currentMode = useAnimationModeStore.getState().mode;
+
+      // Time management differs based on mode
+      let elapsedTime: number;
+      if (currentMode === 'animation-system') {
+        // AnimationSystem mode: unified time management with pause/resume/timeScale
+        animSystem.update(deltaTime);
+        elapsedTime = animSystem.getElapsedTime();
+      } else {
+        // Legacy mode: manual time accumulation
+        elapsedTimeLegacy += deltaTime;
+        elapsedTime = elapsedTimeLegacy;
+      }
 
       // Update camera animation
       if (cameraAnimatorRef.current) {

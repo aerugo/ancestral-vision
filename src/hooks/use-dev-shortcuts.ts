@@ -38,30 +38,24 @@ export function useDevShortcuts(): void {
 
   // Toggle biography handler
   const toggleBiography = useCallback(() => {
-    if (!selectedPersonId) {
-      console.log('[DevShortcuts] No person selected');
-      return;
-    }
-
-    if (!selectedPerson) {
-      console.log('[DevShortcuts] Person data not loaded');
+    if (!selectedPersonId || !selectedPerson) {
       return;
     }
 
     const hasBiography = Boolean(selectedPerson.biography?.trim());
 
     if (hasBiography) {
-      // Remove biography
-      console.log(`[DevShortcuts] Removing biography from ${selectedPerson.givenName ?? 'Unknown'}`);
+      // Remove biography - trigger reverse animation first
+      // Emit transition event BEFORE mutation to capture biography node position
+      biographyTransitionEvents.emit(selectedPersonId, 'remove');
       updatePerson.mutate({
         id: selectedPersonId,
         input: { biography: null },
       });
     } else {
       // Add placeholder biography - trigger animation first
-      console.log(`[DevShortcuts] Adding biography to ${selectedPerson.givenName ?? 'Unknown'}`);
       // Emit transition event BEFORE mutation to capture ghost node position
-      biographyTransitionEvents.emit(selectedPersonId);
+      biographyTransitionEvents.emit(selectedPersonId, 'add');
       updatePerson.mutate({
         id: selectedPersonId,
         input: { biography: PLACEHOLDER_BIOGRAPHY },

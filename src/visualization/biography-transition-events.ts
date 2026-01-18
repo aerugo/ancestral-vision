@@ -1,15 +1,22 @@
 /**
  * Biography Transition Events
  *
- * Event emitter for communicating biography addition events from React components
+ * Event emitter for communicating biography transition events from React components
  * to the Three.js visualization layer. Enables the metamorphosis animation when
- * a biography is added to a ghost node.
+ * a biography is added to or removed from a node.
  */
+
+/**
+ * Direction of the biography transition
+ * - 'add': Ghost node transforms into biography node
+ * - 'remove': Biography node transforms back into ghost node
+ */
+export type TransitionDirection = 'add' | 'remove';
 
 /**
  * Callback type for biography transition listeners
  */
-export type BiographyTransitionListener = (personId: string) => void;
+export type BiographyTransitionListener = (personId: string, direction: TransitionDirection) => void;
 
 /**
  * Track whether a biography transition animation is currently in progress.
@@ -63,14 +70,14 @@ export function scheduleInvalidation(callback: () => void): void {
  * Biography transition event emitter
  *
  * Used to notify the constellation visualization when a biography has been
- * added to a person, triggering the zoom + metamorphosis animation.
+ * added to or removed from a person, triggering the metamorphosis animation.
  */
 class BiographyTransitionEventEmitter {
   private _listeners: Set<BiographyTransitionListener> = new Set();
 
   /**
    * Subscribe to biography transition events
-   * @param listener Callback to invoke when a biography is added
+   * @param listener Callback to invoke when a biography transition occurs
    * @returns Unsubscribe function
    */
   public subscribe(listener: BiographyTransitionListener): () => void {
@@ -82,12 +89,13 @@ class BiographyTransitionEventEmitter {
 
   /**
    * Emit a biography transition event
-   * @param personId The ID of the person who received a biography
+   * @param personId The ID of the person whose biography status is changing
+   * @param direction 'add' for ghost→biography, 'remove' for biography→ghost
    */
-  public emit(personId: string): void {
+  public emit(personId: string, direction: TransitionDirection = 'add'): void {
     for (const listener of this._listeners) {
       try {
-        listener(personId);
+        listener(personId, direction);
       } catch (error) {
         console.error('[BiographyTransitionEvents] Error in listener:', error);
       }

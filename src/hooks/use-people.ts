@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gql } from '@/lib/graphql-client';
 import { useAuthStore } from '@/store/auth-store';
+import { constellationGraphQueryKey } from './use-constellation-graph';
+import { scheduleInvalidation } from '@/visualization/biography-transition-events';
 
 /**
  * Person data from the API (summary view)
@@ -55,7 +57,7 @@ export interface UpdatePersonInput {
   gender?: string;
   birthDate?: unknown;
   deathDate?: unknown;
-  biography?: string;
+  biography?: string | null;
   speculative?: boolean;
 }
 
@@ -293,6 +295,12 @@ export function useUpdatePerson() {
       queryClient.invalidateQueries({ queryKey: peopleQueryKey });
       // Update the specific person cache
       queryClient.setQueryData(personQueryKey(updatedPerson.id), updatedPerson);
+      // Invalidate constellation graph (biography changes affect node appearance)
+      // Use scheduleInvalidation to delay during transition animation
+      // This prevents the scene from rebuilding mid-animation
+      scheduleInvalidation(() => {
+        queryClient.invalidateQueries({ queryKey: constellationGraphQueryKey });
+      });
     },
   });
 }

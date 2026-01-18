@@ -48,6 +48,8 @@ export interface GhostNodeMaterialConfig {
   connectedGlowMultiplier?: number;
   /** Glow multiplier when selected (default: 100.0 - sun-like brightness) */
   selectedGlowMultiplier?: number;
+  /** Enable transition support for biography metamorphosis (default: true) */
+  transitionEnabled?: boolean;
 }
 
 export interface GhostNodeMaterialUniforms {
@@ -80,6 +82,7 @@ export function createGhostNodeMaterial(
     baseGlow = 0.05, // Very faint for non-selected nodes
     connectedGlowMultiplier = 12.0, // 0.05 * 12.0 = 0.6
     selectedGlowMultiplier = 100.0, // 0.05 * 100.0 = 5.0 (sun-like brightness)
+    transitionEnabled = true,
   } = config;
 
   // Create uniforms
@@ -94,6 +97,8 @@ export function createGhostNodeMaterial(
   // Instance attributes
   const selectionState = attribute('aSelectionState');
   const pulseIntensity = attribute('aPulseIntensity');
+  // Transition progress for biography metamorphosis (0 = normal, 1 = fully faded)
+  const transitionProgress = transitionEnabled ? attribute('aTransitionProgress') : float(0);
 
   // Calculate glow multiplier based on selection state
   // selectionState: 0 = none, 0.5 = connected, 1 = selected
@@ -167,8 +172,14 @@ export function createGhostNodeMaterial(
   // Selection-based glow
   const effectiveGlow = mul(uBaseGlow, glowMult);
 
-  // Rim glow for selection highlighting
-  const rimGlow = mul(mul(fresnel, effectiveGlow), float(2.5));
+  // Transition glow boost: intensify glow during metamorphosis (0→5x boost, peaks at 0.4 progress)
+  // Creates a "charging up" effect before the node transforms
+  const transitionGlowBoost = transitionEnabled
+    ? add(float(1), mul(mul(transitionProgress, sub(float(1), transitionProgress)), float(20)))
+    : float(1);
+
+  // Rim glow for selection highlighting (boosted by transition)
+  const rimGlow = mul(mul(mul(fresnel, effectiveGlow), float(2.5)), transitionGlowBoost);
   finalColor = add(finalColor, mul(uBaseColor, rimGlow));
 
   // Add selection highlight color shift (brighter when selected)
@@ -186,15 +197,34 @@ export function createGhostNodeMaterial(
   );
   finalColor = add(finalColor, pulseGlow);
 
+  // Transition color shift: shift toward Sacred Gold during metamorphosis
+  // Creates the "transformation glow" as ghost becomes biography node
+  if (transitionEnabled) {
+    const transitionColor = vec3(0.83, 0.66, 0.29); // Sacred Gold
+    const transitionGlow = mul(
+      transitionColor,
+      mul(transitionProgress, mul(transitionGlowBoost, float(0.5)))
+    );
+    finalColor = add(finalColor, transitionGlow);
+  }
+
   // Clamp to prevent oversaturation
   const clampedColor = finalColor.clamp(vec3(float(0)), vec3(float(0.9)));
   material.colorNode = clampedColor;
 
   // Semi-transparent for ghostly effect
+  // Opacity reduced during transition (fade out effect)
   material.transparent = true;
-  material.opacity = transparency;
   material.blending = THREE.NormalBlending;
   material.depthWrite = false; // Better transparency rendering
+
+  // Opacity node: base transparency reduced by transition progress
+  // transitionProgress 0→1 reduces opacity to 0
+  if (transitionEnabled) {
+    material.opacityNode = mul(float(transparency), sub(float(1), transitionProgress));
+  } else {
+    material.opacity = transparency;
+  }
 
   const uniforms: GhostNodeMaterialUniforms = {
     uTime: uTime as unknown as { value: number },

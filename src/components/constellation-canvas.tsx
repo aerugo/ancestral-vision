@@ -108,6 +108,25 @@ import {
 } from '@/visualization/layout';
 import { useConstellationGraph } from '@/hooks/use-constellation-graph';
 import { useSelectionStore } from '@/store/selection-store';
+import {
+  biographyTransitionEvents,
+  setTransitionStarted,
+  setTransitionCompleted,
+} from '@/visualization/biography-transition-events';
+import {
+  BiographyTransitionAnimator,
+  createMetamorphosisParticles,
+  updateMetamorphosisParticles,
+  setMetamorphosisParticleOrigin,
+  setMetamorphosisTargetRadius,
+  disposeMetamorphosisParticles,
+  type MetamorphosisParticleResult,
+} from '@/visualization/biography-transition';
+import {
+  updateGhostTransitionProgress,
+  resetGhostTransitionProgress,
+  updateInstanceScale,
+} from '@/visualization/instanced-constellation';
 import * as THREE from 'three';
 
 /**
@@ -261,6 +280,13 @@ export function ConstellationCanvas(): React.ReactElement {
   // Pulse animation for selection transitions
   const pulseAnimatorRef = useRef<PathPulseAnimator | null>(null);
   const graphRef = useRef<FamilyGraph | null>(null);
+  // Biography transition animation for ghost-to-biography metamorphosis
+  const biographyTransitionRef = useRef<BiographyTransitionAnimator | null>(null);
+  const metamorphosisParticlesRef = useRef<MetamorphosisParticleResult | null>(null);
+  // Reveal sphere that fades in during particle reformation (temporary until real node appears)
+  const revealSphereRef = useRef<THREE.Mesh | null>(null);
+  // Camera state to restore after scene rebuild (preserves position during biography transition)
+  const cameraStateToRestoreRef = useRef<{ position: THREE.Vector3; target: THREE.Vector3 } | null>(null);
 
   // WebGPU error state for user-friendly error display
   const [webGPUError, setWebGPUError] = useState<string | null>(null);
@@ -339,6 +365,16 @@ export function ConstellationCanvas(): React.ReactElement {
     const controls = createControls(camera, canvas);
     controlsRef.current = controls;
 
+    // Restore camera state if transitioning from biography animation
+    // This prevents the camera from jumping back to default position after scene rebuild
+    if (cameraStateToRestoreRef.current) {
+      camera.position.copy(cameraStateToRestoreRef.current.position);
+      controls.target.copy(cameraStateToRestoreRef.current.target);
+      controls.update();
+      cameraStateToRestoreRef.current = null;
+      console.log('[initScene] Restored camera state after biography transition');
+    }
+
     // Create selection handler
     selectionRef.current = new ConstellationSelection(camera, scene);
 
@@ -379,6 +415,34 @@ export function ConstellationCanvas(): React.ReactElement {
       pulseWidth: 0.35,
       breathingDuration: 1.8,
     });
+
+    // Create biography transition animator for ghost-to-biography metamorphosis
+    biographyTransitionRef.current = new BiographyTransitionAnimator({
+      duration: 5.0, // Duration for full animation: explosion + reformation + bright reveal
+      easing: 'easeInOutCubic',
+      cameraZoomDistance: 25, // Zoom closer to see the effect
+    });
+
+    // Create metamorphosis particle system (hidden until animation starts)
+    // Uses new defaults: 2000 particles, 35 maxRadius, 24 pointSize for dramatic effect
+    const metamorphosisResult = createMetamorphosisParticles();
+    metamorphosisParticlesRef.current = metamorphosisResult;
+    scene.add(metamorphosisResult.mesh);
+
+    // Create reveal sphere (fades in during particle reformation, hidden until needed)
+    // This provides a smooth transition before the real biography node appears
+    const revealSphereGeometry = new THREE.SphereGeometry(3, 32, 32);
+    const revealSphereMaterial = new THREE.MeshBasicMaterial({
+      color: 0xd4a84a, // Sacred Gold
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const revealSphere = new THREE.Mesh(revealSphereGeometry, revealSphereMaterial);
+    revealSphere.visible = false;
+    revealSphereRef.current = revealSphere;
+    scene.add(revealSphere);
 
     // Split nodes by biography presence (not family relationships)
     // - Ghost nodes: no biography - small, semi-transparent, blue mandala
@@ -815,6 +879,117 @@ export function ConstellationCanvas(): React.ReactElement {
 
     window.addEventListener('keydown', handleKeyDown);
 
+    // Subscribe to biography transition events for ghost-to-biography metamorphosis
+    const unsubscribeBiographyTransition = biographyTransitionEvents.subscribe((personId) => {
+      console.log('[BiographyTransition] Received event for person:', personId);
+      console.log('[BiographyTransition] ghostConstellationRef.current:', ghostConstellationRef.current);
+      console.log('[BiographyTransition] biographyTransitionRef.current:', biographyTransitionRef.current);
+
+      // Find the ghost node position for this person
+      if (!ghostConstellationRef.current) {
+        console.log('[BiographyTransition] No ghost constellation, skipping animation');
+        return;
+      }
+
+      const ghostPersonIds = ghostConstellationRef.current.mesh.userData.personIds as string[];
+      console.log('[BiographyTransition] Ghost person IDs:', ghostPersonIds);
+      const nodeIndex = ghostPersonIds.indexOf(personId);
+      console.log('[BiographyTransition] Node index:', nodeIndex);
+      if (nodeIndex < 0) {
+        console.log('[BiographyTransition] Person not found in ghost constellation:', personId);
+        return;
+      }
+
+      // Get the node's world position from the instanced mesh
+      const nodePosition = new THREE.Vector3();
+      const instanceMatrix = new THREE.Matrix4();
+      ghostConstellationRef.current.mesh.getMatrixAt(nodeIndex, instanceMatrix);
+
+      // Extract position from instance matrix (instances are in local space of the mesh)
+      nodePosition.setFromMatrixPosition(instanceMatrix);
+
+      // Transform to world space if the mesh has a transform
+      ghostConstellationRef.current.mesh.updateMatrixWorld(true);
+      nodePosition.applyMatrix4(ghostConstellationRef.current.mesh.matrixWorld);
+
+      console.log('[BiographyTransition] Node world position:', nodePosition.toArray());
+
+      // Mark transition as in progress to delay query invalidation
+      setTransitionStarted();
+
+      // Start the transition animation
+      biographyTransitionRef.current?.start(personId, nodePosition, {
+        onCameraZoomStart: (targetPos, zoomDistance) => {
+          console.log('[BiographyTransition] Camera zoom start to:', targetPos.toArray(), 'distance:', zoomDistance);
+          if (cameraAnimatorRef.current && cameraRef.current && controlsRef.current) {
+            // Calculate camera position: maintain current viewing angle but move closer
+            const currentPos = cameraRef.current.position.clone();
+            const dirToTarget = new THREE.Vector3().subVectors(targetPos, currentPos);
+
+            // Normalize and calculate zoom position
+            dirToTarget.normalize();
+            const zoomPosition = targetPos.clone().sub(dirToTarget.multiplyScalar(zoomDistance));
+            console.log('[BiographyTransition] Camera zoom position:', zoomPosition.toArray());
+
+            // Update OrbitControls target FIRST - this ensures controls won't fight the animation
+            controlsRef.current.target.copy(targetPos);
+
+            // Start the camera animation
+            cameraAnimatorRef.current.animateTo(zoomPosition, targetPos, {
+              duration: 1.0,
+              easing: 'easeInOutCubic',
+            });
+          }
+        },
+        onCameraZoomComplete: () => {
+          console.log('[BiographyTransition] Camera zoom complete');
+        },
+        onParticleBurstStart: (position) => {
+          console.log('[BiographyTransition] Particle burst start at:', position);
+          if (metamorphosisParticlesRef.current) {
+            setMetamorphosisParticleOrigin(metamorphosisParticlesRef.current.uniforms, position);
+            // Target radius matches a biography node with minimal weight
+            // sphereRadius (2) * baseScale (1.0) = 2, plus a bit for visual size
+            setMetamorphosisTargetRadius(metamorphosisParticlesRef.current.uniforms, 3);
+            metamorphosisParticlesRef.current.mesh.visible = true;
+          }
+          // Position reveal sphere at node location (will fade in during intensify phase)
+          if (revealSphereRef.current) {
+            revealSphereRef.current.position.copy(position);
+            revealSphereRef.current.visible = true;
+            (revealSphereRef.current.material as THREE.MeshBasicMaterial).opacity = 0;
+          }
+        },
+        onComplete: () => {
+          console.log('[BiographyTransition] Animation complete');
+          // Hide particles
+          if (metamorphosisParticlesRef.current) {
+            metamorphosisParticlesRef.current.mesh.visible = false;
+          }
+          // Hide reveal sphere (real biography node will take its place)
+          if (revealSphereRef.current) {
+            revealSphereRef.current.visible = false;
+            (revealSphereRef.current.material as THREE.MeshBasicMaterial).opacity = 0;
+          }
+          // Reset ghost node transition state
+          if (ghostConstellationRef.current?.transitionProgressAttribute) {
+            resetGhostTransitionProgress(ghostConstellationRef.current.transitionProgressAttribute);
+          }
+          // Save camera state before scene rebuild so we can restore it
+          // This prevents the camera from jumping back to default position
+          if (cameraRef.current && controlsRef.current) {
+            cameraStateToRestoreRef.current = {
+              position: cameraRef.current.position.clone(),
+              target: controlsRef.current.target.clone(),
+            };
+          }
+          // Mark transition complete - this will trigger the pending query invalidation
+          // The constellation graph will refresh and show the updated biography node
+          setTransitionCompleted();
+        },
+      });
+    });
+
     // Animation loop - use setAnimationLoop per INV-A002
     let elapsedTime = 0;
     renderer.setAnimationLoop(() => {
@@ -832,6 +1007,78 @@ export function ConstellationCanvas(): React.ReactElement {
       if (pulseAnimatorRef.current?.isAnimating()) {
         pulseAnimatorRef.current.update(deltaTime);
         updatePulseIntensities();
+      }
+
+      // Update biography transition animation for ghost-to-biography metamorphosis
+      if (biographyTransitionRef.current?.isAnimating()) {
+        biographyTransitionRef.current.update(deltaTime);
+        const state = biographyTransitionRef.current.getState();
+        const transitionPersonId = biographyTransitionRef.current.getPersonId();
+
+        // Update ghost node appearance during transition
+        if (ghostConstellationRef.current && transitionPersonId) {
+          const ghostPersonIds = ghostConstellationRef.current.mesh.userData.personIds as string[];
+          const nodeIndex = ghostPersonIds.indexOf(transitionPersonId);
+          if (nodeIndex >= 0) {
+            // Hide ghost node once particles have gathered (progress > 0.15)
+            // This prevents the grey sphere artifact during the particle animation
+            if (state.progress > 0.15) {
+              // Set scale to 0 to completely hide the instance
+              updateInstanceScale(ghostConstellationRef.current.mesh, nodeIndex, 0);
+            } else {
+              // During gather phase, shrink ghost node gradually
+              const gatherProgress = state.progress / 0.15;
+              const shrinkScale = 1 - gatherProgress * 0.8; // Shrink from 1.0 to 0.2
+              updateInstanceScale(ghostConstellationRef.current.mesh, nodeIndex, shrinkScale);
+            }
+            // Update transition progress for glow effects in shader (only during visible phase)
+            if (ghostConstellationRef.current.transitionProgressAttribute && state.progress <= 0.15) {
+              updateGhostTransitionProgress(
+                ghostConstellationRef.current.transitionProgressAttribute,
+                nodeIndex,
+                state.progress * 6 // Scale up progress for faster glow effect
+              );
+            }
+          }
+        }
+
+        // Update metamorphosis particles - use full progress for the new vortex animation
+        // The particle system handles its own internal phasing (implosion/compression/explosion)
+        if (metamorphosisParticlesRef.current && state.progress > 0) {
+          updateMetamorphosisParticles(
+            metamorphosisParticlesRef.current.uniforms,
+            state.progress,
+            elapsedTime
+          );
+        }
+
+        // Fade in reveal sphere during intensify phase (0.72-0.92)
+        // The sphere fades in while particles are still glowing brightly
+        if (revealSphereRef.current) {
+          const material = revealSphereRef.current.material as THREE.MeshBasicMaterial;
+          if (state.progress >= 0.72 && state.progress < 0.98) {
+            // Fade from 0 to 1 over the range 0.72-0.92
+            const fadeProgress = Math.min((state.progress - 0.72) / 0.20, 1);
+            // Use easeInQuad for a gentle fade-in that accelerates
+            const easedOpacity = fadeProgress * fadeProgress;
+            // Increase max brightness during peak glow (0.80-0.88)
+            const glowBoost = state.progress >= 0.78 && state.progress < 0.88
+              ? 1.0 + Math.sin((state.progress - 0.78) / 0.10 * Math.PI) * 0.5
+              : 1.0;
+            material.opacity = easedOpacity * 0.95 * glowBoost;
+            // Scale up during fade for "emergence" effect
+            const scale = 0.6 + fadeProgress * 0.4;
+            revealSphereRef.current.scale.setScalar(scale);
+            // Pulse the color brightness during glow phase
+            const brightness = 0.83 + glowBoost * 0.17; // 0.83 to 1.0
+            material.color.setRGB(brightness, brightness * 0.79, brightness * 0.35);
+          } else if (state.progress >= 0.98) {
+            // Hold at full opacity during final reveal
+            material.opacity = 0.95;
+            revealSphereRef.current.scale.setScalar(1);
+            material.color.setRGB(0.83, 0.66, 0.29); // Sacred Gold
+          }
+        }
       }
 
       // Update ghost constellation time uniform for mandala animation
@@ -864,7 +1111,11 @@ export function ConstellationCanvas(): React.ReactElement {
         updateSacredGeometryGrid(sacredGeometryGridRef.current, elapsedTime);
       }
 
-      controls.update();
+      // Only update controls when camera is not animating
+      // Otherwise OrbitControls will fight with the camera animation
+      if (!cameraAnimatorRef.current?.isAnimating()) {
+        controls.update();
+      }
 
       // Render with TSL post-processing (Phase 2 WebGPU Graphics Engine)
       // INV-A013: TSL PostProcessing works with both WebGPU and WebGL renderers
@@ -896,13 +1147,26 @@ export function ConstellationCanvas(): React.ReactElement {
 
     // Return cleanup function (INV-A009)
     return () => {
+      // Save camera state before cleanup so it can be restored on scene rebuild
+      // This preserves the camera position when data changes (e.g., adding/removing biography)
+      if (cameraRef.current && controlsRef.current) {
+        cameraStateToRestoreRef.current = {
+          position: cameraRef.current.position.clone(),
+          target: controlsRef.current.target.clone(),
+        };
+      }
+
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('keydown', handleKeyDown);
       canvas.removeEventListener('click', handleClick);
+      unsubscribeBiographyTransition();
       renderer.setAnimationLoop(null);
       controls.dispose();
       selectionRef.current?.dispose();
       focusIndicatorRef.current = null;
+      // Cancel any ongoing biography transition
+      biographyTransitionRef.current?.cancel();
+      biographyTransitionRef.current = null;
       // Dispose ghost constellation (nodes without biography - mandala pattern)
       if (ghostConstellationRef.current) {
         disposeInstancedConstellation(ghostConstellationRef.current.mesh);
@@ -932,6 +1196,17 @@ export function ConstellationCanvas(): React.ReactElement {
       if (sacredGeometryGridRef.current) {
         disposeSacredGeometryGrid(sacredGeometryGridRef.current);
         sacredGeometryGridRef.current = null;
+      }
+      // Dispose metamorphosis particles (biography transition animation)
+      if (metamorphosisParticlesRef.current) {
+        disposeMetamorphosisParticles(metamorphosisParticlesRef.current.mesh);
+        metamorphosisParticlesRef.current = null;
+      }
+      // Dispose reveal sphere (biography transition animation)
+      if (revealSphereRef.current) {
+        revealSphereRef.current.geometry.dispose();
+        (revealSphereRef.current.material as THREE.Material).dispose();
+        revealSphereRef.current = null;
       }
       // Dispose post-processing (Phase 2 WebGPU Graphics Engine - INV-A009)
       if (postProcessingRef.current) {

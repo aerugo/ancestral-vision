@@ -12,6 +12,7 @@ import { useSelectionStore } from '@/store/selection-store';
 import { usePerson } from '@/hooks/use-people';
 import { usePersonRelationships } from '@/hooks/use-relationships';
 import { Button } from '@/components/ui/button';
+import { PersonBioTab } from './person-bio-tab';
 import { PersonNotesTab } from './person-notes-tab';
 import { PersonEventsTab } from './person-events-tab';
 import { PersonMediaTab } from './person-media-tab';
@@ -316,18 +317,11 @@ export function PersonProfilePanel(): ReactElement | null {
 
           {/* Tab Content */}
           <div className="mb-4 flex-1 overflow-hidden">
-            {activeTab === 'bio' && (
-              <div className="prose prose-sm prose-invert max-w-none">
-                {person.biography ? (
-                  <p className="text-sm text-foreground whitespace-pre-wrap">
-                    {person.biography}
-                  </p>
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">
-                    No biography available.
-                  </p>
-                )}
-              </div>
+            {activeTab === 'bio' && selectedPersonId && (
+              <PersonBioTab
+                personId={selectedPersonId}
+                biography={person.biography}
+              />
             )}
             {activeTab === 'events' && selectedPersonId && (
               <PersonEventsTab personId={selectedPersonId} />

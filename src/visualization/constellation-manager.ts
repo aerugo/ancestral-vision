@@ -47,6 +47,16 @@ export interface TransitionState {
 }
 
 /**
+ * Reverse transition state for biography-to-ghost animation
+ */
+export interface ReverseTransitionState {
+  personId: string;
+  progress: number;
+  startPosition: THREE.Vector3;
+  startScale: number;
+}
+
+/**
  * Changes detected between graph data updates
  */
 export interface GraphChanges {
@@ -73,6 +83,7 @@ export class ConstellationManager {
   private _ghostUniforms: GhostNodeMaterialUniforms | null = null;
   private _biographyUniforms: TSLCloudMaterialUniforms | null = null;
   private _currentTransition: TransitionState | null = null;
+  private _currentReverseTransition: ReverseTransitionState | null = null;
   private _scene: THREE.Scene | null = null;
 
   // Track all known people for diffing
@@ -227,7 +238,19 @@ export class ConstellationManager {
       });
     }
 
+    // Handle transitions (biography to ghost)
+    // This happens immediately (no animation for removing biography)
     for (const person of changes.biographyToGhost) {
+      // Remove from biography pool
+      this._biographyPool?.removeNode(person.id);
+
+      // Add to ghost pool
+      this._ghostPool?.addNode({
+        id: person.id,
+        position: person.position,
+      });
+
+      // Update tracking
       this._knownPeople.set(person.id, {
         hasBiography: false,
         position: person.position.clone(),
@@ -280,15 +303,13 @@ export class ConstellationManager {
 
   /**
    * Update transition animation progress
-   * Timing aligned with BiographyTransitionAnimator phases:
-   * - 0-30%: Camera zoom (ghost appears normal)
-   * - 30-40%: Glow intensify (ghost glows, slight swell)
-   * - 40-70%: Shrink + particles (ghost shrinks rapidly)
-   * - 70-90%: Particle fade (ghost fully fades out)
-   * - 90-100%: Hold
-   *
-   * Biography node appears during 55-85% (reconvene/emergence phase)
-   * to seamlessly replace the ghost as particles converge.
+   * Timing aligned with metamorphosis particles and sphere dissolution:
+   * - 0-12%: Gather phase - ghost normal, sphere particles fade in over it
+   * - 12-18%: Compress phase - ghost starts fading as sphere particles intensify
+   * - 18-20%: Ghost fully fades out just before explosion
+   * - 20%: Explosion moment - sphere particles explode (ghost already invisible)
+   * - 55-85%: Biography node emerges as particles reconvene
+   * - 88-100%: Reveal phase - particles fade, biography node takes over
    *
    * @param progress - Animation progress 0-1
    * @returns The transition state or null if no transition active
@@ -299,36 +320,26 @@ export class ConstellationManager {
     this._currentTransition.progress = progress;
     const { personId, targetScale } = this._currentTransition;
 
-    // Ghost node phases (aligned with BiographyTransitionAnimator)
+    // Ghost node phases - fade out BEFORE explosion so sphere particles take over
     if (this._ghostPool) {
-      if (progress < 0.40) {
-        // Before shrink phase: ghost at normal scale (with slight glow swell in 30-40%)
-        const baseScale = 0.7;
-        if (progress >= 0.30) {
-          // Glow phase: slight swell (matches animator's ghostScale: 1 + eased * 0.1)
-          const glowProgress = (progress - 0.30) / 0.10;
-          this._ghostPool.setNodeScale(personId, baseScale * (1 + glowProgress * 0.1));
-        } else {
-          this._ghostPool.setNodeScale(personId, baseScale);
-        }
+      const baseScale = 0.7;
+
+      if (progress < 0.12) {
+        // Gather phase (0-12%): Ghost at normal scale while sphere particles fade in
+        this._ghostPool.setNodeScale(personId, baseScale);
         this._ghostPool.setTransitionProgress(personId, 0);
-      } else if (progress < 0.70) {
-        // Shrink phase (40-70%): ghost shrinks from 0.77 to ~0.14
-        const shrinkProgress = (progress - 0.40) / 0.30;
-        const eased = shrinkProgress * shrinkProgress * shrinkProgress; // easeInCubic
-        const ghostScale = 0.77 * (1 - eased * 0.82); // 0.77 → 0.14
+      } else if (progress < 0.20) {
+        // Compress phase (12-20%): Ghost rapidly fades out as sphere particles intensify
+        // This creates the "dissolve" effect - sphere particles become visible as ghost fades
+        const fadeProgress = (progress - 0.12) / 0.08; // 0 to 1 over 12-20%
+        const eased = fadeProgress * fadeProgress; // easeInQuad for smooth fade
+        const ghostScale = baseScale * (1 - eased);
         this._ghostPool.setNodeScale(personId, ghostScale);
-        this._ghostPool.setTransitionProgress(personId, shrinkProgress);
-      } else if (progress < 0.90) {
-        // Particle fade phase (70-90%): ghost shrinks from 0.14 to 0 and fades
-        const fadeProgress = (progress - 0.70) / 0.20;
-        const eased = 1 - Math.pow(1 - fadeProgress, 4); // easeOutQuart
-        const ghostScale = 0.14 * (1 - eased);
-        this._ghostPool.setNodeScale(personId, ghostScale);
-        this._ghostPool.setTransitionProgress(personId, 1);
+        this._ghostPool.setTransitionProgress(personId, fadeProgress);
       } else {
-        // Hold phase (90-100%): ghost fully hidden
+        // After 20%: Ghost is invisible, explosion happens
         this._ghostPool.setNodeScale(personId, 0);
+        this._ghostPool.setTransitionProgress(personId, 1);
       }
     }
 
@@ -398,6 +409,132 @@ export class ConstellationManager {
   }
 
   /**
+   * Start a biography-to-ghost reverse transition animation
+   * Called when user removes a biography from a node
+   */
+  public startReverseTransition(personId: string): ReverseTransitionState | null {
+    if (!this._ghostPool || !this._biographyPool) {
+      return null;
+    }
+
+    const position = this._biographyPool.getNodePosition(personId);
+    if (!position) {
+      console.warn(`[ConstellationManager] Person ${personId} not found in biography pool`);
+      return null;
+    }
+
+    // Get current scale of the biography node
+    const startScale = this._biographyPool.getNodeScale(personId) ?? 1.0;
+
+    this._currentReverseTransition = {
+      personId,
+      progress: 0,
+      startPosition: position.clone(),
+      startScale,
+    };
+
+    // Add to ghost pool immediately at scale 0 (invisible)
+    this._ghostPool.addNode({
+      id: personId,
+      position: position,
+    });
+    this._ghostPool.setNodeScale(personId, 0);
+
+    return this._currentReverseTransition;
+  }
+
+  /**
+   * Update reverse transition animation progress
+   * Simple compression and crossfade (no particles):
+   * - 0-60%: Biography compresses smoothly
+   * - 20-80%: Ghost fades in (overlapping crossfade)
+   * - 80-100%: Ghost at final scale
+   *
+   * @param progress - Animation progress 0-1
+   * @returns The reverse transition state or null if no transition active
+   */
+  public updateReverseTransition(progress: number): ReverseTransitionState | null {
+    if (!this._currentReverseTransition) return null;
+
+    this._currentReverseTransition.progress = progress;
+    const { personId, startScale } = this._currentReverseTransition;
+
+    // Biography node: smooth compression over 0-60%
+    if (this._biographyPool) {
+      if (progress < 0.60) {
+        // Smooth compression with easeInQuad
+        const compressProgress = progress / 0.60;
+        const eased = compressProgress * compressProgress;
+        const biographyScale = startScale * (1 - eased);
+        this._biographyPool.setNodeScale(personId, biographyScale);
+      } else {
+        // Fully compressed
+        this._biographyPool.setNodeScale(personId, 0);
+      }
+    }
+
+    // Ghost node: fade in during 20-80% (overlapping crossfade)
+    if (this._ghostPool) {
+      const ghostTargetScale = 0.7;
+
+      if (progress >= 0.20 && progress < 0.80) {
+        const growProgress = (progress - 0.20) / 0.60;
+        // Ease out cubic for smooth emergence
+        const eased = 1 - Math.pow(1 - growProgress, 3);
+        const scale = eased * ghostTargetScale;
+        this._ghostPool.setNodeScale(personId, scale);
+      } else if (progress >= 0.80) {
+        // Full scale from 80% onward
+        this._ghostPool.setNodeScale(personId, ghostTargetScale);
+      }
+    }
+
+    return this._currentReverseTransition;
+  }
+
+  /**
+   * Complete the current reverse transition
+   * Removes biography node and finalizes ghost node
+   */
+  public completeReverseTransition(): void {
+    if (!this._currentReverseTransition) return;
+
+    const { personId, startPosition } = this._currentReverseTransition;
+
+    // Remove from biography pool
+    this._biographyPool?.removeNode(personId);
+
+    // Ensure ghost node is at final scale
+    this._ghostPool?.setNodeScale(personId, 0.7);
+    this._ghostPool?.setTransitionProgress(personId, 0);
+
+    // Update tracking
+    this._knownPeople.set(personId, {
+      hasBiography: false,
+      position: startPosition.clone(),
+    });
+
+    this._currentReverseTransition = null;
+  }
+
+  /**
+   * Cancel current reverse transition (revert to biography state)
+   */
+  public cancelReverseTransition(): void {
+    if (!this._currentReverseTransition) return;
+
+    const { personId, startScale } = this._currentReverseTransition;
+
+    // Remove from ghost pool
+    this._ghostPool?.removeNode(personId);
+
+    // Restore biography node
+    this._biographyPool?.setNodeScale(personId, startScale);
+
+    this._currentReverseTransition = null;
+  }
+
+  /**
    * Get current transition state
    */
   public getCurrentTransition(): TransitionState | null {
@@ -405,10 +542,17 @@ export class ConstellationManager {
   }
 
   /**
+   * Get current reverse transition state
+   */
+  public getCurrentReverseTransition(): ReverseTransitionState | null {
+    return this._currentReverseTransition;
+  }
+
+  /**
    * Check if a transition is in progress
    */
   public isTransitioning(): boolean {
-    return this._currentTransition !== null;
+    return this._currentTransition !== null || this._currentReverseTransition !== null;
   }
 
   /**
@@ -507,6 +651,28 @@ export class ConstellationManager {
    */
   public get biographyMesh(): THREE.InstancedMesh | null {
     return this._biographyPool?.mesh ?? null;
+  }
+
+  /**
+   * Check if the constellation has been initialized
+   * Used to decide between full initialization vs incremental updates
+   */
+  public isInitialized(): boolean {
+    return this._ghostPool !== null || this._biographyPool !== null;
+  }
+
+  /**
+   * Update constellation with new data using incremental changes
+   * Preserves existing nodes (important for smooth transition handoff)
+   */
+  public update(data: ConstellationGraphData): void {
+    if (!this.isInitialized()) {
+      console.warn('[ConstellationManager] Cannot update before initialization');
+      return;
+    }
+
+    const changes = this.computeChanges(data);
+    this.applyChanges(changes);
   }
 
   /**

@@ -275,6 +275,8 @@ export function ConstellationCanvas(): React.ReactElement {
   const graphRef = useRef<FamilyGraph | null>(null);
   // Biography transition animation for ghost-to-biography metamorphosis
   const biographyTransitionRef = useRef<BiographyTransitionAnimator | null>(null);
+  // Track current transition direction: 'add' = ghost→biography, 'remove' = biography→ghost
+  const transitionDirectionRef = useRef<'add' | 'remove'>('add');
   const metamorphosisParticlesRef = useRef<MetamorphosisParticleResult | null>(null);
   // Reveal sphere that fades in during particle reformation (temporary until real node appears)
   const revealSphereRef = useRef<THREE.Mesh | null>(null);
@@ -303,6 +305,10 @@ export function ConstellationCanvas(): React.ReactElement {
   const prevGraphDataRef = useRef<typeof graphData>(null);
   // Flag to skip rebuild when applying incremental updates
   const skipRebuildRef = useRef(false);
+  // Flag to preserve scene during incremental updates (prevents disposal during cleanup)
+  const preserveSceneRef = useRef(false);
+  // Store the real cleanup function so it can be called later when full disposal is needed
+  const realCleanupRef = useRef<(() => void) | null>(null);
 
   // Debug logging
   if (isError) {
@@ -312,12 +318,73 @@ export function ConstellationCanvas(): React.ReactElement {
     console.log('[ConstellationCanvas] Constellation graph loaded:', graphData?.rawPeople?.length ?? 0, 'people,', graphData?.parentChildRelationships?.length ?? 0, 'parent-child relationships');
   }
 
+  // Early detection of incremental update - runs BEFORE effect cleanup
+  // This sets preserveSceneRef so cleanup knows not to dispose the constellation manager
+  if (prevGraphDataRef.current && graphData && constellationManagerRef.current?.isInitialized()) {
+    const prevPeople = prevGraphDataRef.current.rawPeople;
+    const currPeople = graphData.rawPeople;
+    if (prevPeople.length === currPeople.length) {
+      const prevIds = new Set(prevPeople.map(p => p.id));
+      const currIds = new Set(currPeople.map(p => p.id));
+      const sameIds = prevIds.size === currIds.size && [...prevIds].every(id => currIds.has(id));
+      if (sameIds) {
+        preserveSceneRef.current = true;
+      }
+    }
+  }
+
+  // Track if we've detected an incremental update scenario - used to preserve scene across data changes
+  const isIncrementalUpdateRef = useRef(false);
+
   const initScene = useCallback(async (): Promise<(() => void) | undefined> => {
+    // Helper function to create cleanup wrapper that respects preserveSceneRef
+    const createPreservableCleanup = (): (() => void) => {
+      return () => {
+        // Check if the scene should be preserved (set by early detection in render)
+        if (preserveSceneRef.current) {
+          console.log('[ConstellationCanvas] Preserving scene for incremental update');
+          preserveSceneRef.current = false; // Reset for next cycle
+          return; // Don't dispose anything
+        }
+        // Call the real cleanup
+        realCleanupRef.current?.();
+        realCleanupRef.current = null;
+      };
+    };
+
     // Check if we should skip rebuild (incremental update was applied)
     if (skipRebuildRef.current) {
       console.log('[initScene] Skipping rebuild - incremental update was applied');
       skipRebuildRef.current = false;
-      return undefined;
+      isIncrementalUpdateRef.current = true;
+      // Return cleanup wrapper that will call real cleanup when not preserving
+      return createPreservableCleanup();
+    }
+
+    // Check if this is an incremental update (same people, just biography changes)
+    // If constellation manager is already initialized and we have previous data,
+    // use incremental updates instead of full rebuild
+    // Note: We check prevGraphDataRef here because the manager may have been preserved
+    // from the previous render cycle for incremental updates
+    if (prevGraphDataRef.current && graphData) {
+      const prevPeople = prevGraphDataRef.current.rawPeople;
+      const currPeople = graphData.rawPeople;
+
+      // Check if same person count and IDs
+      if (prevPeople.length === currPeople.length) {
+        const prevIds = new Set(prevPeople.map(p => p.id));
+        const currIds = new Set(currPeople.map(p => p.id));
+        const sameIds = prevIds.size === currIds.size && [...prevIds].every(id => currIds.has(id));
+
+        if (sameIds && constellationManagerRef.current?.isInitialized()) {
+          console.log('[initScene] Same people set - using incremental update, skipping rebuild');
+          // NOTE: Do NOT update prevGraphDataRef here - let the incremental update effect
+          // detect and apply the changes first, then it will update the ref
+          isIncrementalUpdateRef.current = true;
+          // Return cleanup wrapper that will call real cleanup when not preserving
+          return createPreservableCleanup();
+        }
+      }
     }
 
     console.log('[initScene] Starting initialization...');
@@ -823,89 +890,107 @@ export function ConstellationCanvas(): React.ReactElement {
 
     window.addEventListener('keydown', handleKeyDown);
 
-    // Subscribe to biography transition events for ghost-to-biography metamorphosis
-    const unsubscribeBiographyTransition = biographyTransitionEvents.subscribe((personId) => {
-      console.log('[BiographyTransition] Received event for person:', personId);
+    // Subscribe to biography transition events for metamorphosis animations
+    const unsubscribeBiographyTransition = biographyTransitionEvents.subscribe((personId, direction) => {
+      if (direction === 'add') {
+        // Ghost-to-biography transition (adding biography)
+        if (!constellationManagerRef.current?.isGhostNode(personId)) {
+          return;
+        }
 
-      // Use ConstellationManager to check if person is a ghost node and get position
-      if (!constellationManagerRef.current?.isGhostNode(personId)) {
-        console.log('[BiographyTransition] Person not found in ghost pool, skipping animation');
-        return;
+        const nodePosition = constellationManagerRef.current.getNodePosition(personId);
+        if (!nodePosition) {
+          return;
+        }
+
+        // Track direction for animation loop
+        transitionDirectionRef.current = 'add';
+
+        // Mark transition as in progress to delay query invalidation
+        setTransitionStarted();
+
+        // Start the transition in ConstellationManager (sets up biography node at scale 0)
+        constellationManagerRef.current.startTransition(personId, 0.1);
+
+        // Start the visual animation
+        biographyTransitionRef.current?.start(personId, nodePosition, {
+          onCameraZoomStart: (targetPos, zoomDistance) => {
+            if (cameraAnimatorRef.current && cameraRef.current && controlsRef.current) {
+              const currentPos = cameraRef.current.position.clone();
+              const dirToTarget = new THREE.Vector3().subVectors(targetPos, currentPos);
+              dirToTarget.normalize();
+              const zoomPosition = targetPos.clone().sub(dirToTarget.multiplyScalar(zoomDistance));
+              controlsRef.current.target.copy(targetPos);
+              cameraAnimatorRef.current.animateTo(zoomPosition, targetPos, {
+                duration: 1.0,
+                easing: 'easeInOutCubic',
+              });
+            }
+          },
+          onCameraZoomComplete: () => {
+            // Camera zoom finished
+          },
+          onParticleBurstStart: (position) => {
+            if (metamorphosisParticlesRef.current) {
+              setMetamorphosisParticleOrigin(metamorphosisParticlesRef.current.uniforms, position);
+              setMetamorphosisTargetRadius(metamorphosisParticlesRef.current.uniforms, 3);
+              metamorphosisParticlesRef.current.mesh.visible = true;
+            }
+            if (revealSphereRef.current) {
+              revealSphereRef.current.position.copy(position);
+              revealSphereRef.current.visible = true;
+              (revealSphereRef.current.material as THREE.MeshBasicMaterial).opacity = 0;
+            }
+          },
+          onComplete: () => {
+            if (metamorphosisParticlesRef.current) {
+              metamorphosisParticlesRef.current.mesh.visible = false;
+            }
+            if (revealSphereRef.current) {
+              revealSphereRef.current.visible = false;
+            }
+            constellationManagerRef.current?.completeTransition();
+            setTransitionCompleted();
+          },
+        });
+      } else {
+        // Biography-to-ghost transition (removing biography)
+        if (!constellationManagerRef.current?.isBiographyNode(personId)) {
+          return;
+        }
+
+        const nodePosition = constellationManagerRef.current.getNodePosition(personId);
+        if (!nodePosition) {
+          return;
+        }
+
+        // Track direction for animation loop
+        transitionDirectionRef.current = 'remove';
+
+        // Mark transition as in progress to delay query invalidation
+        setTransitionStarted();
+
+        // Start the reverse transition in ConstellationManager (sets up ghost node at scale 0)
+        constellationManagerRef.current.startReverseTransition(personId);
+
+        // Start the visual animation (no camera zoom for reverse - keep camera free)
+        biographyTransitionRef.current?.start(personId, nodePosition, {
+          onCameraZoomStart: () => {
+            // No camera zoom for reverse animation - keep camera free
+          },
+          onCameraZoomComplete: () => {
+            // No camera zoom for reverse
+          },
+          onParticleBurstStart: () => {
+            // No particles for reverse animation - just a smooth compression/crossfade
+          },
+          onComplete: () => {
+            // Complete the reverse transition (removes biography, finalizes ghost)
+            constellationManagerRef.current?.completeReverseTransition();
+            setTransitionCompleted();
+          },
+        });
       }
-
-      const nodePosition = constellationManagerRef.current.getNodePosition(personId);
-      if (!nodePosition) {
-        console.log('[BiographyTransition] Could not get node position');
-        return;
-      }
-
-      console.log('[BiographyTransition] Node position:', nodePosition.toArray());
-
-      // Mark transition as in progress to delay query invalidation
-      setTransitionStarted();
-
-      // Start the transition in ConstellationManager (sets up biography node at scale 0)
-      constellationManagerRef.current.startTransition(personId, 0.1);
-
-      // Start the visual animation
-      biographyTransitionRef.current?.start(personId, nodePosition, {
-        onCameraZoomStart: (targetPos, zoomDistance) => {
-          console.log('[BiographyTransition] Camera zoom start to:', targetPos.toArray(), 'distance:', zoomDistance);
-          if (cameraAnimatorRef.current && cameraRef.current && controlsRef.current) {
-            // Calculate camera position: maintain current viewing angle but move closer
-            const currentPos = cameraRef.current.position.clone();
-            const dirToTarget = new THREE.Vector3().subVectors(targetPos, currentPos);
-
-            // Normalize and calculate zoom position
-            dirToTarget.normalize();
-            const zoomPosition = targetPos.clone().sub(dirToTarget.multiplyScalar(zoomDistance));
-            console.log('[BiographyTransition] Camera zoom position:', zoomPosition.toArray());
-
-            // Update OrbitControls target FIRST - this ensures controls won't fight the animation
-            controlsRef.current.target.copy(targetPos);
-
-            // Start the camera animation
-            cameraAnimatorRef.current.animateTo(zoomPosition, targetPos, {
-              duration: 1.0,
-              easing: 'easeInOutCubic',
-            });
-          }
-        },
-        onCameraZoomComplete: () => {
-          console.log('[BiographyTransition] Camera zoom complete');
-        },
-        onParticleBurstStart: (position) => {
-          console.log('[BiographyTransition] Particle burst start at:', position);
-          if (metamorphosisParticlesRef.current) {
-            setMetamorphosisParticleOrigin(metamorphosisParticlesRef.current.uniforms, position);
-            // Target radius matches a biography node with minimal weight
-            // sphereRadius (2) * baseScale (1.0) = 2, plus a bit for visual size
-            setMetamorphosisTargetRadius(metamorphosisParticlesRef.current.uniforms, 3);
-            metamorphosisParticlesRef.current.mesh.visible = true;
-          }
-          // Position reveal sphere at node location (backup for seamless transition)
-          if (revealSphereRef.current) {
-            revealSphereRef.current.position.copy(position);
-            revealSphereRef.current.visible = true;
-            (revealSphereRef.current.material as THREE.MeshBasicMaterial).opacity = 0;
-          }
-        },
-        onComplete: () => {
-          console.log('[BiographyTransition] Animation complete');
-          // Hide particles (they've faded out by now)
-          if (metamorphosisParticlesRef.current) {
-            metamorphosisParticlesRef.current.mesh.visible = false;
-          }
-          // Hide reveal sphere - with pooled architecture the biography node is already visible
-          if (revealSphereRef.current) {
-            revealSphereRef.current.visible = false;
-          }
-          // Complete the transition in ConstellationManager (removes ghost, finalizes biography)
-          constellationManagerRef.current?.completeTransition();
-          // Mark transition complete - this will trigger the pending query invalidation
-          setTransitionCompleted();
-        },
-      });
     });
 
     // Animation System A/B Test (INV-A010)
@@ -955,16 +1040,21 @@ export function ConstellationCanvas(): React.ReactElement {
       }
 
       // Update biography transition animation for ghost-to-biography metamorphosis
+      // or reverse (biography-to-ghost) depending on transition direction
       if (biographyTransitionRef.current?.isAnimating()) {
         biographyTransitionRef.current.update(deltaTime);
         const state = biographyTransitionRef.current.getState();
 
-        // ConstellationManager handles ghost shrink and biography grow
-        constellationManagerRef.current?.updateTransition(state.progress);
+        // ConstellationManager handles node scale transitions based on direction
+        if (transitionDirectionRef.current === 'add') {
+          constellationManagerRef.current?.updateTransition(state.progress);
+        } else {
+          constellationManagerRef.current?.updateReverseTransition(state.progress);
+        }
 
-        // Update metamorphosis particles - use full progress for the new vortex animation
-        // The particle system handles its own internal phasing (implosion/compression/explosion)
-        if (metamorphosisParticlesRef.current && state.progress > 0) {
+        // Update metamorphosis particles only for 'add' direction (ghost→biography)
+        // Reverse animation uses a simple compression/crossfade without particles
+        if (metamorphosisParticlesRef.current && state.progress > 0 && transitionDirectionRef.current === 'add') {
           updateMetamorphosisParticles(
             metamorphosisParticlesRef.current.uniforms,
             state.progress,
@@ -972,11 +1062,12 @@ export function ConstellationCanvas(): React.ReactElement {
           );
         }
 
-        // Reveal sphere animation phases:
+        // Reveal sphere animation phases (only for 'add' direction):
         // - 0.55-0.85: Fade in (emerge from particle cloud)
         // - 0.75-0.88: Peak glow boost
         // - 0.88-1.00: Fade out (biography node takes over seamlessly)
-        if (revealSphereRef.current) {
+        // For reverse animation, skip reveal sphere - ghost node scales up directly
+        if (revealSphereRef.current && transitionDirectionRef.current === 'add') {
           const material = revealSphereRef.current.material as THREE.MeshBasicMaterial;
           if (state.progress >= 0.55) {
             // Fade from 0 to 1 over the range 0.55-0.85
@@ -1062,8 +1153,8 @@ export function ConstellationCanvas(): React.ReactElement {
 
     window.addEventListener('resize', handleResize);
 
-    // Return cleanup function (INV-A009)
-    return () => {
+    // Create the real cleanup function (INV-A009)
+    const realCleanup = (): void => {
       // Save camera state before cleanup so it can be restored on scene rebuild
       // This preserves the camera position when data changes (e.g., adding/removing biography)
       if (cameraRef.current && controlsRef.current) {
@@ -1129,6 +1220,22 @@ export function ConstellationCanvas(): React.ReactElement {
       if (canvas.parentNode) {
         canvas.parentNode.removeChild(canvas);
       }
+    };
+
+    // Store the real cleanup function for use by the preservable cleanup wrapper
+    realCleanupRef.current = realCleanup;
+
+    // Return a wrapper that checks preserveSceneRef before calling real cleanup
+    return () => {
+      // Check if the scene should be preserved (set by early detection in render)
+      if (preserveSceneRef.current) {
+        console.log('[ConstellationCanvas] Preserving scene for incremental update');
+        preserveSceneRef.current = false; // Reset for next cycle
+        return; // Don't dispose anything - scene continues running
+      }
+      // Call the real cleanup
+      realCleanup();
+      realCleanupRef.current = null;
     };
   }, [graphData, selectPerson, clearSelection, isLoading]);
 
@@ -1208,8 +1315,13 @@ export function ConstellationCanvas(): React.ReactElement {
       // Apply changes via ConstellationManager
       for (const change of changes) {
         if (change.hasBiography) {
-          // Ghost -> Biography: Use transition if not already transitioning
-          if (!constellationManagerRef.current.isTransitioning()) {
+          // Ghost -> Biography: Check if already moved by animation
+          if (constellationManagerRef.current.isBiographyNode(change.id)) {
+            // Node already in biography pool (animation completed) - nothing to do
+            // This is the expected path after a transition animation completes
+            console.log(`[ConstellationCanvas] Node ${change.id} already in biography pool (animation completed)`);
+          } else if (!constellationManagerRef.current.isTransitioning()) {
+            // Node still in ghost pool and no animation running - instant transition
             const position = constellationManagerRef.current.getNodePosition(change.id);
             if (position) {
               // This was triggered by data change, not animation - just move the node
@@ -1218,6 +1330,7 @@ export function ConstellationCanvas(): React.ReactElement {
               constellationManagerRef.current.completeTransition();
             }
           }
+          // If isTransitioning() is true, animation is still running - let it complete
         } else {
           // Biography -> Ghost: Move node from biography pool to ghost pool
           const position = constellationManagerRef.current.getNodePosition(change.id);

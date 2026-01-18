@@ -39,3 +39,6 @@ export {
   type CreateSpouseRelationshipInput,
   type UpdateSpouseRelationshipInput,
 } from './use-relationships';
+
+// Development shortcuts (only active in template mode)
+export { useDevShortcuts, DevShortcutsProvider } from './use-dev-shortcuts';

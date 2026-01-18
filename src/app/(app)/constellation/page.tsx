@@ -20,6 +20,7 @@ import { PersonProfilePanel } from '@/components/person-profile-panel';
 import { useSelectionStore } from '@/store/selection-store';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useOnboarding } from '@/hooks/use-onboarding';
+import { DevShortcutsProvider } from '@/hooks/use-dev-shortcuts';
 
 export default function ConstellationPage(): React.ReactElement {
   const router = useRouter();
@@ -89,6 +90,7 @@ export default function ConstellationPage(): React.ReactElement {
       <AppShell onPersonSelect={handlePersonSelect}>
         <ConstellationCanvas />
         {isPanelOpen && selectedPersonId && <PersonProfilePanel />}
+        <DevShortcutsProvider />
       </AppShell>
     </div>
   );

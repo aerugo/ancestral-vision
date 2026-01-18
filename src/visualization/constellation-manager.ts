@@ -280,6 +280,16 @@ export class ConstellationManager {
 
   /**
    * Update transition animation progress
+   * Timing aligned with BiographyTransitionAnimator phases:
+   * - 0-30%: Camera zoom (ghost appears normal)
+   * - 30-40%: Glow intensify (ghost glows, slight swell)
+   * - 40-70%: Shrink + particles (ghost shrinks rapidly)
+   * - 70-90%: Particle fade (ghost fully fades out)
+   * - 90-100%: Hold
+   *
+   * Biography node appears during 55-85% (reconvene/emergence phase)
+   * to seamlessly replace the ghost as particles converge.
+   *
    * @param progress - Animation progress 0-1
    * @returns The transition state or null if no transition active
    */
@@ -289,25 +299,55 @@ export class ConstellationManager {
     this._currentTransition.progress = progress;
     const { personId, targetScale } = this._currentTransition;
 
-    // Shrink ghost node (hide at 15% progress like before)
-    if (this._ghostPool && progress <= 0.15) {
-      const shrinkProgress = progress / 0.15;
-      const ghostScale = 0.7 * (1 - shrinkProgress * 0.8); // 0.7 → 0.14
-      this._ghostPool.setNodeScale(personId, ghostScale);
-      this._ghostPool.setTransitionProgress(personId, progress * 6);
-    } else if (this._ghostPool && progress > 0.15) {
-      this._ghostPool.setNodeScale(personId, 0);
+    // Ghost node phases (aligned with BiographyTransitionAnimator)
+    if (this._ghostPool) {
+      if (progress < 0.40) {
+        // Before shrink phase: ghost at normal scale (with slight glow swell in 30-40%)
+        const baseScale = 0.7;
+        if (progress >= 0.30) {
+          // Glow phase: slight swell (matches animator's ghostScale: 1 + eased * 0.1)
+          const glowProgress = (progress - 0.30) / 0.10;
+          this._ghostPool.setNodeScale(personId, baseScale * (1 + glowProgress * 0.1));
+        } else {
+          this._ghostPool.setNodeScale(personId, baseScale);
+        }
+        this._ghostPool.setTransitionProgress(personId, 0);
+      } else if (progress < 0.70) {
+        // Shrink phase (40-70%): ghost shrinks from 0.77 to ~0.14
+        const shrinkProgress = (progress - 0.40) / 0.30;
+        const eased = shrinkProgress * shrinkProgress * shrinkProgress; // easeInCubic
+        const ghostScale = 0.77 * (1 - eased * 0.82); // 0.77 → 0.14
+        this._ghostPool.setNodeScale(personId, ghostScale);
+        this._ghostPool.setTransitionProgress(personId, shrinkProgress);
+      } else if (progress < 0.90) {
+        // Particle fade phase (70-90%): ghost shrinks from 0.14 to 0 and fades
+        const fadeProgress = (progress - 0.70) / 0.20;
+        const eased = 1 - Math.pow(1 - fadeProgress, 4); // easeOutQuart
+        const ghostScale = 0.14 * (1 - eased);
+        this._ghostPool.setNodeScale(personId, ghostScale);
+        this._ghostPool.setTransitionProgress(personId, 1);
+      } else {
+        // Hold phase (90-100%): ghost fully hidden
+        this._ghostPool.setNodeScale(personId, 0);
+      }
     }
 
-    // Grow biography node (starts at 55% progress)
-    if (this._biographyPool && progress >= 0.55) {
-      const growProgress = Math.min((progress - 0.55) / 0.30, 1);
-      // Ease in-out cubic
-      const eased = growProgress < 0.5
-        ? 4 * growProgress * growProgress * growProgress
-        : 1 - Math.pow(-2 * growProgress + 2, 3) / 2;
-      const scale = 0.2 * targetScale + eased * 0.8 * targetScale;
-      this._biographyPool.setNodeScale(personId, scale);
+    // Biography node: emerge during 55-85% (as particles reconvene)
+    // This creates seamless handoff - biography appears as particles converge
+    if (this._biographyPool) {
+      if (progress >= 0.55 && progress < 0.85) {
+        const growProgress = (progress - 0.55) / 0.30;
+        // Ease in-out cubic for smooth emergence
+        const eased = growProgress < 0.5
+          ? 4 * growProgress * growProgress * growProgress
+          : 1 - Math.pow(-2 * growProgress + 2, 3) / 2;
+        // Start at 0, grow to full target scale
+        const scale = eased * targetScale;
+        this._biographyPool.setNodeScale(personId, scale);
+      } else if (progress >= 0.85) {
+        // Full scale from 85% onward
+        this._biographyPool.setNodeScale(personId, targetScale);
+      }
     }
 
     return this._currentTransition;

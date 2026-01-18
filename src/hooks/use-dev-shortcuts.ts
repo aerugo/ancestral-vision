@@ -13,6 +13,7 @@ import { devShortcuts, DEV_SHORTCUT_KEYS } from '@/lib/dev-shortcuts';
 import { isTemplateMode } from '@/lib/template-mode';
 import { useSelectionStore } from '@/store/selection-store';
 import { useUpdatePerson, usePerson } from '@/hooks/use-people';
+import { biographyTransitionEvents } from '@/visualization/biography-transition-events';
 
 /**
  * Placeholder biography for testing
@@ -57,8 +58,10 @@ export function useDevShortcuts(): void {
         input: { biography: null },
       });
     } else {
-      // Add placeholder biography
+      // Add placeholder biography - trigger animation first
       console.log(`[DevShortcuts] Adding biography to ${selectedPerson.givenName ?? 'Unknown'}`);
+      // Emit transition event BEFORE mutation to capture ghost node position
+      biographyTransitionEvents.emit(selectedPersonId);
       updatePerson.mutate({
         id: selectedPersonId,
         input: { biography: PLACEHOLDER_BIOGRAPHY },

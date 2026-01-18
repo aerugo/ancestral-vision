@@ -292,6 +292,44 @@ useEffect(() => {
 
 **Rationale**: WebGL/WebGPU resources are not garbage collected. Manual disposal required.
 
+### INV-A010: Animation Timing Single Source of Truth
+
+All animation timing must flow through the central `AnimationSystem`. Materials must register their `uTime` uniforms with the AnimationSystem rather than updating time independently.
+
+```typescript
+// Correct - Register uniforms with AnimationSystem
+const { system, setup } = useAnimationSystem();
+
+useEffect(() => {
+  setup.registerGhostNodes(ghostUniforms);
+  setup.registerBiographyNodes(biographyUniforms);
+  setup.registerEdges(edgeUniforms);
+}, [setup, ghostUniforms, biographyUniforms, edgeUniforms]);
+
+// In render loop:
+renderer.setAnimationLoop(() => {
+  system.update(deltaTime); // Single call updates all uniforms
+  renderer.render(scene, camera);
+});
+
+// Incorrect - Manual uTime updates bypassing AnimationSystem
+renderer.setAnimationLoop(() => {
+  elapsedTime += deltaTime;
+  updateGhostNodeMaterialTime(uniforms, elapsedTime); // WRONG
+  updateEdgeMaterialTime(uniforms, elapsedTime);       // WRONG
+  renderer.render(scene, camera);
+});
+```
+
+**Benefits of centralized timing**:
+- Pause/resume ALL animations with a single call
+- Apply global time scale (slow-mo, fast-forward)
+- Debug animation state via AnimationInspector
+- Delta time capping prevents catch-up after browser tab sleep
+- Consistent timing across all shader materials
+
+**Rationale**: Scattered timing updates make it impossible to pause, debug, or coordinate animations. The AnimationSystem provides unified control over all animation timing.
+
 ---
 
 ## UI Invariants (INV-U)
@@ -406,4 +444,4 @@ When discovering new architectural constraints:
 ---
 
 *Created: 2026-01-13*
-*Last Updated: 2026-01-13*
+*Last Updated: 2026-01-18*

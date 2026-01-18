@@ -71,6 +71,8 @@ export interface InstancedConstellationResult {
   colorIndexAttribute?: THREE.InstancedBufferAttribute;
   /** Pulse intensity attribute for path pulse animation */
   pulseIntensityAttribute: THREE.InstancedBufferAttribute;
+  /** Transition progress attribute for biography metamorphosis (ghost nodes only) */
+  transitionProgressAttribute?: THREE.InstancedBufferAttribute;
   /** The material mode used */
   materialMode: MaterialMode;
 }
@@ -362,8 +364,14 @@ export function createGhostConstellation(
   const pulseIntensityAttribute = new THREE.InstancedBufferAttribute(pulseIntensityArray, 1);
   geometry.setAttribute('aPulseIntensity', pulseIntensityAttribute);
 
-  // Create ghost node material
-  const result = createGhostNodeMaterial();
+  // Create transition progress attribute for biography metamorphosis animation
+  const transitionProgressArray = new Float32Array(count);
+  transitionProgressArray.fill(0);
+  const transitionProgressAttribute = new THREE.InstancedBufferAttribute(transitionProgressArray, 1);
+  geometry.setAttribute('aTransitionProgress', transitionProgressAttribute);
+
+  // Create ghost node material (with transition support enabled)
+  const result = createGhostNodeMaterial({ transitionEnabled: true });
   const material = result.material;
   const uniforms = result.uniforms;
 
@@ -400,6 +408,7 @@ export function createGhostConstellation(
     selectionStateAttribute,
     colorIndexAttribute: undefined,
     pulseIntensityAttribute,
+    transitionProgressAttribute,
     materialMode: 'tsl', // Ghost uses a variant of TSL material
   };
 }
@@ -568,6 +577,67 @@ export function updateNodePulseIntensity(
   }
 
   attribute.needsUpdate = true;
+}
+
+/**
+ * Update transition progress for a specific ghost node during biography metamorphosis.
+ * This drives the fade/glow effect in the ghost-node-material.
+ *
+ * @param attribute - Transition progress attribute from ghost constellation
+ * @param index - Instance index of the node being transformed
+ * @param progress - Animation progress 0-1 (from BiographyTransitionAnimator)
+ */
+export function updateGhostTransitionProgress(
+  attribute: THREE.InstancedBufferAttribute,
+  index: number,
+  progress: number
+): void {
+  if (index >= 0 && index < attribute.array.length) {
+    attribute.array[index] = progress;
+    attribute.needsUpdate = true;
+  }
+}
+
+/**
+ * Reset all transition progress values to 0.
+ * Call after metamorphosis animation completes and data refreshes.
+ *
+ * @param attribute - Transition progress attribute from ghost constellation
+ */
+export function resetGhostTransitionProgress(
+  attribute: THREE.InstancedBufferAttribute
+): void {
+  (attribute.array as Float32Array).fill(0);
+  attribute.needsUpdate = true;
+}
+
+/**
+ * Update the scale of a specific instance in an instanced mesh.
+ * Used for shrinking ghost nodes during metamorphosis.
+ *
+ * @param mesh - The instanced mesh
+ * @param index - Instance index
+ * @param scale - New uniform scale value (1 = normal, 0 = invisible)
+ */
+export function updateInstanceScale(
+  mesh: THREE.InstancedMesh,
+  index: number,
+  scale: number
+): void {
+  const matrix = new THREE.Matrix4();
+  mesh.getMatrixAt(index, matrix);
+
+  // Decompose to get position
+  const position = new THREE.Vector3();
+  const quaternion = new THREE.Quaternion();
+  const currentScale = new THREE.Vector3();
+  matrix.decompose(position, quaternion, currentScale);
+
+  // Recompose with new scale
+  const newScale = new THREE.Vector3(scale, scale, scale);
+  matrix.compose(position, quaternion, newScale);
+  mesh.setMatrixAt(index, matrix);
+  mesh.instanceMatrix.needsUpdate = true;
 }
 
 /**

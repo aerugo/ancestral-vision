@@ -18,18 +18,12 @@ import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js
 import { createRenderer, WebGPUNotSupportedError } from '@/visualization/renderer';
 import { createScene, createCamera, createControls, disposeScene } from '@/visualization/scene';
 import {
-  createGhostConstellation,
-  createBiographyConstellation,
-  updateAnyConstellationTime,
-  updateSelectionState,
-  updateNodePulseIntensity,
-  disposeInstancedConstellation,
-  type ConstellationData,
-  type InstancedConstellationResult,
-} from '@/visualization/instanced-constellation';
+  ConstellationManager,
+  type ConstellationPersonData,
+} from '@/visualization/constellation-manager';
 import { getConnectedPersonIds } from '@/visualization/selection';
 import { calculateBiographyWeight } from '@/visualization/layout';
-import { getRandomColorIndex } from '@/visualization/materials';
+import { getRandomColorIndex } from '@/visualization/materials/palette';
 
 /**
  * Placeholder person data for visualization
@@ -122,11 +116,8 @@ import {
   disposeMetamorphosisParticles,
   type MetamorphosisParticleResult,
 } from '@/visualization/biography-transition';
-import {
-  updateGhostTransitionProgress,
-  resetGhostTransitionProgress,
-  updateInstanceScale,
-} from '@/visualization/instanced-constellation';
+// ConstellationManager handles ghost/biography pools with dynamic add/remove
+// No longer need direct imports from instanced-constellation
 import * as THREE from 'three';
 
 /**
@@ -268,10 +259,8 @@ export function ConstellationCanvas(): React.ReactElement {
   const selectionRef = useRef<ConstellationSelection | null>(null);
   const cameraAnimatorRef = useRef<CameraAnimator | null>(null);
   const clockRef = useRef<THREE.Clock | null>(null);
-  // Ghost constellation for nodes without biography (small, semi-transparent, blue mandala)
-  const ghostConstellationRef = useRef<InstancedConstellationResult | null>(null);
-  // Biography constellation for nodes with biography (cloud effect with palette colors)
-  const biographyConstellationRef = useRef<InstancedConstellationResult | null>(null);
+  // Constellation manager for pooled ghost/biography nodes with dynamic add/remove
+  const constellationManagerRef = useRef<ConstellationManager | null>(null);
   const edgeSystemRef = useRef<EdgeSystemResult | null>(null);
   const backgroundParticlesRef = useRef<BackgroundParticleResult | null>(null);
   const eventFirefliesRef = useRef<EventFireflyResult | null>(null);
@@ -490,40 +479,29 @@ export function ConstellationCanvas(): React.ReactElement {
 
       console.log(`[initScene] Biography-based split: ${biographyPeople.length} with biography, ${ghostPeople.length} ghost nodes`);
 
-      // Create ghost constellation for nodes without biography
-      // Small, semi-transparent, ghostly blue with swirling mandala pattern
-      if (ghostPeople.length > 0) {
-        const ghostData = {
-          positions: ghostPeople.map(p => new THREE.Vector3(p.position.x, p.position.y, p.position.z)),
-          biographyWeights: ghostPeople.map(() => 0), // No biography weight for ghosts
-          personIds: ghostPeople.map(p => p.id),
-        };
+      // Create ConstellationManager and initialize with all people
+      // The manager handles both ghost and biography pools with dynamic add/remove
+      const allPeopleData: ConstellationPersonData[] = [
+        ...ghostPeople.map(p => ({
+          id: p.id,
+          hasBiography: false,
+          biographyWeight: 0,
+          position: new THREE.Vector3(p.position.x, p.position.y, p.position.z),
+          colorIndex: getRandomColorIndex(),
+        })),
+        ...biographyPeople.map(p => ({
+          id: p.id,
+          hasBiography: true,
+          biographyWeight: p.biographyWeight,
+          position: new THREE.Vector3(p.position.x, p.position.y, p.position.z),
+          colorIndex: getRandomColorIndex(),
+        })),
+      ];
 
-        const ghostResult = createGhostConstellation(ghostData);
-        ghostConstellationRef.current = ghostResult;
-        scene.add(ghostResult.mesh);
-        console.log(`[initScene] Ghost constellation created: ${ghostPeople.length} nodes`);
-      }
-
-      // Create biography constellation for nodes with biography
-      // Cloud effect with palette colors and selection glow
-      if (biographyPeople.length > 0) {
-        const bioData: ConstellationData = {
-          positions: biographyPeople.map(p => new THREE.Vector3(p.position.x, p.position.y, p.position.z)),
-          biographyWeights: biographyPeople.map(p => p.biographyWeight),
-          personIds: biographyPeople.map(p => p.id),
-          colorIndices: biographyPeople.map(() => getRandomColorIndex()),
-        };
-
-        const bioResult = createBiographyConstellation(bioData);
-        biographyConstellationRef.current = bioResult;
-        scene.add(bioResult.mesh);
-        console.log(`[initScene] Biography constellation created: ${biographyPeople.length} nodes`);
-      }
+      constellationManagerRef.current = new ConstellationManager();
+      constellationManagerRef.current.initialize(scene, { people: allPeopleData });
+      console.log(`[initScene] ConstellationManager initialized: ${ghostPeople.length} ghost, ${biographyPeople.length} biography nodes`);
     }
-
-    // Store person ID to index mapping for selection state updates
-    const personIdToIndexRef = personIdToIndex;
 
     // Add edge system - use REAL edges from FamilyGraph with proper types
     // Filter out spouse edges (invisible - for layout clustering only)
@@ -630,35 +608,8 @@ export function ConstellationCanvas(): React.ReactElement {
       selectedPersonId: string | null,
       connectedIds: string[]
     ): void => {
-      // Update ghost constellation selection state
-      if (ghostConstellationRef.current) {
-        const ghostPersonIds = ghostConstellationRef.current.mesh.userData.personIds as string[];
-        const selectedIdx = selectedPersonId ? ghostPersonIds.indexOf(selectedPersonId) : -1;
-        const connectedIdxs = connectedIds
-          .map(id => ghostPersonIds.indexOf(id))
-          .filter(idx => idx >= 0);
-
-        updateSelectionState(
-          ghostConstellationRef.current.selectionStateAttribute,
-          selectedIdx >= 0 ? selectedIdx : null,
-          connectedIdxs
-        );
-      }
-
-      // Update biography constellation selection state
-      if (biographyConstellationRef.current) {
-        const bioPersonIds = biographyConstellationRef.current.mesh.userData.personIds as string[];
-        const selectedIdx = selectedPersonId ? bioPersonIds.indexOf(selectedPersonId) : -1;
-        const connectedIdxs = connectedIds
-          .map(id => bioPersonIds.indexOf(id))
-          .filter(idx => idx >= 0);
-
-        updateSelectionState(
-          biographyConstellationRef.current.selectionStateAttribute,
-          selectedIdx >= 0 ? selectedIdx : null,
-          connectedIdxs
-        );
-      }
+      // ConstellationManager handles both ghost and biography pools
+      constellationManagerRef.current?.updateSelectionState(selectedPersonId, connectedIds);
     };
 
     // Helper to update pulse intensities from animator state
@@ -667,25 +618,8 @@ export function ConstellationCanvas(): React.ReactElement {
 
       const nodeIntensities = pulseAnimatorRef.current.getAllNodeIntensities();
 
-      // Update ghost constellation node pulse intensities
-      if (ghostConstellationRef.current) {
-        const ghostPersonIds = ghostConstellationRef.current.mesh.userData.personIds as string[];
-        updateNodePulseIntensity(
-          ghostConstellationRef.current.pulseIntensityAttribute,
-          ghostPersonIds,
-          nodeIntensities
-        );
-      }
-
-      // Update biography constellation node pulse intensities
-      if (biographyConstellationRef.current) {
-        const bioPersonIds = biographyConstellationRef.current.mesh.userData.personIds as string[];
-        updateNodePulseIntensity(
-          biographyConstellationRef.current.pulseIntensityAttribute,
-          bioPersonIds,
-          nodeIntensities
-        );
-      }
+      // ConstellationManager handles pulse intensity for both pools
+      constellationManagerRef.current?.updatePulseIntensity(nodeIntensities);
 
       // Update edge pulse intensities with smooth per-vertex falloff (light orb effect)
       if (edgeSystemRef.current) {
@@ -707,23 +641,8 @@ export function ConstellationCanvas(): React.ReactElement {
     const clearPulseIntensities = (): void => {
       const emptyMap = new Map<string, number>();
 
-      if (ghostConstellationRef.current) {
-        const ghostPersonIds = ghostConstellationRef.current.mesh.userData.personIds as string[];
-        updateNodePulseIntensity(
-          ghostConstellationRef.current.pulseIntensityAttribute,
-          ghostPersonIds,
-          emptyMap
-        );
-      }
-
-      if (biographyConstellationRef.current) {
-        const bioPersonIds = biographyConstellationRef.current.mesh.userData.personIds as string[];
-        updateNodePulseIntensity(
-          biographyConstellationRef.current.pulseIntensityAttribute,
-          bioPersonIds,
-          emptyMap
-        );
-      }
+      // ConstellationManager clears pulse intensity for both pools
+      constellationManagerRef.current?.updatePulseIntensity(emptyMap);
 
       if (edgeSystemRef.current) {
         updateEdgePulseIntensities(
@@ -882,42 +801,28 @@ export function ConstellationCanvas(): React.ReactElement {
     // Subscribe to biography transition events for ghost-to-biography metamorphosis
     const unsubscribeBiographyTransition = biographyTransitionEvents.subscribe((personId) => {
       console.log('[BiographyTransition] Received event for person:', personId);
-      console.log('[BiographyTransition] ghostConstellationRef.current:', ghostConstellationRef.current);
-      console.log('[BiographyTransition] biographyTransitionRef.current:', biographyTransitionRef.current);
 
-      // Find the ghost node position for this person
-      if (!ghostConstellationRef.current) {
-        console.log('[BiographyTransition] No ghost constellation, skipping animation');
+      // Use ConstellationManager to check if person is a ghost node and get position
+      if (!constellationManagerRef.current?.isGhostNode(personId)) {
+        console.log('[BiographyTransition] Person not found in ghost pool, skipping animation');
         return;
       }
 
-      const ghostPersonIds = ghostConstellationRef.current.mesh.userData.personIds as string[];
-      console.log('[BiographyTransition] Ghost person IDs:', ghostPersonIds);
-      const nodeIndex = ghostPersonIds.indexOf(personId);
-      console.log('[BiographyTransition] Node index:', nodeIndex);
-      if (nodeIndex < 0) {
-        console.log('[BiographyTransition] Person not found in ghost constellation:', personId);
+      const nodePosition = constellationManagerRef.current.getNodePosition(personId);
+      if (!nodePosition) {
+        console.log('[BiographyTransition] Could not get node position');
         return;
       }
 
-      // Get the node's world position from the instanced mesh
-      const nodePosition = new THREE.Vector3();
-      const instanceMatrix = new THREE.Matrix4();
-      ghostConstellationRef.current.mesh.getMatrixAt(nodeIndex, instanceMatrix);
-
-      // Extract position from instance matrix (instances are in local space of the mesh)
-      nodePosition.setFromMatrixPosition(instanceMatrix);
-
-      // Transform to world space if the mesh has a transform
-      ghostConstellationRef.current.mesh.updateMatrixWorld(true);
-      nodePosition.applyMatrix4(ghostConstellationRef.current.mesh.matrixWorld);
-
-      console.log('[BiographyTransition] Node world position:', nodePosition.toArray());
+      console.log('[BiographyTransition] Node position:', nodePosition.toArray());
 
       // Mark transition as in progress to delay query invalidation
       setTransitionStarted();
 
-      // Start the transition animation
+      // Start the transition in ConstellationManager (sets up biography node at scale 0)
+      constellationManagerRef.current.startTransition(personId, 0.1);
+
+      // Start the visual animation
       biographyTransitionRef.current?.start(personId, nodePosition, {
         onCameraZoomStart: (targetPos, zoomDistance) => {
           console.log('[BiographyTransition] Camera zoom start to:', targetPos.toArray(), 'distance:', zoomDistance);
@@ -953,7 +858,7 @@ export function ConstellationCanvas(): React.ReactElement {
             setMetamorphosisTargetRadius(metamorphosisParticlesRef.current.uniforms, 3);
             metamorphosisParticlesRef.current.mesh.visible = true;
           }
-          // Position reveal sphere at node location (will fade in during intensify phase)
+          // Position reveal sphere at node location (backup for seamless transition)
           if (revealSphereRef.current) {
             revealSphereRef.current.position.copy(position);
             revealSphereRef.current.visible = true;
@@ -966,23 +871,13 @@ export function ConstellationCanvas(): React.ReactElement {
           if (metamorphosisParticlesRef.current) {
             metamorphosisParticlesRef.current.mesh.visible = false;
           }
-          // DON'T hide reveal sphere - it must stay visible until scene rebuilds
-          // with the actual biography node. The reveal sphere will be disposed
-          // when the scene is cleaned up and recreated with the new data.
-          // Reset ghost node transition state
-          if (ghostConstellationRef.current?.transitionProgressAttribute) {
-            resetGhostTransitionProgress(ghostConstellationRef.current.transitionProgressAttribute);
+          // Hide reveal sphere - with pooled architecture the biography node is already visible
+          if (revealSphereRef.current) {
+            revealSphereRef.current.visible = false;
           }
-          // Save camera state before scene rebuild so we can restore it
-          // This prevents the camera from jumping back to default position
-          if (cameraRef.current && controlsRef.current) {
-            cameraStateToRestoreRef.current = {
-              position: cameraRef.current.position.clone(),
-              target: controlsRef.current.target.clone(),
-            };
-          }
+          // Complete the transition in ConstellationManager (removes ghost, finalizes biography)
+          constellationManagerRef.current?.completeTransition();
           // Mark transition complete - this will trigger the pending query invalidation
-          // The constellation graph will refresh and show the updated biography node
           setTransitionCompleted();
         },
       });
@@ -1011,34 +906,9 @@ export function ConstellationCanvas(): React.ReactElement {
       if (biographyTransitionRef.current?.isAnimating()) {
         biographyTransitionRef.current.update(deltaTime);
         const state = biographyTransitionRef.current.getState();
-        const transitionPersonId = biographyTransitionRef.current.getPersonId();
 
-        // Update ghost node appearance during transition
-        if (ghostConstellationRef.current && transitionPersonId) {
-          const ghostPersonIds = ghostConstellationRef.current.mesh.userData.personIds as string[];
-          const nodeIndex = ghostPersonIds.indexOf(transitionPersonId);
-          if (nodeIndex >= 0) {
-            // Hide ghost node once particles have gathered (progress > 0.15)
-            // This prevents the grey sphere artifact during the particle animation
-            if (state.progress > 0.15) {
-              // Set scale to 0 to completely hide the instance
-              updateInstanceScale(ghostConstellationRef.current.mesh, nodeIndex, 0);
-            } else {
-              // During gather phase, shrink ghost node gradually
-              const gatherProgress = state.progress / 0.15;
-              const shrinkScale = 1 - gatherProgress * 0.8; // Shrink from 1.0 to 0.2
-              updateInstanceScale(ghostConstellationRef.current.mesh, nodeIndex, shrinkScale);
-            }
-            // Update transition progress for glow effects in shader (only during visible phase)
-            if (ghostConstellationRef.current.transitionProgressAttribute && state.progress <= 0.15) {
-              updateGhostTransitionProgress(
-                ghostConstellationRef.current.transitionProgressAttribute,
-                nodeIndex,
-                state.progress * 6 // Scale up progress for faster glow effect
-              );
-            }
-          }
-        }
+        // ConstellationManager handles ghost shrink and biography grow
+        constellationManagerRef.current?.updateTransition(state.progress);
 
         // Update metamorphosis particles - use full progress for the new vortex animation
         // The particle system handles its own internal phasing (implosion/compression/explosion)
@@ -1052,6 +922,7 @@ export function ConstellationCanvas(): React.ReactElement {
 
         // Fade in reveal sphere during reconvene phase (0.55-0.85)
         // The sphere emerges from within the particle cloud as it forms
+        // This is a backup for the seamless transition - the biography node grows via ConstellationManager
         if (revealSphereRef.current) {
           const material = revealSphereRef.current.material as THREE.MeshBasicMaterial;
           if (state.progress >= 0.55) {
@@ -1076,15 +947,8 @@ export function ConstellationCanvas(): React.ReactElement {
         }
       }
 
-      // Update ghost constellation time uniform for mandala animation
-      if (ghostConstellationRef.current) {
-        updateAnyConstellationTime(ghostConstellationRef.current.uniforms, elapsedTime);
-      }
-
-      // Update biography constellation time uniform for cloud flow animation
-      if (biographyConstellationRef.current) {
-        updateAnyConstellationTime(biographyConstellationRef.current.uniforms, elapsedTime);
-      }
+      // Update constellation time uniforms for animations (ghost mandala + biography cloud)
+      constellationManagerRef.current?.updateTime(elapsedTime);
 
       // Update edge system time uniform for flowing animation (Phase 2)
       if (edgeSystemRef.current) {
@@ -1162,16 +1026,10 @@ export function ConstellationCanvas(): React.ReactElement {
       // Cancel any ongoing biography transition
       biographyTransitionRef.current?.cancel();
       biographyTransitionRef.current = null;
-      // Dispose ghost constellation (nodes without biography - mandala pattern)
-      if (ghostConstellationRef.current) {
-        disposeInstancedConstellation(ghostConstellationRef.current.mesh);
-        ghostConstellationRef.current = null;
-      }
-      // Dispose biography constellation (nodes with biography - cloud effect)
-      if (biographyConstellationRef.current) {
-        disposeInstancedConstellation(biographyConstellationRef.current.mesh);
-        biographyConstellationRef.current = null;
-      }
+      constellationManagerRef.current?.cancelTransition();
+      // Dispose constellation pools (ghost and biography nodes)
+      constellationManagerRef.current?.dispose();
+      constellationManagerRef.current = null;
       // Dispose edge system (Phase 2 resources)
       if (edgeSystemRef.current) {
         disposeEdgeSystem(edgeSystemRef.current.mesh);

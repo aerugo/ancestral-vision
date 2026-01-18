@@ -289,6 +289,11 @@ export function ConstellationCanvas(): React.ReactElement {
   const focusIndicatorRef = useRef<THREE.Mesh | null>(null);
   const peoplePositionsRef = useRef<PlaceholderPerson[]>([]);
 
+  // Track previous graphData for incremental updates
+  const prevGraphDataRef = useRef<typeof graphData>(null);
+  // Flag to skip rebuild when applying incremental updates
+  const skipRebuildRef = useRef(false);
+
   // Debug logging
   if (isError) {
     console.error('[ConstellationCanvas] Failed to fetch constellation graph:', error);
@@ -298,6 +303,13 @@ export function ConstellationCanvas(): React.ReactElement {
   }
 
   const initScene = useCallback(async (): Promise<(() => void) | undefined> => {
+    // Check if we should skip rebuild (incremental update was applied)
+    if (skipRebuildRef.current) {
+      console.log('[initScene] Skipping rebuild - incremental update was applied');
+      skipRebuildRef.current = false;
+      return undefined;
+    }
+
     console.log('[initScene] Starting initialization...');
     const container = containerRef.current;
     if (!container) {
@@ -501,6 +513,9 @@ export function ConstellationCanvas(): React.ReactElement {
       constellationManagerRef.current = new ConstellationManager();
       constellationManagerRef.current.initialize(scene, { people: allPeopleData });
       console.log(`[initScene] ConstellationManager initialized: ${ghostPeople.length} ghost, ${biographyPeople.length} biography nodes`);
+
+      // Store graphData for incremental update comparison
+      prevGraphDataRef.current = graphData;
     }
 
     // Add edge system - use REAL edges from FamilyGraph with proper types
@@ -1094,6 +1109,94 @@ export function ConstellationCanvas(): React.ReactElement {
       }
     };
   }, [initScene]);
+
+  // Handle incremental constellation updates when graphData changes
+  // This avoids rebuilding the entire scene for biography add/remove
+  useEffect(() => {
+    // Skip on initial mount or if no manager
+    if (!constellationManagerRef.current || !graphData || !prevGraphDataRef.current) {
+      // Store current data for next comparison
+      prevGraphDataRef.current = graphData;
+      return;
+    }
+
+    // Check if the people set is the same (only biography status changed)
+    const prevPeople = prevGraphDataRef.current.rawPeople;
+    const currPeople = graphData.rawPeople;
+
+    if (prevPeople.length !== currPeople.length) {
+      // People added or removed - need full rebuild (handled by initScene)
+      prevGraphDataRef.current = graphData;
+      return;
+    }
+
+    // Check if same person IDs (order doesn't matter)
+    const prevIds = new Set(prevPeople.map(p => p.id));
+    const currIds = new Set(currPeople.map(p => p.id));
+    const sameIds = prevIds.size === currIds.size && [...prevIds].every(id => currIds.has(id));
+
+    if (!sameIds) {
+      // Different people - need full rebuild
+      prevGraphDataRef.current = graphData;
+      return;
+    }
+
+    // Same people, check for biography changes
+    const changes: Array<{ id: string; hasBiography: boolean; biographyWeight: number }> = [];
+    for (const curr of currPeople) {
+      const prev = prevPeople.find(p => p.id === curr.id);
+      if (!prev) continue;
+
+      const prevHasBio = Boolean(prev.biography?.trim());
+      const currHasBio = Boolean(curr.biography?.trim());
+
+      if (prevHasBio !== currHasBio) {
+        changes.push({
+          id: curr.id,
+          hasBiography: currHasBio,
+          biographyWeight: calculateBiographyWeight(curr.biography ?? undefined),
+        });
+      }
+    }
+
+    if (changes.length > 0) {
+      console.log('[ConstellationCanvas] Applying incremental updates:', changes);
+
+      // Apply changes via ConstellationManager
+      for (const change of changes) {
+        if (change.hasBiography) {
+          // Ghost -> Biography: Use transition if not already transitioning
+          if (!constellationManagerRef.current.isTransitioning()) {
+            const position = constellationManagerRef.current.getNodePosition(change.id);
+            if (position) {
+              // This was triggered by data change, not animation - just move the node
+              constellationManagerRef.current.startTransition(change.id, change.biographyWeight);
+              constellationManagerRef.current.updateTransition(1); // Instant transition
+              constellationManagerRef.current.completeTransition();
+            }
+          }
+        } else {
+          // Biography -> Ghost: Move node from biography pool to ghost pool
+          const position = constellationManagerRef.current.getNodePosition(change.id);
+          if (position && constellationManagerRef.current.isBiographyNode(change.id)) {
+            // Remove from biography pool
+            constellationManagerRef.current.biographyPool?.removeNode(change.id);
+            // Add to ghost pool
+            constellationManagerRef.current.ghostPool?.addNode({
+              id: change.id,
+              position,
+            });
+            console.log(`[ConstellationCanvas] Moved ${change.id} from biography to ghost pool`);
+          }
+        }
+      }
+
+      // Mark that we handled this update - skip rebuild
+      skipRebuildRef.current = true;
+    }
+
+    prevGraphDataRef.current = graphData;
+  }, [graphData]);
 
   // Show error message if WebGPU is not supported
   if (webGPUError) {

@@ -86,7 +86,7 @@ export {
   type FilmGrainConfig,
 } from './tsl-pipeline';
 
-// Instanced constellation
+// Instanced constellation (legacy)
 export {
   createInstancedConstellation,
   updateConstellationTime,
@@ -96,6 +96,10 @@ export {
   createGhostConstellation,
   createBiographyConstellation,
   updateAnyConstellationTime,
+  updateNodePulseIntensity,
+  updateGhostTransitionProgress,
+  resetGhostTransitionProgress,
+  updateInstanceScale,
   type MaterialMode,
   type ConstellationConfig,
   type ConstellationData,
@@ -104,6 +108,23 @@ export {
   type GhostConstellationConfig,
   type BiographyConstellationConfig,
 } from './instanced-constellation';
+
+// Pooled instancing (game engine-style architecture)
+export { InstancePool, type InstancePoolConfig, type TrackedAttribute } from './instance-pool';
+export {
+  ConstellationPool,
+  type ConstellationPoolType,
+  type ConstellationPoolConfig,
+  type ConstellationNodeData,
+  type ConstellationPoolResult,
+} from './constellation-pool';
+export {
+  ConstellationManager,
+  type ConstellationPersonData,
+  type ConstellationGraphData,
+  type TransitionState,
+  type GraphChanges,
+} from './constellation-manager';
 
 // Selection
 export {

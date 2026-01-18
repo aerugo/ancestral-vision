@@ -972,26 +972,44 @@ export function ConstellationCanvas(): React.ReactElement {
           );
         }
 
-        // Fade in reveal sphere during reconvene phase (0.55-0.85)
-        // The sphere emerges from within the particle cloud as it forms
-        // This is a backup for the seamless transition - the biography node grows via ConstellationManager
+        // Reveal sphere animation phases:
+        // - 0.55-0.85: Fade in (emerge from particle cloud)
+        // - 0.75-0.88: Peak glow boost
+        // - 0.88-1.00: Fade out (biography node takes over seamlessly)
         if (revealSphereRef.current) {
           const material = revealSphereRef.current.material as THREE.MeshBasicMaterial;
           if (state.progress >= 0.55) {
             // Fade from 0 to 1 over the range 0.55-0.85
-            const fadeProgress = Math.min((state.progress - 0.55) / 0.30, 1);
+            const fadeInProgress = Math.min((state.progress - 0.55) / 0.30, 1);
             // Use easeInOutCubic for smooth emergence
-            const eased = fadeProgress < 0.5
-              ? 4 * fadeProgress * fadeProgress * fadeProgress
-              : 1 - Math.pow(-2 * fadeProgress + 2, 3) / 2;
+            const fadeInEased = fadeInProgress < 0.5
+              ? 4 * fadeInProgress * fadeInProgress * fadeInProgress
+              : 1 - Math.pow(-2 * fadeInProgress + 2, 3) / 2;
+
+            // Fade out during reveal phase (0.88-1.0) to hand off to biography node
+            let fadeOutMultiplier = 1.0;
+            if (state.progress >= 0.88) {
+              const fadeOutProgress = (state.progress - 0.88) / 0.12;
+              // Use easeInQuad for smooth fade out
+              fadeOutMultiplier = 1 - fadeOutProgress * fadeOutProgress;
+            }
+
             // Increase max brightness during peak glow (0.75-0.88)
             const glowBoost = state.progress >= 0.75 && state.progress < 0.88
               ? 1.0 + Math.sin((state.progress - 0.75) / 0.13 * Math.PI) * 0.6
               : 1.0;
-            material.opacity = eased * 0.95 * glowBoost;
+
+            // Apply both fade in and fade out
+            material.opacity = fadeInEased * 0.95 * glowBoost * fadeOutMultiplier;
+
             // Scale from tiny (0.2) to full (1.0) - emerge from within particle cloud
-            const scale = 0.2 + eased * 0.8;
-            revealSphereRef.current.scale.setScalar(scale);
+            // Slight grow during fade out to blend with biography node
+            const baseScale = 0.2 + fadeInEased * 0.8;
+            const expandOnFade = state.progress >= 0.88
+              ? 1.0 + (1 - fadeOutMultiplier) * 0.15 // Slight expansion as it fades
+              : 1.0;
+            revealSphereRef.current.scale.setScalar(baseScale * expandOnFade);
+
             // Pulse the color brightness during glow phase
             const brightness = 0.83 + (glowBoost - 1) * 0.34; // 0.83 to 1.0
             material.color.setRGB(brightness, brightness * 0.79, brightness * 0.35);

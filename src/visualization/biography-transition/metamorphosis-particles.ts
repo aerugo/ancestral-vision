@@ -5,14 +5,17 @@
  * Features thousands of particles with vortex motion, spiraling arms, and intense glow
  * that creates a magical, cosmic transformation effect.
  *
- * Animation Timeline:
+ * Animation Timeline (synced with reveal sphere and biography node):
  * 1. Gather (0-12%) - particles spiral inward from ghost node
  * 2. Compress (12-20%) - intense compression to white-hot center
  * 3. Explode (20-40%) - dramatic outward burst
  * 4. Peak (40-50%) - maximum expansion, particles slow down
  * 5. Reconvene (50-70%) - particles spiral back inward, forming sphere shape
- * 6. Intensify (70-88%) - tight sphere formation with intense glow
- * 7. Reveal (88-100%) - blinding flash then fade, new node appears
+ * 6. Intensify (70-90%) - tight sphere formation with intense glow
+ *    - Biography node starts growing at 55%, full scale at 85%
+ *    - Reveal sphere fades in 55-85%, peaks with glow boost 75-88%
+ * 7. Reveal (88-100%) - particles + reveal sphere fade out together
+ *    - Biography node visible underneath as seamless handoff
  *
  * INV-A008: Use three/webgpu for material classes, three/tsl for shader nodes
  * INV-A009: Resource Disposal - Particle geometries and materials disposed on cleanup
@@ -203,14 +206,14 @@ export function createMetamorphosisParticles(
   const brightnessAttr = attribute('aBrightness');
   const sphereAnglesAttr = attribute('aSphereAngles');
 
-  // Animation phase boundaries
+  // Animation phase boundaries (synced with reveal sphere animation)
   const GATHER_END = float(0.12);
   const COMPRESS_END = float(0.20);
   const EXPLODE_END = float(0.40);
   const PEAK_END = float(0.50);
   const RECONVENE_END = float(0.70);
-  const INTENSIFY_END = float(0.88);
-  // REVEAL: 0.88 to 1.0
+  const INTENSIFY_END = float(0.90); // Extended to overlap with reveal sphere fade (0.88-1.0)
+  // REVEAL: 0.90 to 1.0 - particles fade as biography node takes over
 
   // Spiral angle calculation - creates the twisting vortex effect
   const spiralAngle = Fn(() => {
@@ -482,6 +485,7 @@ export function createMetamorphosisParticles(
   })();
 
   // Opacity with intense glow during compression and intensify
+  // Synced with reveal sphere: both fade out 0.88-1.0 as biography node takes over
   const opacityNode = Fn(() => {
     const p = uProgress;
 
@@ -494,16 +498,17 @@ export function createMetamorphosisParticles(
       sub(float(1), smoothstep(COMPRESS_END, EXPLODE_END, p))
     );
 
-    // Intensify glow - very bright before reveal (extended range for more drama)
+    // Intensify glow - peaks at 0.82, fades by 0.92 (overlaps with biography node at full scale)
     const intensifyGlow = mul(
-      smoothstep(RECONVENE_END, float(0.80), p),
-      sub(float(1), smoothstep(float(0.80), float(0.94), p))
+      smoothstep(RECONVENE_END, float(0.82), p),
+      sub(float(1), smoothstep(float(0.82), float(0.92), p))
     );
 
     const glow = add(float(1), add(mul(compressionGlow, float(0.6)), mul(intensifyGlow, float(1.5))));
 
-    // Fade out during final reveal (starts at 0.92 to overlap with reveal sphere)
-    const fadeOut = sub(float(1), pow(smoothstep(float(0.92), float(1), p), float(0.4)));
+    // Fade out during reveal phase (0.88-1.0) - synced with reveal sphere fade
+    // Biography node is at full scale from 0.85, so particles/reveal sphere blend out smoothly
+    const fadeOut = sub(float(1), pow(smoothstep(float(0.88), float(1), p), float(0.5)));
 
     return clamp(mul(mul(fadeIn, fadeOut), glow), float(0), float(1));
   })();

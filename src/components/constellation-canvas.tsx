@@ -962,15 +962,13 @@ export function ConstellationCanvas(): React.ReactElement {
         },
         onComplete: () => {
           console.log('[BiographyTransition] Animation complete');
-          // Hide particles
+          // Hide particles (they've faded out by now)
           if (metamorphosisParticlesRef.current) {
             metamorphosisParticlesRef.current.mesh.visible = false;
           }
-          // Hide reveal sphere (real biography node will take its place)
-          if (revealSphereRef.current) {
-            revealSphereRef.current.visible = false;
-            (revealSphereRef.current.material as THREE.MeshBasicMaterial).opacity = 0;
-          }
+          // DON'T hide reveal sphere - it must stay visible until scene rebuilds
+          // with the actual biography node. The reveal sphere will be disposed
+          // when the scene is cleaned up and recreated with the new data.
           // Reset ghost node transition state
           if (ghostConstellationRef.current?.transitionProgressAttribute) {
             resetGhostTransitionProgress(ghostConstellationRef.current.transitionProgressAttribute);
@@ -1052,31 +1050,28 @@ export function ConstellationCanvas(): React.ReactElement {
           );
         }
 
-        // Fade in reveal sphere during intensify phase (0.72-0.92)
-        // The sphere fades in while particles are still glowing brightly
+        // Fade in reveal sphere during reconvene phase (0.55-0.85)
+        // The sphere emerges from within the particle cloud as it forms
         if (revealSphereRef.current) {
           const material = revealSphereRef.current.material as THREE.MeshBasicMaterial;
-          if (state.progress >= 0.72 && state.progress < 0.98) {
-            // Fade from 0 to 1 over the range 0.72-0.92
-            const fadeProgress = Math.min((state.progress - 0.72) / 0.20, 1);
-            // Use easeInQuad for a gentle fade-in that accelerates
-            const easedOpacity = fadeProgress * fadeProgress;
-            // Increase max brightness during peak glow (0.80-0.88)
-            const glowBoost = state.progress >= 0.78 && state.progress < 0.88
-              ? 1.0 + Math.sin((state.progress - 0.78) / 0.10 * Math.PI) * 0.5
+          if (state.progress >= 0.55) {
+            // Fade from 0 to 1 over the range 0.55-0.85
+            const fadeProgress = Math.min((state.progress - 0.55) / 0.30, 1);
+            // Use easeInOutCubic for smooth emergence
+            const eased = fadeProgress < 0.5
+              ? 4 * fadeProgress * fadeProgress * fadeProgress
+              : 1 - Math.pow(-2 * fadeProgress + 2, 3) / 2;
+            // Increase max brightness during peak glow (0.75-0.88)
+            const glowBoost = state.progress >= 0.75 && state.progress < 0.88
+              ? 1.0 + Math.sin((state.progress - 0.75) / 0.13 * Math.PI) * 0.6
               : 1.0;
-            material.opacity = easedOpacity * 0.95 * glowBoost;
-            // Scale up during fade for "emergence" effect
-            const scale = 0.6 + fadeProgress * 0.4;
+            material.opacity = eased * 0.95 * glowBoost;
+            // Scale from tiny (0.2) to full (1.0) - emerge from within particle cloud
+            const scale = 0.2 + eased * 0.8;
             revealSphereRef.current.scale.setScalar(scale);
             // Pulse the color brightness during glow phase
-            const brightness = 0.83 + glowBoost * 0.17; // 0.83 to 1.0
+            const brightness = 0.83 + (glowBoost - 1) * 0.34; // 0.83 to 1.0
             material.color.setRGB(brightness, brightness * 0.79, brightness * 0.35);
-          } else if (state.progress >= 0.98) {
-            // Hold at full opacity during final reveal
-            material.opacity = 0.95;
-            revealSphereRef.current.scale.setScalar(1);
-            material.color.setRGB(0.83, 0.66, 0.29); // Sacred Gold
           }
         }
       }

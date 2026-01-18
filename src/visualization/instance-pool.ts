@@ -345,6 +345,18 @@ export class InstancePool {
   }
 
   /**
+   * Get instance scale (returns the x component, assuming uniform scale)
+   */
+  public getScale(id: string): number | null {
+    const index = this._idToIndex.get(id);
+    if (index === undefined) return null;
+
+    this._mesh.getMatrixAt(index, this._matrix);
+    this._matrix.decompose(this._position, this._quaternion, this._scale);
+    return this._scale.x;
+  }
+
+  /**
    * Set a single-component attribute value for an instance
    */
   public setAttributeValue(

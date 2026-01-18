@@ -56,6 +56,22 @@ export interface ConstellationPoolResult {
   uniforms: GhostNodeMaterialUniforms | TSLCloudMaterialUniforms;
 }
 
+/**
+ * Result of creating a ghost pool (specific uniform type)
+ */
+export interface GhostPoolResult {
+  pool: ConstellationPool;
+  uniforms: GhostNodeMaterialUniforms;
+}
+
+/**
+ * Result of creating a biography pool (specific uniform type)
+ */
+export interface BiographyPoolResult {
+  pool: ConstellationPool;
+  uniforms: TSLCloudMaterialUniforms;
+}
+
 const DEFAULT_GHOST_CONFIG = {
   sphereRadius: 2,
   sphereSegments: 24,
@@ -105,7 +121,7 @@ export class ConstellationPool {
   public static createGhostPool(
     initialNodes: ConstellationNodeData[],
     config: ConstellationPoolConfig = {}
-  ): ConstellationPoolResult {
+  ): GhostPoolResult {
     const {
       sphereRadius = DEFAULT_GHOST_CONFIG.sphereRadius,
       sphereSegments = DEFAULT_GHOST_CONFIG.sphereSegments,
@@ -147,7 +163,8 @@ export class ConstellationPool {
 
     // Create mesh with full capacity
     const mesh = new THREE.InstancedMesh(geometry, material, capacity);
-    mesh.count = 0; // Will be set by pool
+    // Set count to capacity so InstancePool reads correct capacity, then it sets to activeCount
+    mesh.count = capacity;
 
     // Set initial instance matrices
     const matrix = new THREE.Matrix4();
@@ -197,7 +214,7 @@ export class ConstellationPool {
   public static createBiographyPool(
     initialNodes: ConstellationNodeData[],
     config: ConstellationPoolConfig = {}
-  ): ConstellationPoolResult {
+  ): BiographyPoolResult {
     const {
       sphereRadius = DEFAULT_BIOGRAPHY_CONFIG.sphereRadius,
       sphereSegments = DEFAULT_BIOGRAPHY_CONFIG.sphereSegments,
@@ -248,7 +265,8 @@ export class ConstellationPool {
 
     // Create mesh with full capacity
     const mesh = new THREE.InstancedMesh(geometry, material, capacity);
-    mesh.count = 0; // Will be set by pool
+    // Set count to capacity so InstancePool reads correct capacity, then it sets to activeCount
+    mesh.count = capacity;
 
     // Set initial instance matrices and attributes
     const matrix = new THREE.Matrix4();
@@ -426,6 +444,13 @@ export class ConstellationPool {
    */
   public setNodeScaleByIndex(index: number, scale: number): void {
     this._pool.setScaleByIndex(index, scale);
+  }
+
+  /**
+   * Get node scale (for animations)
+   */
+  public getNodeScale(id: string): number | null {
+    return this._pool.getScale(id);
   }
 
   /**

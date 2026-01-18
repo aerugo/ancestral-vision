@@ -27,6 +27,13 @@ export const PALETTE_SIZE = SCIFI_PALETTE.length;
 export const GHOST_COLOR = new THREE.Color(0x4488cc);
 
 /**
+ * Sacred Gold color for pulse glow and metamorphosis effects.
+ * Matches the edge illumination and transformation highlights.
+ * RGB: (0.83, 0.66, 0.29) = #D4A84A
+ */
+export const SACRED_GOLD = new THREE.Color(0xd4a84a);
+
+/**
  * Selection state values for instance attribute.
  * Used in shaders to determine glow intensity.
  */

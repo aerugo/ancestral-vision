@@ -109,15 +109,44 @@ export async function seedTestUser(userId = 'seed-test-user'): Promise<SeedResul
 }
 
 /**
- * Clean up all test data from the database
+ * Clean up test data from the database.
+ * Only deletes records with test-specific prefixes to avoid interfering
+ * with parallel tests.
  */
 export async function cleanupTestData(): Promise<void> {
+  // Test prefixes used across test files
+  const testPrefixes = ['ai-', 'test-', 'seed-'];
+
+  // Build OR conditions for each prefix
+  const userConditions = testPrefixes.map(prefix => ({ id: { startsWith: prefix } }));
+
   // Clean up in correct order (respecting foreign keys)
-  await prisma.parentChildRelationship.deleteMany();
-  await prisma.spouseRelationship.deleteMany();
-  await prisma.person.deleteMany();
-  await prisma.constellation.deleteMany();
-  await prisma.user.deleteMany();
+  // First delete AI suggestions (new table from Phase 2.2)
+  await prisma.aISuggestion.deleteMany({
+    where: { OR: [
+      ...testPrefixes.map(prefix => ({ userId: { startsWith: prefix } })),
+      ...testPrefixes.map(prefix => ({ person: { createdBy: { startsWith: prefix } } })),
+    ]},
+  });
+
+  await prisma.parentChildRelationship.deleteMany({
+    where: { OR: testPrefixes.map(prefix => ({ createdBy: { startsWith: prefix } })) },
+  });
+  await prisma.spouseRelationship.deleteMany({
+    where: { OR: testPrefixes.map(prefix => ({ createdBy: { startsWith: prefix } })) },
+  });
+  await prisma.person.deleteMany({
+    where: { OR: testPrefixes.map(prefix => ({ createdBy: { startsWith: prefix } })) },
+  });
+  await prisma.constellation.deleteMany({
+    where: { OR: userConditions },
+  });
+  await prisma.usageTracking.deleteMany({
+    where: { OR: userConditions.map(c => ({ userId: c.id })) },
+  });
+  await prisma.user.deleteMany({
+    where: { OR: userConditions },
+  });
 }
 
 /**

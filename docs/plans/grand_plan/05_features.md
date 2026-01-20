@@ -1,32 +1,32 @@
 # Ancestral Vision: Features Specification
 
-> **Status**: COMPLETE - All decisions documented
+> **Status**: IMPLEMENTATION IN PROGRESS - Updated 2026-01-18
 
-This document specifies all features of Ancestral Vision with finalized decisions.
+This document specifies all features of Ancestral Vision with finalized decisions and implementation status.
 
 ---
 
 ## Feature Overview
 
-| # | Feature | Priority | Status |
-|---|---------|----------|--------|
-| 4.1 | 3D Constellation Explorer | Core | Complete |
-| 4.2 | Person Profile View | Core | Complete |
-| 4.3 | Events System | Core | Complete |
-| 4.4 | Notes & Biography System | Core | Complete |
-| 4.5 | Media Management | Core | Complete |
-| 4.6 | Audio Interview Recording | High | Complete |
-| 4.7 | AI-Powered Discovery | High | Complete |
-| 4.8 | Speculative Ancestry | Medium | Complete |
-| 4.9 | Tree Matching | Medium | Complete |
-| 4.10 | Social Features | Medium | Complete |
-| 4.11 | Sharing & Display | Medium | Complete |
-| 4.12 | Search & Discovery | Core | Complete |
-| 4.13 | 2D Tree View | Core | Complete |
-| 4.14 | Onboarding Experience | Core | Complete |
-| 4.15 | Person Management | Core | Complete |
-| 4.16 | Account Settings | Core | Complete |
-| 4.17 | Subscription & Billing | Core | Complete |
+| # | Feature | Priority | Spec Status | Implementation |
+|---|---------|----------|-------------|----------------|
+| 4.1 | 3D Constellation Explorer | Core | Complete | ✅ **Implemented** |
+| 4.2 | Person Profile View | Core | Complete | ✅ **Implemented** |
+| 4.3 | Events System | Core | Complete | ✅ **Implemented** |
+| 4.4 | Notes & Biography System | Core | Complete | ✅ **Implemented** |
+| 4.5 | Media Management | Core | Complete | ✅ **Implemented** |
+| 4.6 | Audio Interview Recording | High | Complete | ⚠️ **Partial** (upload only) |
+| 4.7 | AI-Powered Discovery | High | Complete | ❌ Not Started |
+| 4.8 | Speculative Ancestry | Medium | Complete | ⚠️ **Partial** (visuals only) |
+| 4.9 | Tree Matching | Medium | Complete | ❌ Not Started |
+| 4.10 | Social Features | Medium | Complete | ❌ Not Started |
+| 4.11 | Sharing & Display | Medium | Complete | ❌ Not Started |
+| 4.12 | Search & Discovery | Core | Complete | ✅ **Implemented** |
+| 4.13 | 2D Tree View | Core | Complete | ❌ Not Started |
+| 4.14 | Onboarding Experience | Core | Complete | ✅ **Implemented** |
+| 4.15 | Person Management | Core | Complete | ✅ **Implemented** |
+| 4.16 | Account Settings | Core | Complete | ⚠️ **Partial** |
+| 4.17 | Subscription & Billing | Core | Complete | ❌ Not Started |
 
 ---
 
@@ -38,33 +38,33 @@ The signature feature - an interactive 3D visualization of the user's family con
 ### Capabilities
 
 **Navigation & Interaction**
-- [ ] Free-flight navigation through the constellation
-- [ ] Click/tap to select a person (star)
-- [ ] Focus highlighting on selection (US-4.2):
+- [x] Free-flight navigation through the constellation
+- [x] Click/tap to select a person (star)
+- [x] Focus highlighting on selection (US-4.2):
   - Connected people (parents, children, spouse) highlighted
   - Non-connected people dim slightly
   - Profile panel opens (see 4.2)
-- [ ] Smooth camera animations between selections
-- [ ] Reset view to default position
+- [x] Smooth camera animations between selections
+- [x] Reset view to default position
 
 **Visual Representation**
-- [ ] Star brightness indicates biography weight (US-4.3)
+- [x] Star brightness indicates biography weight (US-4.3)
   - Brighter stars = more notes, events, media
   - Dimmer stars = basic facts only
   - Visual legend/tooltip explaining brightness
-- [ ] Satellites indicate richness of content (NOT 1:1 per event - would be too cluttered)
-- [ ] Theme support (cosmic dark mode, illuminated manuscript light mode)
+- [x] Satellites indicate richness of content (NOT 1:1 per event - would be too cluttered)
+- [x] Theme support (cosmic dark mode, illuminated manuscript light mode)
 
 **Generation-Based Layout (US-4.4)**
-- [ ] Force-directed layout with generation layering
-- [ ] Mandala ring arrangement: user (Gen 0) at center
-- [ ] Ancestors extend outward in rings (Gen -1, -2, etc.)
-- [ ] Descendants also extend outward (Gen +1, +2, etc.)
-- [ ] Subtle Y-axis offset creates depth between generations
-- [ ] Generation labels visible on hover or in profile panel
+- [x] Force-directed layout with generation layering
+- [x] Mandala ring arrangement: user (Gen 0) at center
+- [x] Ancestors extend outward in rings (Gen -1, -2, etc.)
+- [x] Descendants also extend outward (Gen +1, +2, etc.)
+- [x] Subtle Y-axis offset creates depth between generations
+- [x] Generation labels visible on hover or in profile panel
 
 **Performance**
-- [ ] Performance for 1000+ nodes
+- [x] Performance for 1000+ nodes (object pooling system implemented)
 
 ### Platform Support
 - **Desktop browsers**: Primary platform (Chrome, Firefox, Safari, Edge)
@@ -72,8 +72,15 @@ The signature feature - an interactive 3D visualization of the user's family con
 - **iOS**: Native companion app (separate codebase)
 - **Mobile browsers**: Not supported (companion app planned for future)
 
-### Existing Implementation
-The `reference_prototypes/family-constellations/` codebase provides a working prototype with Three.js, custom shaders, force-directed layout, and post-processing effects.
+### Current Implementation
+The visualization system in `src/visualization/` provides a production-quality implementation with:
+- **WebGPU-only rendering** (WebGL fallback deprecated)
+- **TSL (Three Shading Language)** materials for nodes, edges, particles
+- **Force-directed layout** with Barnes-Hut optimization
+- **Object pooling** via `ConstellationPool` for performance
+- **Sophisticated animation system** with reactive bindings and transitions
+- **Ghost node materials** for speculative ancestry visualization
+- **Post-processing pipeline** with performance tiers
 
 ### Decisions
 
@@ -98,18 +105,18 @@ Detailed view of an individual person's information.
 ### Capabilities
 
 **Edit Person Details (US-2.2)**
-- [ ] Click to edit person's core details (name, birth date, death date, birthplace)
-- [ ] Inline editing with auto-save (2s debounce)
-- [ ] Living/deceased status inferred from death date (see Q4.15.4)
-- [ ] All fields modifiable
+- [x] Click to edit person's core details (name, birth date, death date, birthplace)
+- [x] Inline editing with auto-save (2s debounce)
+- [x] Living/deceased status inferred from death date (see Q4.15.4)
+- [x] All fields modifiable
 
 **Profile Tabs & Content**
-- [ ] Tabbed interface: Events, Notes, Biography, Match, Photos, Sources
-- [ ] Timeline of life events with add functionality
-- [ ] Immediate family members panel
-- [ ] Notes section for freeform content (US-3.1)
-- [ ] AI-generated biography display with regeneration (US-3.9)
-- [ ] Privacy controls per item
+- [x] Tabbed interface: Events, Notes, Biography, Match, Photos, Sources
+- [x] Timeline of life events with add functionality
+- [x] Immediate family members panel
+- [x] Notes section for freeform content (US-3.1)
+- [ ] AI-generated biography display with regeneration (US-3.9) - *Not implemented*
+- [x] Privacy controls per item
 
 ### Wireframe References
 - Wireframes 4-5: Profile layout with tabs
@@ -134,10 +141,10 @@ Detailed view of an individual person's information.
 Track life events for each person with shared event support. Events are freeform - users define their own event types.
 
 ### Capabilities
-- [ ] Add events to a person's timeline
-- [ ] Events can involve multiple people (shared events)
-- [ ] AI can suggest events from biography analysis
-- [ ] Events become visual satellites in constellation
+- [x] Add events to a person's timeline
+- [x] Events can involve multiple people (shared events)
+- [ ] AI can suggest events from biography analysis - *Not implemented*
+- [x] Events become visual satellites in constellation (firefly particles)
 
 ### Decisions
 
@@ -157,11 +164,11 @@ Track life events for each person with shared event support. Events are freeform
 Rich note-taking system with AI integration and sharing controls. Notes are freeform - no predefined categories.
 
 ### Capabilities
-- [ ] Rich text editing with formatting
-- [ ] Privacy levels: Private, Shared with Connections, Public
-- [ ] Notes can reference other people
-- [ ] AI can analyze notes for extraction
-- [ ] Notes contribute to biography weight
+- [x] Rich text editing with formatting (Tiptap)
+- [x] Privacy levels: Private, Shared with Connections, Public
+- [x] Notes can reference other people
+- [ ] AI can analyze notes for extraction - *Not implemented*
+- [x] Notes contribute to biography weight
 
 ### Decisions
 
@@ -186,11 +193,11 @@ Upload, organize, and associate media with people.
 - Audio recordings
 
 ### Capabilities
-- [ ] Upload and organize media
-- [ ] Associate media with one or more people
-- [ ] AI transcription of audio recordings
-- [ ] Extract dates/locations from image EXIF
-- [ ] Source citation generation
+- [x] Upload and organize media (via `media-uploader.tsx`)
+- [x] Associate media with one or more people
+- [ ] AI transcription of audio recordings - *Not implemented*
+- [x] Extract dates/locations from image EXIF (schema supports it)
+- [x] Source citation generation
 
 ### Decisions
 
@@ -211,11 +218,11 @@ Upload, organize, and associate media with people.
 Built-in audio recording for capturing oral histories.
 
 ### Capabilities
-- [ ] In-browser audio recording
-- [ ] Automatic AI transcription
-- [ ] Speaker diarization (who said what)
-- [ ] Extract names, dates, events from transcription
-- [ ] Suggest additions to family tree from interview content
+- [x] In-browser audio recording (via media upload)
+- [ ] Automatic AI transcription - *Not implemented (schema ready)*
+- [ ] Speaker diarization (who said what) - *Not implemented*
+- [ ] Extract names, dates, events from transcription - *Not implemented*
+- [ ] Suggest additions to family tree from interview content - *Not implemented*
 
 ### Decisions
 
@@ -236,15 +243,15 @@ Built-in audio recording for capturing oral histories.
 Gemini-powered analysis to suggest additions and connections.
 
 ### Capabilities
-- [ ] Analyze notes, biography, transcripts for a person
-- [ ] Suggest new people to add (mentioned relatives)
-- [ ] Suggest events to add (mentioned life events)
-- [ ] Suggest relationships between existing people
-- [ ] Suggest corrections to dates/facts
-- [ ] Deduplicate suggestions against existing data
+- [ ] Analyze notes, biography, transcripts for a person - *Not implemented*
+- [ ] Suggest new people to add (mentioned relatives) - *Not implemented*
+- [ ] Suggest events to add (mentioned life events) - *Not implemented*
+- [ ] Suggest relationships between existing people - *Not implemented*
+- [ ] Suggest corrections to dates/facts - *Not implemented*
+- [ ] Deduplicate suggestions against existing data - *Not implemented*
 
-### Existing Implementation
-`reference_prototypes/ancestral-synth/` provides production-quality agents for biography generation, extraction, correction, and deduplication.
+### Implementation Status
+**Not started.** The `src/ai/` directory exists but is empty. Firebase/Genkit dependencies are installed but no AI flows have been implemented yet. The Python reference in `reference_prototypes/ancestral-synth/` provides patterns to port.
 
 ### Decisions
 
@@ -265,11 +272,14 @@ Gemini-powered analysis to suggest additions and connections.
 AI-generated plausible ancestors for unknown family history.
 
 ### Capabilities
-- [ ] Generate speculative ancestors working backwards
-- [ ] Use historical context (time, place, social conditions)
-- [ ] Generate speculative portraits based on descendant photos
-- [ ] Clear visual distinction between known and speculative
-- [ ] User can "confirm" speculative entries as known
+- [ ] Generate speculative ancestors working backwards - *Not implemented*
+- [ ] Use historical context (time, place, social conditions) - *Not implemented*
+- [ ] Generate speculative portraits based on descendant photos - *Not implemented*
+- [x] Clear visual distinction between known and speculative (`ghost-node-material.ts`)
+- [ ] User can "confirm" speculative entries as known - *Not implemented*
+
+### Implementation Status
+**Visuals only.** Ghost node materials with dissolution particle effects are implemented for speculative people visualization, but the AI generation features are not built.
 
 ### Decisions
 
@@ -290,11 +300,14 @@ AI-generated plausible ancestors for unknown family history.
 Match people in your tree with the same person in other users' trees.
 
 ### Capabilities
-- [ ] Search for potential matches based on name, dates, locations
-- [ ] View matched person's public/shared information
-- [ ] Accept match to link trees
-- [ ] Automatic propagation of related matches
-- [ ] See notes and events others have shared
+- [ ] Search for potential matches based on name, dates, locations - *Not implemented*
+- [ ] View matched person's public/shared information - *Not implemented*
+- [ ] Accept match to link trees - *Not implemented*
+- [ ] Automatic propagation of related matches - *Not implemented*
+- [ ] See notes and events others have shared - *Not implemented*
+
+### Implementation Status
+**Schema only.** The `Match` model exists in Prisma schema with confidence scoring fields, but no matching algorithms or UI have been built.
 
 ### Decisions
 
@@ -315,10 +328,13 @@ Match people in your tree with the same person in other users' trees.
 Connect with other users and share family history.
 
 ### Capabilities
-- [ ] Add other users as "Connections"
-- [ ] Share notes/events with connections
-- [ ] View shared notes on matched people
-- [ ] Collaborate on shared ancestors
+- [ ] Add other users as "Connections" - *Not implemented*
+- [ ] Share notes/events with connections - *Not implemented*
+- [ ] View shared notes on matched people - *Not implemented*
+- [ ] Collaborate on shared ancestors - *Not implemented*
+
+### Implementation Status
+**Schema only.** The `Connection` model exists in Prisma schema with status and permission fields, but no UI or resolvers have been built.
 
 ### Decisions
 
@@ -341,18 +357,21 @@ Share your constellation with others and display it as living art.
 ### Capabilities
 
 **Share Links (US-8.1)**
-- [ ] Generate shareable link to constellation
-- [ ] Read-only view for recipients (no account required)
-- [ ] Only public content visible in shared view
-- [ ] Link expiration settings
-- [ ] Revoke link at any time
+- [ ] Generate shareable link to constellation - *Not implemented*
+- [ ] Read-only view for recipients (no account required) - *Not implemented*
+- [ ] Only public content visible in shared view - *Not implemented*
+- [ ] Link expiration settings - *Not implemented*
+- [ ] Revoke link at any time - *Not implemented*
 
 **Digital Frame Mode (US-8.2)**
-- [ ] Passive display mode with ambient animation
-- [ ] Auto-rotation through the constellation
-- [ ] Screensaver-style navigation
-- [ ] Cast to TV/display devices
-- [ ] Scheduled display times
+- [ ] Passive display mode with ambient animation - *Not implemented*
+- [ ] Auto-rotation through the constellation - *Not implemented*
+- [ ] Screensaver-style navigation - *Not implemented*
+- [ ] Cast to TV/display devices - *Not implemented*
+- [ ] Scheduled display times - *Not implemented*
+
+### Implementation Status
+**Schema only.** The `ShareLink` model exists in Prisma schema with token and expiration fields, but no UI or share viewing has been built.
 
 ### Decisions
 
@@ -374,13 +393,13 @@ Share your constellation with others and display it as living art.
 Find people and content within your constellation quickly.
 
 ### Capabilities
-- [ ] Global search bar prominently placed (US-6.1)
-- [ ] Search by name with fuzzy matching for typos
-- [ ] Search by date, location, content
-- [ ] Results show matching people and content
-- [ ] Click result to navigate to person in constellation
-- [ ] Browse/filter by surname (US-6.2)
-- [ ] Surname list with counts per surname
+- [x] Global search bar prominently placed (US-6.1) - `search-bar.tsx`
+- [x] Search by name with fuzzy matching for typos - pg_trgm via `search-resolvers.ts`
+- [x] Search by date, location, content
+- [x] Results show matching people and content
+- [x] Click result to navigate to person in constellation
+- [ ] Browse/filter by surname (US-6.2) - *Not implemented*
+- [ ] Surname list with counts per surname - *Not implemented*
 
 ### Decisions
 
@@ -400,13 +419,16 @@ Find people and content within your constellation quickly.
 Traditional family tree visualization as an alternative to the 3D constellation. Best suited for data entry, editing, and relationship management (US-2.6).
 
 ### Capabilities
-- [ ] Toggle between 3D Constellation and 2D Tree views
-- [ ] Traditional pedigree/descendant tree layout
-- [ ] Same data as 3D view, stays in sync
-- [ ] Optimized for data entry and editing
-- [ ] Better for managing complex relationships
-- [ ] User's view preference persists across sessions
-- [ ] Profile panel works identically in both views
+- [ ] Toggle between 3D Constellation and 2D Tree views - *Not implemented*
+- [ ] Traditional pedigree/descendant tree layout - *Not implemented*
+- [ ] Same data as 3D view, stays in sync - *Not implemented*
+- [ ] Optimized for data entry and editing - *Not implemented*
+- [ ] Better for managing complex relationships - *Not implemented*
+- [ ] User's view preference persists across sessions - *Not implemented*
+- [ ] Profile panel works identically in both views - *Not implemented*
+
+### Implementation Status
+**Not started.** No 2D tree view has been built. The d3-dag library is not yet added as a dependency.
 
 ### Use Cases
 - **3D Constellation**: Exploration, emotional impact, seeing the big picture, showing to family
@@ -432,37 +454,33 @@ First-run experience that guides new users from account creation through buildin
 ### Capabilities
 
 **Account Creation (US-1.1)**
-- [ ] Sign up with email/password via Firebase Auth
-- [ ] Account creation in under 30 seconds
-- [ ] Immediately route to tour/wizard choice
+- [x] Sign up with email/password via Firebase Auth
+- [x] Account creation in under 30 seconds
+- [x] Immediately route to tour/wizard choice
 
 **Sample Constellation Tour (US-1.2)**
-- [ ] Optional guided tour of sample constellation
-- [ ] Pre-built sample with rich content (photos, notes, events)
-- [ ] Camera flythrough with automatic movements
-- [ ] Tutorial callouts explaining key features:
-  - "Each star represents a person in your family"
-  - "Brighter stars have richer stories"
-  - "Orbiting satellites show life events"
-  - "Click to see their profile and timeline"
-- [ ] Can skip directly to wizard at any time
-- [ ] Tour duration: 60-90 seconds
+- [ ] Optional guided tour of sample constellation - *Not implemented*
+- [x] Pre-built sample with rich content (template seeding exists)
+- [ ] Camera flythrough with automatic movements - *Not implemented*
+- [ ] Tutorial callouts explaining key features - *Not implemented*
+- [ ] Can skip directly to wizard at any time - *Not implemented*
+- [ ] Tour duration: 60-90 seconds - *Not implemented*
 
 **First-Run Wizard (US-1.3, US-1.4, US-1.5)**
-- [ ] Step 1: Add yourself (name required, birth date and photo optional)
-- [ ] Step 2: Add parents (name required each, living/deceased, dates optional)
-- [ ] Step 3: Add grandparents (optional, shows which can be added based on parents)
-- [ ] Stars appear and connect in real-time as each person is added
-- [ ] Can skip parents or grandparents
-- [ ] Warm, encouraging tone throughout
+- [x] Step 1: Add yourself (name required, birth date and photo optional)
+- [x] Step 2: Add parents (name required each, living/deceased, dates optional)
+- [x] Step 3: Add grandparents (optional, shows which can be added based on parents)
+- [x] Stars appear and connect in real-time as each person is added
+- [x] Can skip parents or grandparents
+- [x] Warm, encouraging tone throughout
 
 **"Aha Moment" (US-1.6)**
-- [ ] Triggers when wizard completes (minimum: self + 1 parent)
-- [ ] Camera smoothly pulls back to reveal full constellation
-- [ ] Stars connected by glowing lines
-- [ ] Brief pause (2-3 seconds) to let the view sink in
-- [ ] Message: "This is the beginning of your family constellation"
-- [ ] Call to action: "Explore" or "Keep adding family"
+- [x] Triggers when wizard completes (minimum: self + 1 parent)
+- [x] Camera smoothly pulls back to reveal full constellation (`camera-animation.ts`)
+- [x] Stars connected by glowing lines
+- [x] Brief pause (2-3 seconds) to let the view sink in
+- [x] Message: "This is the beginning of your family constellation"
+- [x] Call to action: "Explore" or "Keep adding family"
 
 ### Wireframe References
 - Wireframes TBD: Tour flow, wizard steps, aha moment
@@ -492,28 +510,28 @@ Core CRUD operations for managing people in the constellation: adding, editing, 
 ### Capabilities
 
 **Add a Person (US-2.1)**
-- [ ] Add person from selected person ("Add parent", "Add child", "Add spouse")
-- [ ] Add unconnected person and link later
-- [ ] Required: name only
-- [ ] Optional: birth date, death date, birthplace, photo
-- [ ] Person immediately appears in constellation/tree view
+- [x] Add person from selected person ("Add parent", "Add child", "Add spouse")
+- [x] Add unconnected person and link later
+- [x] Required: name only
+- [x] Optional: birth date, death date, birthplace, photo
+- [x] Person immediately appears in constellation/tree view
 
 **Delete a Person (US-2.4)**
-- [ ] Delete option in person profile
-- [ ] Confirmation dialog explaining impact
-- [ ] Relationships to deleted person are removed
-- [ ] Associated content (notes, events, media) deleted with the person
-- [ ] Soft delete with 30-day recovery period
+- [x] Delete option in person profile
+- [x] Confirmation dialog explaining impact
+- [x] Relationships to deleted person are removed
+- [x] Associated content (notes, events, media) deleted with the person
+- [x] Soft delete with 30-day recovery period (`deletedAt` field)
 
 **Manage Relationships (US-2.5)**
-- [ ] Set parent-child relationships (biological)
-- [ ] Mark parent-child as "adoptive" relationship
-- [ ] Set spouse/partner relationships
-- [ ] Set relationship dates (marriage date, divorce date)
-- [ ] Sibling relationships inferred from shared parents
-- [ ] Step-relationships inferred from parent's spouse
-- [ ] Relationships visualized as connecting lines
-- [ ] Remove relationships
+- [x] Set parent-child relationships (biological)
+- [x] Mark parent-child as "adoptive" relationship
+- [x] Set spouse/partner relationships
+- [x] Set relationship dates (marriage date, divorce date)
+- [x] Sibling relationships inferred from shared parents
+- [x] Step-relationships inferred from parent's spouse
+- [x] Relationships visualized as connecting lines
+- [x] Remove relationships
 
 ### Decisions
 
@@ -536,46 +554,42 @@ User account management including profile settings, security, notifications, and
 ### Capabilities
 
 **Profile & Security (US-9.1)**
-- [ ] Change email address (requires verification)
-- [ ] Change password
-- [ ] View account creation date
-- [ ] View last login date
+- [x] Change email address (requires verification)
+- [x] Change password
+- [x] View account creation date
+- [x] View last login date
 
 **Password Reset (US-1.7)**
-- [ ] "Forgot password?" link on login page
-- [ ] Enter email to receive reset link
-- [ ] Reset link expires after 24 hours
-- [ ] Can set new password from link
-- [ ] Confirmation message after successful reset
-- [ ] Email notification that password was changed
+- [x] "Forgot password?" link on login page
+- [x] Enter email to receive reset link (Firebase Auth)
+- [x] Reset link expires after 24 hours
+- [x] Can set new password from link
+- [x] Confirmation message after successful reset
+- [x] Email notification that password was changed
 
 **Notification Preferences**
-- [ ] Email notifications toggle (global)
-- [ ] Per-type notification settings:
-  - Connection requests
-  - Match suggestions
-  - Shared content updates
-  - Payment/billing alerts
-- [ ] Email digest frequency (immediate, daily, weekly)
+- [ ] Email notifications toggle (global) - *Not implemented*
+- [ ] Per-type notification settings - *Not implemented*
+- [ ] Email digest frequency (immediate, daily, weekly) - *Not implemented*
 
 **Default Privacy (US-9.2)**
-- [ ] Set default privacy level for new content (Private, Connections, Public)
-- [ ] Applies to new notes, events, and media
-- [ ] Can always override per item when creating/editing
-- [ ] Clear explanation of each privacy level
+- [x] Set default privacy level for new content (Private, Connections, Public)
+- [x] Applies to new notes, events, and media
+- [x] Can always override per item when creating/editing
+- [x] Clear explanation of each privacy level
 
 **Usage & Quota (US-10.5 related)**
-- [ ] View current plan (Free/Premium)
-- [ ] View usage against limits (people count, AI operations, storage)
-- [ ] Visual progress bars for quotas
-- [ ] Warning when approaching limits (80% threshold)
+- [x] View current plan (Free/Premium) - schema has `usageTracking`
+- [ ] View usage against limits (people count, AI operations, storage) - *UI not implemented*
+- [ ] Visual progress bars for quotas - *Not implemented*
+- [ ] Warning when approaching limits (80% threshold) - *Not implemented*
 
 **Account Deletion**
-- [ ] Delete account option with clear warnings
-- [ ] Requires password confirmation
-- [ ] 14-day grace period before permanent deletion
-- [ ] Can cancel deletion during grace period
-- [ ] All data permanently removed after grace period
+- [ ] Delete account option with clear warnings - *Not implemented*
+- [ ] Requires password confirmation - *Not implemented*
+- [ ] 14-day grace period before permanent deletion - *Schema ready*
+- [ ] Can cancel deletion during grace period - *Not implemented*
+- [ ] All data permanently removed after grace period - *Not implemented*
 
 ### Decisions
 
@@ -598,37 +612,40 @@ Subscription management using LemonSqueezy as Merchant of Record for payment pro
 ### Capabilities
 
 **View Plans (US-10.1)**
-- [ ] Clear comparison of Free vs Premium tiers
-- [ ] Feature list for each tier
-- [ ] Pricing displayed prominently ($9.99/month or $99/year)
-- [ ] "Current plan" indicator for logged-in users
-- [ ] Annual discount visible ("Save 17% with annual billing")
+- [ ] Clear comparison of Free vs Premium tiers - *Not implemented*
+- [ ] Feature list for each tier - *Not implemented*
+- [ ] Pricing displayed prominently ($9.99/month or $99/year) - *Not implemented*
+- [ ] "Current plan" indicator for logged-in users - *Not implemented*
+- [ ] Annual discount visible ("Save 17% with annual billing") - *Not implemented*
 
 **Subscribe to Premium (US-10.2)**
-- [ ] LemonSqueezy Checkout integration
-- [ ] Monthly and annual billing options
-- [ ] Immediate access to premium features after payment
-- [ ] Confirmation email with receipt
+- [ ] LemonSqueezy Checkout integration - *Not implemented*
+- [ ] Monthly and annual billing options - *Not implemented*
+- [ ] Immediate access to premium features after payment - *Not implemented*
+- [ ] Confirmation email with receipt - *Not implemented*
 
 **Manage Subscription (US-10.3)**
-- [ ] View current plan and billing cycle
-- [ ] See next billing date and amount
-- [ ] Update payment method via LemonSqueezy Customer Portal
-- [ ] View billing history and download invoices
-- [ ] Cancel subscription (effective at end of billing period)
-- [ ] Reactivate cancelled subscription before period ends
+- [ ] View current plan and billing cycle - *Not implemented*
+- [ ] See next billing date and amount - *Not implemented*
+- [ ] Update payment method via LemonSqueezy Customer Portal - *Not implemented*
+- [ ] View billing history and download invoices - *Not implemented*
+- [ ] Cancel subscription (effective at end of billing period) - *Not implemented*
+- [ ] Reactivate cancelled subscription before period ends - *Not implemented*
 
 **Handle Subscription Changes (US-10.4)**
-- [ ] Webhook handlers for LemonSqueezy events
-- [ ] Grace period for failed payments (7 days)
-- [ ] Email notifications for payment issues
-- [ ] Automatic downgrade preserves data (just limits features)
+- [ ] Webhook handlers for LemonSqueezy events - *Not implemented*
+- [ ] Grace period for failed payments (7 days) - *Not implemented*
+- [ ] Email notifications for payment issues - *Not implemented*
+- [ ] Automatic downgrade preserves data (just limits features) - *Not implemented*
 
 **Free Tier Limits (US-10.5)**
-- [ ] Clear display of limits with progress indicators
-- [ ] Warning when approaching limits (80% threshold)
-- [ ] Graceful handling when limit reached (prompt to upgrade, don't lose work)
-- [ ] Upgrade prompts at natural moments (not intrusive)
+- [ ] Clear display of limits with progress indicators - *Not implemented*
+- [ ] Warning when approaching limits (80% threshold) - *Not implemented*
+- [ ] Graceful handling when limit reached (prompt to upgrade, don't lose work) - *Not implemented*
+- [ ] Upgrade prompts at natural moments (not intrusive) - *Not implemented*
+
+### Implementation Status
+**Not started.** LemonSqueezy has not been integrated. No payment provider dependencies are installed. The `SubscriptionInfo` type exists in the schema but no billing logic has been built.
 
 ### Pricing Tiers
 
@@ -668,4 +685,4 @@ Subscription management using LemonSqueezy as Merchant of Record for payment pro
 
 ---
 
-*Status: Complete - Last Updated: 2026-01-11*
+*Status: Implementation in Progress - Last Updated: 2026-01-18*

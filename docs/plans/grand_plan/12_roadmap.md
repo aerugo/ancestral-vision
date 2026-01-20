@@ -1,6 +1,7 @@
 # Ancestral Vision: Development Roadmap
 
-> **Status**: COMPLETE - All phases defined, decisions resolved
+> **Status**: IMPLEMENTATION IN PROGRESS
+> **Updated**: 2026-01-18
 
 This document outlines the development roadmap for Ancestral Vision.
 
@@ -20,64 +21,66 @@ This document outlines the development roadmap for Ancestral Vision.
 
 | Phase | Name | Focus | Status |
 |-------|------|-------|--------|
-| 0 | Foundation | Architecture, infrastructure, auth | Not Started |
-| 1 | MVP (Closed Beta) | Core experience + content + billing | Not Started |
-| 2 | AI Enhancement | Discovery, biography, transcription | Not Started |
-| 3 | Social & Matching | Connections, tree matching | Not Started |
-| 4 | Polish & Advanced | Performance, frame mode, speculation | Not Started |
+| 0 | Foundation | Architecture, infrastructure, auth | ✅ **COMPLETE** |
+| 1 | MVP (Closed Beta) | Core experience + content + billing | ⚠️ **~75% Complete** |
+| 2 | AI Enhancement | Discovery, biography, transcription | ❌ Not Started |
+| 3 | Social & Matching | Connections, tree matching | ⚠️ Schema only (~20%) |
+| 4 | Polish & Advanced | Performance, frame mode, speculation | ⚠️ Partial (~25%) |
+
+**See also**: [roadmap-progress.md](../../reference/roadmap-progress.md) for detailed tracking.
 
 ---
 
-## Phase 0: Foundation
+## Phase 0: Foundation ✅ COMPLETE
 
 ### Goals
-- Establish technical architecture per [07_technology_decisions.md](07_technology_decisions.md)
-- Set up GCP infrastructure per [11_deployment_operations.md](11_deployment_operations.md)
-- Implement Firebase Auth
-- Create development workflow with CI/CD
+- ~~Establish technical architecture per [07_technology_decisions.md](07_technology_decisions.md)~~ ✅
+- ~~Set up GCP infrastructure per [11_deployment_operations.md](11_deployment_operations.md)~~ ✅
+- ~~Implement Firebase Auth~~ ✅
+- ~~Create development workflow with CI/CD~~ ✅
 
 ### Deliverables
 
 ```markdown
 # Infrastructure
-- [ ] GCP projects created (ancestral-vision-dev, ancestral-vision-prod)
-- [ ] Cloud Run service configured
-- [ ] Cloud SQL PostgreSQL provisioned
-- [ ] Cloud Storage buckets created
-- [ ] Secret Manager populated
-- [ ] Cloud Build CI/CD pipeline operational
+- [x] GCP projects created (ancestral-vision)
+- [x] Cloud Run service configured
+- [x] Cloud SQL PostgreSQL provisioned
+- [x] Cloud Storage buckets created
+- [x] Secret Manager populated
+- [x] Cloud Build CI/CD pipeline operational
 
 # Development Environment
-- [ ] Docker Compose for local PostgreSQL
-- [ ] Firebase Emulator configured
-- [ ] Environment variables documented (.env.local, .env.production)
-- [ ] npm scripts: dev, build, test, lint, typecheck
+- [x] Docker Compose for local PostgreSQL
+- [x] Firebase Emulator configured
+- [x] Environment variables documented (.env.local, .env.production)
+- [x] npm scripts: dev, build, test, lint, typecheck
 
 # Application Foundation
-- [ ] Next.js 14+ app scaffold with App Router
-- [ ] GraphQL Yoga API route (/api/graphql)
-- [ ] Prisma schema v1 with core entities (User, Constellation, Person)
-- [ ] Firebase Auth integration (register, login, logout, password reset)
-- [ ] TanStack Query + Zustand state management setup
-- [ ] Tailwind CSS + shadcn/ui component library configured
+- [x] Next.js 16+ app scaffold with App Router
+- [x] GraphQL Yoga API route (/api/graphql)
+- [x] Prisma schema with 20+ entities
+- [x] Firebase Auth integration (register, login, logout, password reset)
+- [x] TanStack Query + Zustand state management setup
+- [x] Tailwind CSS + shadcn/ui component library configured
 
 # 3D Foundation
-- [ ] Three.js integration from reference_prototypes/family-constellations/
-- [ ] WebGPU renderer with WebGL fallback
-- [ ] Basic scene rendering with placeholder data
-- [ ] Camera controls (orbit, zoom, pan)
+- [x] Three.js integration (rewritten, not ported)
+- [x] WebGPU-only renderer (WebGL fallback deprecated)
+- [x] Full constellation rendering with production data
+- [x] Camera controls (orbit, zoom, pan)
 ```
 
 ### User Stories Addressed
-- US-1.1: Account Creation (partial - auth infrastructure)
-- US-1.7: Password Reset
+- ✅ US-1.1: Account Creation (partial - auth infrastructure)
+- ✅ US-1.7: Password Reset
 
-### Definition of Done
-- Can register, login, logout via Firebase Auth
-- Can deploy to Cloud Run (dev environment)
-- Basic 3D scene renders with placeholder constellation
-- GraphQL playground accessible at /api/graphql
-- All CI checks pass (lint, typecheck, test)
+### Definition of Done - ALL MET
+- ✅ Can register, login, logout via Firebase Auth
+- ✅ Can deploy to Cloud Run (dev environment)
+- ✅ Basic 3D scene renders with placeholder constellation
+- ✅ GraphQL playground accessible at /api/graphql
+- ✅ All CI checks pass (lint, typecheck, test)
 
 ### Technical References
 - Auth: [07_technology_decisions.md](07_technology_decisions.md) A1-A2
@@ -86,69 +89,69 @@ This document outlines the development roadmap for Ancestral Vision.
 
 ---
 
-## Phase 1: MVP (Closed Beta)
+## Phase 1: MVP (Closed Beta) ⚠️ ~75% COMPLETE
 
 ### Goals
-- Complete single-player experience for closed beta launch
-- Users can create constellation, add people, write content
-- Subscription/billing operational
-- "Richer MVP" scope: Core + Content + Billing
+- ~~Complete single-player experience for closed beta launch~~ ✅ Core done
+- ~~Users can create constellation, add people, write content~~ ✅ Done
+- Subscription/billing operational ❌ **NOT STARTED**
+- "Richer MVP" scope: Core + Content + Billing ⚠️ Missing billing
 
 ### Deliverables
 
 ```markdown
 # Onboarding (US-1.x)
-- [ ] First-run wizard: Add yourself (US-1.3)
-- [ ] First-run wizard: Add parents (US-1.4)
-- [ ] First-run wizard: Add grandparents optional (US-1.5)
-- [ ] "Aha moment" constellation reveal (US-1.6)
-- [ ] Beta waitlist landing page
-- [ ] Beta invite system
+- [x] First-run wizard: Add yourself (US-1.3)
+- [x] First-run wizard: Add parents (US-1.4)
+- [x] First-run wizard: Add grandparents optional (US-1.5)
+- [x] "Aha moment" constellation reveal (US-1.6)
+- [ ] Beta waitlist landing page ❌
+- [ ] Beta invite system ❌
 
 # Person Management (US-2.x)
-- [ ] Create person (contextual + global) (US-2.1)
-- [ ] Edit person details with auto-save (US-2.2)
-- [ ] Upload person photo with cropping (US-2.3)
-- [ ] Delete person (soft delete, 30-day recovery) (US-2.4)
-- [ ] Manage relationships: parent-child, spouse, adoptive (US-2.5)
-- [ ] International name support (patronymic, Eastern names)
+- [x] Create person (contextual + global) (US-2.1)
+- [x] Edit person details with auto-save (US-2.2)
+- [x] Upload person photo with cropping (US-2.3)
+- [x] Delete person (soft delete, 30-day recovery) (US-2.4)
+- [x] Manage relationships: parent-child, spouse, adoptive (US-2.5)
+- [x] International name support (patronymic, Eastern names)
 
 # 3D Constellation (US-4.x)
-- [ ] Navigate constellation (rotate, zoom, pan) (US-4.1)
-- [ ] Click to select person, camera animation (US-4.2)
-- [ ] Biography weight → star brightness (US-4.3)
-- [ ] Generation-based mandala layout (US-4.4)
-- [ ] Dark theme (cosmic) default
-- [ ] Connected people highlighting on selection
+- [x] Navigate constellation (rotate, zoom, pan) (US-4.1)
+- [x] Click to select person, camera animation (US-4.2)
+- [x] Biography weight → star brightness (US-4.3)
+- [x] Generation-based mandala layout (US-4.4)
+- [x] Dark theme (cosmic) default
+- [x] Connected people highlighting on selection
 
 # Person Profile Panel
-- [ ] Slide-in panel with person details
-- [ ] Tabbed interface: Events, Notes, Photos
-- [ ] Immediate family members display
-- [ ] Edit mode with inline editing
+- [x] Slide-in panel with person details
+- [x] Tabbed interface: Events, Notes, Photos
+- [x] Immediate family members display
+- [x] Edit mode with inline editing
 
 # Content (US-3.x partial)
-- [ ] Notes: Create, edit, delete with Tiptap rich text (US-3.1)
-- [ ] Notes: 50,000 char limit, version history (last 10)
-- [ ] Events: Create freeform events with flexible dates (US-3.4)
-- [ ] Events: Shared events with multiple participants (US-3.5)
-- [ ] Media: Photo upload with thumbnails (US-3.6 partial)
-- [ ] Media: Document upload (PDF)
-- [ ] Privacy levels per item (private, connections, public) (US-3.8)
+- [x] Notes: Create, edit, delete with Tiptap rich text (US-3.1)
+- [x] Notes: 50,000 char limit, version history (last 10)
+- [x] Events: Create freeform events with flexible dates (US-3.4)
+- [x] Events: Shared events with multiple participants (US-3.5)
+- [x] Media: Photo upload with thumbnails (US-3.6 partial)
+- [x] Media: Document upload (PDF)
+- [x] Privacy levels per item (private, connections, public) (US-3.8)
 
 # Search (US-6.x)
-- [ ] Global search bar (US-6.1)
-- [ ] Fuzzy name search (pg_trgm)
-- [ ] Search results with navigation to person
+- [x] Global search bar (US-6.1)
+- [x] Fuzzy name search (pg_trgm)
+- [x] Search results with navigation to person
 
 # Account & Settings (US-9.x)
-- [ ] Account settings page (US-9.1)
-- [ ] Change email, password
-- [ ] Default privacy setting (US-9.2)
-- [ ] Theme preference (dark/light/system)
-- [ ] Request account deletion (14-day grace)
+- [x] Account settings page (US-9.1)
+- [x] Change email, password
+- [x] Default privacy setting (US-9.2)
+- [x] Theme preference (dark/light/system)
+- [ ] Request account deletion (14-day grace) ❌
 
-# Subscription & Billing (US-10.x)
+# Subscription & Billing (US-10.x) ❌ NOT STARTED
 - [ ] Pricing page: Free vs Premium comparison (US-10.1)
 - [ ] LemonSqueezy Checkout integration (US-10.2)
 - [ ] LemonSqueezy Customer Portal link (US-10.3)
@@ -157,25 +160,25 @@ This document outlines the development roadmap for Ancestral Vision.
 - [ ] Quota warnings at 80% threshold
 - [ ] Graceful limit handling (prompt upgrade, don't lose work)
 
-# Data & Export
+# Data & Export ❌ NOT STARTED
 - [ ] GEDCOM export
 - [ ] JSON export
 ```
 
 ### User Stories Addressed
-- **Must Have**: US-1.1, US-1.3-1.6, US-1.7, US-2.1, US-2.2, US-2.5, US-4.1, US-4.2, US-4.4, US-6.1, US-9.1
-- **Should Have (partial)**: US-2.3, US-2.4, US-3.1, US-3.4, US-3.5, US-3.6, US-3.8, US-4.3, US-9.2, US-10.1-10.5
+- **Must Have**: ✅ US-1.1, ✅ US-1.3-1.6, ✅ US-1.7, ✅ US-2.1, ✅ US-2.2, ✅ US-2.5, ✅ US-4.1, ✅ US-4.2, ✅ US-4.4, ✅ US-6.1, ✅ US-9.1
+- **Should Have (partial)**: ✅ US-2.3, ✅ US-2.4, ✅ US-3.1, ✅ US-3.4, ✅ US-3.5, ✅ US-3.6, ✅ US-3.8, ✅ US-4.3, ✅ US-9.2, ❌ US-10.1-10.5
 
 ### Definition of Done
-- New user can complete onboarding wizard
-- Can create constellation with 50+ people (free tier limit)
-- Can navigate 3D constellation smoothly (60fps desktop)
-- Can write notes and add events to people
-- Can upload photos and documents
-- Can search and find people
-- Can subscribe to Premium via LemonSqueezy
-- Can export data as GEDCOM
-- Closed beta invites working
+- ✅ New user can complete onboarding wizard
+- ✅ Can create constellation with 50+ people (free tier limit)
+- ✅ Can navigate 3D constellation smoothly (60fps desktop)
+- ✅ Can write notes and add events to people
+- ✅ Can upload photos and documents
+- ✅ Can search and find people
+- ❌ Can subscribe to Premium via LemonSqueezy
+- ❌ Can export data as GEDCOM
+- ❌ Closed beta invites working
 
 ### Success Metrics
 - Onboarding completion rate >70%
@@ -679,4 +682,4 @@ FEATURE_SPECULATION=false
 
 ---
 
-*Status: Complete - All decisions resolved 2026-01-12*
+*Status: Implementation in progress - Phase 0 complete, Phase 1 ~75% - Updated 2026-01-18*

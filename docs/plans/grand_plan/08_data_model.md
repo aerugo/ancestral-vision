@@ -1,8 +1,11 @@
 # Ancestral Vision: Data Model Specification
 
-> **Status**: COMPLETE - All entities and decisions finalized
+> **Status**: IMPLEMENTED - Schema in production at `prisma/schema.prisma`
+> **Updated**: 2026-01-18
 
 This document defines the data model for Ancestral Vision using PostgreSQL with Prisma ORM.
+
+**Implementation**: The full schema is implemented in `prisma/schema.prisma` with 20+ models and comprehensive relationships.
 
 ---
 
@@ -1438,4 +1441,4 @@ All data model decisions are documented inline with each entity. Key decisions:
 
 ---
 
-*Status: Complete - All decisions resolved 2026-01-11*
+*Status: Implemented - Schema in production at `prisma/schema.prisma` - Updated 2026-01-18*

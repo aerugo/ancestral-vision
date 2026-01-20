@@ -1,6 +1,7 @@
 # Ancestral Vision: Technology Decisions
 
-> **Status**: COMPLETE - All decisions resolved
+> **Status**: IMPLEMENTED - All decisions resolved and implemented (except AI/Billing)
+> **Updated**: 2026-01-18
 
 This document tracks all technology decisions for Ancestral Vision.
 
@@ -134,9 +135,9 @@ These decisions were made upfront:
 
 ### F7: 3D Technology
 
-**Status**: DECIDED
+**Status**: DECIDED → **IMPLEMENTED**
 
-**Decision**: **WebGPU with WebGL fallback**
+**Decision**: **WebGPU only** (WebGL fallback deprecated)
 
 **Rationale**:
 - WebGPU enables 10x particle performance via compute shaders
@@ -144,7 +145,12 @@ These decisions were made upfront:
 - Browser support mature in 2026 (Chrome, Edge, Firefox, Safari)
 - Aligns with existing visual-modernization-plan.md
 - Positions Ancestral Vision as a WebGPU showcase project
-- Automatic WebGL fallback for edge cases
+
+**Implementation Notes**:
+- Three.js 0.182.0 with `three/webgpu` imports
+- All materials written in TSL (`src/visualization/materials/`)
+- WebGL fallback was initially planned but deprecated for simplicity
+- Post-processing via TSL pipeline (`src/visualization/tsl-pipeline/`)
 
 ---
 
@@ -722,63 +728,63 @@ npm run dev:full
 ## Summary: Complete Tech Stack
 
 ### Frontend
-| Layer | Technology |
-|-------|------------|
-| Framework | React |
-| Meta-Framework | Next.js |
-| State (Server) | TanStack Query |
-| State (Client) | Zustand |
-| Styling | Tailwind CSS |
-| Components | shadcn/ui |
-| Rich Text | Tiptap |
-| 3D Rendering | WebGPU + Three.js (WebGL fallback) |
+| Layer | Technology | Version | Implemented |
+|-------|------------|---------|-------------|
+| Framework | React | 19.2.3 | ✅ |
+| Meta-Framework | Next.js | 16.1.1 | ✅ |
+| State (Server) | TanStack Query | 5.90.16 | ✅ |
+| State (Client) | Zustand | 5.0.10 | ✅ |
+| Styling | Tailwind CSS | 4.1.18 | ✅ |
+| Components | shadcn/ui (Radix) | Latest | ✅ |
+| Rich Text | Tiptap | 3.15.3 | ✅ |
+| 3D Rendering | Three.js WebGPU (TSL) | 0.182.0 | ✅ |
 
 ### Backend
-| Layer | Technology |
-|-------|------------|
-| API | GraphQL (Yoga) |
-| Runtime | Next.js API Routes |
-| Database | PostgreSQL (Cloud SQL) |
-| ORM | Prisma |
-| Search | PostgreSQL full-text |
-| Real-time | GraphQL Subscriptions |
+| Layer | Technology | Version | Implemented |
+|-------|------------|---------|-------------|
+| API | GraphQL Yoga | 5.18.0 | ✅ |
+| Runtime | Next.js API Routes | 16.1.1 | ✅ |
+| Database | PostgreSQL (Cloud SQL) | 16 | ✅ |
+| ORM | Prisma | 6.19.1 | ✅ |
+| Search | PostgreSQL full-text (pg_trgm) | - | ✅ |
+| Real-time | GraphQL Subscriptions | - | ⚠️ Schema ready |
 
 ### Auth, Payments & AI
-| Layer | Technology |
-|-------|------------|
-| Authentication | Firebase Auth |
-| Authorization | Ownership + Resource Privacy |
-| Payments | LemonSqueezy (MoR) |
-| AI Platform | Vertex AI |
-| AI Framework | Genkit |
-| Prompts | Vertex AI Prompt Management |
-| Speech-to-Text | Google Chirp 3 (with diarization) |
+| Layer | Technology | Version | Implemented |
+|-------|------------|---------|-------------|
+| Authentication | Firebase Auth | 12.7.0 | ✅ |
+| Authorization | Ownership + Resource Privacy | - | ✅ |
+| Payments | LemonSqueezy (MoR) | - | ❌ Not started |
+| AI Platform | Vertex AI | - | ❌ Not started |
+| AI Framework | Genkit | - | ❌ Not started |
+| Prompts | Vertex AI Prompt Management | - | ❌ Not started |
+| Speech-to-Text | Google Chirp 3 | - | ❌ Not started |
 
 ### Infrastructure
-| Layer | Technology |
-|-------|------------|
-| Compute | Cloud Run |
-| File Storage | Cloud Storage (GCS) |
-| Email | Resend |
-| CDN | Cloud CDN |
-| Logging | Cloud Logging |
-| Monitoring | Cloud Monitoring |
-| Errors | Cloud Error Reporting |
+| Layer | Technology | Implemented |
+|-------|------------|-------------|
+| Compute | Cloud Run | ✅ |
+| File Storage | Cloud Storage (GCS) | ✅ Configured |
+| Email | Resend | ❌ Not started |
+| CDN | Cloud CDN | ⚠️ Configured |
+| Logging | Cloud Logging | ✅ |
+| Monitoring | Cloud Monitoring | ✅ |
+| Errors | Cloud Error Reporting | ✅ |
 
 ### Testing
-| Layer | Technology |
-|-------|------------|
-| Unit Tests | Vitest |
-| E2E Tests | Playwright |
+| Layer | Technology | Version | Implemented |
+|-------|------------|---------|-------------|
+| Unit Tests | Vitest | 4.0.17 | ✅ (103 test files) |
+| E2E Tests | Playwright | - | ⚠️ Configured |
 
 ### Local Development
-| Layer | Technology |
-|-------|------------|
-| Database | Docker PostgreSQL |
-| Auth | Firebase Emulator |
-| AI | Google AI Studio API |
-| Storage | Local filesystem |
+| Layer | Technology | Implemented |
+|-------|------------|-------------|
+| Database | Docker PostgreSQL | ✅ |
+| Auth | Firebase Emulator | ✅ |
+| AI | Google AI Studio API | ❌ Not configured |
+| Storage | Local filesystem | ✅ |
 
 ---
 
-*Status: Complete - All decisions resolved 2026-01-11*
+*Status: Implemented - All core decisions in production, AI/Billing pending - Updated 2026-01-18*

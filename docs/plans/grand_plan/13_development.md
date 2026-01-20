@@ -1,8 +1,11 @@
 # Ancestral Vision: Development Principles & Protocols
 
-> **Status**: COMPLETE - Development workflow and principles defined
+> **Status**: IMPLEMENTED - Development workflow operational
+> **Updated**: 2026-01-18
 
 This document defines the development methodology for Ancestral Vision, optimized for AI-augmented development with Claude Code.
+
+**Implementation**: The methodology is fully operational with 10+ completed implementation plans in `docs/plans/completed/`.
 
 ---
 
@@ -199,17 +202,20 @@ Code patterns and examples.
 Commands to verify work.
 ```
 
-**Required Agents for Ancestral Vision**:
+**Implemented Agents for Ancestral Vision** (in `.claude/agents/`):
 
 | Agent | Purpose | Model |
 |-------|---------|-------|
-| `typescript-stylist` | Type safety, code style | sonnet |
-| `test-engineer` | Test design and implementation | sonnet |
-| `threejs-engineer` | 3D visualization, shaders | sonnet |
-| `graphql-architect` | Schema design, resolvers | sonnet |
+| `typescript-stylist` | Type safety, code patterns | sonnet |
+| `test-engineer` | Vitest, TDD workflow | sonnet |
+| `threejs-engineer` | 3D scenes, cameras, controls | sonnet |
+| `webgpu-specialist` | WebGPU, TSL, WebGPURenderer | sonnet |
+| `graphql-architect` | GraphQL Yoga, schema design | sonnet |
 | `prisma-specialist` | Database schema, migrations | sonnet |
-| `infrastructure-ops` | GCP, deployment, MCP | opus |
+| `gcp-architect` | GCP infrastructure, MCP servers | opus |
 | `genkit-agent` | AI flows, Vertex AI | sonnet |
+| `performance-analyst` | 3D/DB optimization | sonnet |
+| `docs-navigator` | Finding documentation | haiku |
 
 ---
 
@@ -707,4 +713,4 @@ jobs:
 
 ---
 
-*Status: Complete - All development principles defined 2026-01-12*
+*Status: Implemented - Development workflow operational with 10+ completed plans - Updated 2026-01-18*

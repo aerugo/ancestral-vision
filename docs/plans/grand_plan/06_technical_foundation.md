@@ -1,147 +1,157 @@
 # Ancestral Vision: Technical Foundation
 
-> **Status**: COMPLETE - Analysis complete, all integration decisions resolved
+> **Status**: IMPLEMENTATION COMPLETE - Updated 2026-01-18
 
-This document analyzes the existing codebases and their applicability to Ancestral Vision.
+This document describes the technical foundation of Ancestral Vision, including the production implementation and reference prototypes.
 
 ---
 
-## Existing Codebases
+## Current Implementation
+
+The production codebase is in `src/` with the following architecture:
+
+| Component | Location | Technology | Status |
+|-----------|----------|------------|--------|
+| Visualization | `src/visualization/` | Three.js + WebGPU (TSL) | ✅ **Production** |
+| GraphQL API | `src/graphql/` | GraphQL Yoga | ✅ **Production** |
+| React Components | `src/components/` | Next.js 16 + React 19 | ✅ **Production** |
+| State Management | `src/store/` | Zustand | ✅ **Production** |
+| Database | `prisma/schema.prisma` | Prisma + PostgreSQL | ✅ **Production** |
+| AI Flows | `src/ai/` | Genkit | ❌ **Not Started** |
+
+## Reference Prototypes
 
 | Codebase | Location | Language | Purpose |
 |----------|----------|----------|---------|
-| 3D Constellation | `reference_prototypes/family-constellations/` | TypeScript | 3D visualization prototype |
-| AI Genealogy | `reference_prototypes/ancestral-synth/` | Python | AI-powered genealogy generation |
+| 3D Constellation | `reference_prototypes/family-constellations/` | TypeScript | Original prototype (superseded) |
+| AI Genealogy | `reference_prototypes/ancestral-synth/` | Python | AI patterns to port to Genkit |
 
 ---
 
-## 6.1 3D Constellation Codebase (`reference_prototypes/family-constellations/`)
+## 6.1 Production Visualization System (`src/visualization/`)
 
-### Stack
-- **TypeScript** (5.3.0) with strict mode
-- **Three.js** (0.170.0) for WebGL rendering
-- **Vite** (5.0.0) for build/dev server
-- **Vitest** (1.1.0) for testing
-- **postprocessing** (6.36.4) for effects
-- **js-yaml** for YAML parsing
+### Stack (Current Production)
+- **TypeScript** (5.9.3) with strict mode
+- **Three.js** (0.182.0) with WebGPU (TSL shaders)
+- **Next.js** (16.1.1) for build/server
+- **Vitest** (4.0.17) for testing
 
 ### Architecture
 
 ```
-reference_prototypes/family-constellations/
-├── src/
-│   ├── main.ts                 # App orchestration, UI (~1246 lines)
-│   ├── types/index.ts          # Core type definitions
-│   ├── graph/graph.ts          # Family graph data structure (~294 lines)
-│   ├── core/
-│   │   ├── layout.ts           # Force-directed layout (~300 lines)
-│   │   └── barnesHut.ts        # O(n log n) spatial partitioning
-│   ├── renderer/
-│   │   ├── ModernRenderer.ts   # 3D rendering + post-processing (~1180 lines)
-│   │   └── AncestralWebRenderer.ts  # Legacy base renderer
-│   ├── shaders/index.ts        # Custom WebGL shaders (~775 lines)
-│   ├── parser/parser.ts        # YAML/JSON parsing (~334 lines)
-│   └── utils/familyGenerator.ts # Test data generation
-├── index.html
-├── package.json
-└── vite.config.ts
+src/visualization/
+├── instanced-constellation.ts   # Main constellation rendering
+├── constellation-pool.ts        # Object pooling for performance
+├── family-graph.ts              # Graph data structure
+├── force-directed-layout.ts     # Force-directed positioning
+├── barnes-hut.ts                # Barnes-Hut optimization
+├── selection.ts                 # Selection and highlighting
+├── camera-animation.ts          # Camera reveal animations
+├── materials/
+│   ├── node-material.ts         # TSL node material
+│   ├── ghost-node-material.ts   # Speculative person material
+│   ├── edge-material.ts         # Connection lines
+│   ├── tsl-cloud-material.ts    # Cloud effect with biography scaling
+│   └── palette.ts               # 5-color system
+├── animation/
+│   ├── core/                    # AnimationSystem, TimeProvider, EventBus
+│   ├── reactive/                # Reactive attribute bindings
+│   ├── transitions/             # Timeline and transition management
+│   ├── loops/                   # Shader loop registry
+│   ├── propagation/             # Cascading animation effects
+│   └── integration/             # React hooks (use-animation-system.ts)
+├── particles/                   # Background particles, fireflies
+├── effects/                     # Sacred geometry grid
+├── tsl-pipeline/                # Post-processing with performance tiers
+├── path-pulse/                  # Path pulse animations
+└── biography-transition/        # Biography reveal metamorphosis
 ```
 
-**Total**: ~6,534 lines of TypeScript
+**Total**: ~21,700 lines of TypeScript (mature, production-quality)
 
-### Key Components
+### Key Components (Production)
 
-#### ModernRenderer
-- Post-processing pipeline: SMAA, Bloom, Vignette
-- Instanced rendering for 2000+ nodes
-- Theme switching (dark cosmic / light manuscript)
-- Sacred geometry background grid
-- Particle systems for ambient effects
+#### InstancedConstellation
+- WebGPU-only rendering via `WebGPURenderer`
+- Instanced mesh management for 1000+ nodes
+- Real-time incremental updates
+- Integration with object pooling system
 
-#### FamilyGraph
-- Node/edge graph representation
-- Generation calculation from centered person
-- Relationship inference (siblings from shared parents)
-- Biography weight calculation
+#### ConstellationPool
+- Game engine-style object pooling
+- Hot-swappable constellation updates
+- Typed pool returns for nodes, edges, particles
 
-#### ForceDirectedLayout
-- 3D force-directed positioning
-- Barnes-Hut optimization for O(n log n) performance
-- Golden angle mandala ring initialization
-- Generation-based layering
+#### Animation System
+- Central `AnimationSystem` with event bus architecture
+- Reactive attribute bindings (similar to reactive frameworks)
+- Biography-to-ghost transitions with reverse capability
+- Sphere shell particles for dissolution effects
+- A/B testing infrastructure for animation modes
 
-#### Shader System
-- Node shaders: Bioluminescent orbs with sacred geometry
-- Edge shaders: Flowing energy with Byzantine patterns
-- Particle shaders: Hexagonal Haeckel shapes
-- Firefly shaders: Event satellites with flickering
+#### TSL Materials (WebGPU)
+- `node-material.ts`: Main star nodes with biography weight scaling
+- `ghost-node-material.ts`: Translucent speculative people
+- `tsl-cloud-material.ts`: Cloud corona effects
+- `edge-material.ts`: Family connection lines
 
-### Data Flow
+### Data Flow (Production)
 
 ```
-YAML/JSON File
+GraphQL API (React Query)
     ↓
-Parser → FamilyData
+Zustand Store (selection, UI state)
     ↓
 FamilyGraph → nodes, edges, generations
     ↓
 ForceDirectedLayout → 3D positions
     ↓
-ModernRenderer → WebGL scene
+ConstellationPool → pooled mesh instances
     ↓
-Post-processing → Screen
+InstancedConstellation → WebGPU scene
+    ↓
+TSL Pipeline → Post-processing
+    ↓
+Screen
 ```
 
-### Reuse Assessment
+### State Management (Implemented)
 
-| Component | Reuse Potential | Modifications Needed |
-|-----------|-----------------|---------------------|
-| ModernRenderer | High | API data loading, user centering |
-| Shaders | High | Minor theme adjustments |
-| FamilyGraph | High | API integration, real-time updates |
-| Layout | High | Incremental layout for additions |
-| Parser | Low | Replace with API client |
-| Main App | Medium | Extract reusable logic, rebuild UI |
+- **Zustand** (`src/store/`): UI state, selection, panel visibility
+- **React Query** (`src/hooks/`): GraphQL data fetching with caching
+- **Animation System**: Internal animation state and transitions
+- **Three.js Scene**: Render state managed by constellation classes
 
-### Integration Decisions
+## 6.1.1 Reference Prototype (`reference_prototypes/family-constellations/`)
 
-**Q6.1.1: Integration approach for 3D code?**
+The original Vite prototype has been **superseded** by the production implementation. Key patterns were ported:
 
-**Decision**: Embed in Next.js app as internal modules
-
-**Rationale**:
-- 3D code is already TypeScript/Three.js - integrates naturally with Next.js
-- Extract reusable components (ModernRenderer, FamilyGraph, Layout) as internal modules
-- No need for npm package since it's internal to the project
-- Can leverage react-three-fiber ecosystem for React integration
+| Original Component | Production Location | Status |
+|-------------------|---------------------|--------|
+| ModernRenderer | `src/visualization/instanced-constellation.ts` | ✅ Ported + enhanced |
+| FamilyGraph | `src/visualization/family-graph.ts` | ✅ Ported |
+| ForceDirectedLayout | `src/visualization/force-directed-layout.ts` | ✅ Ported |
+| Barnes-Hut | `src/visualization/barnes-hut.ts` | ✅ Ported |
+| WebGL Shaders | TSL materials in `src/visualization/materials/` | ✅ Rewritten for WebGPU |
+| Post-processing | `src/visualization/tsl-pipeline/` | ✅ Rewritten for WebGPU |
 
 ---
 
-**Q6.1.2: State management integration?**
+## 6.2 AI Implementation Status
 
-**Decision**: Hybrid - Sync with app state manager (Zustand + TanStack Query)
+### Current Status: NOT STARTED
 
-**Rationale**:
-- Zustand (from same team as react-three-fiber) handles UI state (selected person, camera position, theme)
-- TanStack Query handles server state (family data from GraphQL API)
-- Three.js keeps internal rendering state (scene graph, animation state)
-- Selection/focus changes in 3D sync to Zustand, which triggers UI updates
+The `src/ai/` directory exists but is empty. Firebase and Genkit dependencies are installed but no AI flows have been implemented.
 
----
+**Installed Dependencies**:
+- `firebase` ^12.7.0
+- `firebase-admin` ^13.6.0
 
-**Q6.1.3: Build system unification?**
+**Not Yet Installed** (needed for Genkit):
+- `@genkit-ai/core`
+- `@genkit-ai/googleai` or `@genkit-ai/vertexai`
 
-**Decision**: Migrate to Next.js build
-
-**Rationale**:
-- Next.js is the chosen meta-framework (07_technology_decisions.md F2)
-- Vite prototype build replaced by Next.js webpack/turbopack
-- Unified build pipeline simplifies CI/CD
-- Three.js code becomes regular modules in Next.js app
-
----
-
-## 6.2 AI Genealogy Codebase (`reference_prototypes/ancestral-synth/`)
+## 6.2.1 Reference AI Codebase (`reference_prototypes/ancestral-synth/`)
 
 ### Stack
 - **Python** (3.11+)
@@ -331,37 +341,37 @@ Note:
 
 ---
 
-## 6.3 Gap Analysis
+## 6.3 Implementation Status
 
-### What Exists
+### What's Implemented
 
-| Capability | Source | Status |
-|------------|--------|--------|
-| 3D Visualization | reference_prototypes/family-constellations/ | Production-quality |
-| Force Layout | reference_prototypes/family-constellations/ | Production-quality |
-| Custom Shaders | reference_prototypes/family-constellations/ | Production-quality |
-| Biography Generation | reference_prototypes/ancestral-synth/ | Production-quality |
-| Data Extraction | reference_prototypes/ancestral-synth/ | Production-quality |
-| Deduplication | reference_prototypes/ancestral-synth/ | Production-quality |
-| Validation | reference_prototypes/ancestral-synth/ | Production-quality |
+| Capability | Location | Status |
+|------------|----------|--------|
+| 3D Visualization | `src/visualization/` | ✅ Production |
+| Force Layout | `src/visualization/` | ✅ Production |
+| TSL Shaders (WebGPU) | `src/visualization/materials/` | ✅ Production |
+| Animation System | `src/visualization/animation/` | ✅ Production |
+| Object Pooling | `src/visualization/constellation-pool.ts` | ✅ Production |
+| User Authentication | Firebase Auth + `src/components/providers/` | ✅ Production |
+| Production Database | Cloud SQL + Prisma (`prisma/schema.prisma`) | ✅ Production |
+| API Layer | GraphQL Yoga (`src/graphql/`) | ✅ Production |
+| Rich Text Editor | Tiptap (`src/components/note-editor.tsx`) | ✅ Production |
+| Media Upload | `src/components/media-uploader.tsx` | ✅ Production |
+| Search | pg_trgm (`src/graphql/resolvers/search-resolvers.ts`) | ✅ Production |
 
-### What's Missing → Decided Solutions
+### What's Not Yet Implemented
 
-| Capability | Priority | Solution (per 07_technology_decisions.md) |
-|------------|----------|-------------------------------------------|
-| User Authentication | Critical | Firebase Auth |
-| Production Database | Critical | Cloud SQL PostgreSQL + Prisma |
-| API Layer | Critical | GraphQL Yoga (Next.js API routes) |
-| Media Storage | High | Cloud Storage (GCS) + Cloud CDN |
-| Audio Transcription | High | Google Speech-to-Text V2 (Chirp 3) |
-| Tree Matching | High | Dedup logic ported to Genkit |
-| Social Features | Medium | GraphQL + PostgreSQL relations |
-| Real-time Sync | Medium | GraphQL Subscriptions |
-| Mobile Optimization | Medium | iPad full support, iOS companion (05_features.md) |
-| Frame Mode | Low | New feature to implement |
-| Rich Text Editor | Medium | Tiptap |
-| Payments | Medium | LemonSqueezy (MoR) |
-| Email | Low | Resend |
+| Capability | Priority | Planned Solution | Status |
+|------------|----------|------------------|--------|
+| AI/Genkit Flows | High | Genkit + Vertex AI | ❌ Not started |
+| Audio Transcription | High | Google Speech-to-Text V2 | ❌ Not started |
+| Tree Matching | High | Matching algorithm | ❌ Schema only |
+| Social Connections | Medium | Connection system | ❌ Schema only |
+| Share Links | Medium | Public viewing | ❌ Schema only |
+| 2D Tree View | Medium | d3-dag | ❌ Not started |
+| Frame Mode | Low | Auto-rotation display | ❌ Not started |
+| Payments | Medium | LemonSqueezy | ❌ Not started |
+| Email | Low | Resend | ❌ Not started |
 
 ### Integration Decisions
 
@@ -463,11 +473,13 @@ Single containerized Next.js application deployed to Cloud Run with:
 
 ## Next Steps
 
-1. ~~Resolve integration approach questions (Q6.1.x, Q6.2.x, Q6.3.x)~~ ✓ Complete
-2. Define data model (08_data_model.md)
-3. Define GraphQL API contracts (09_api_specification.md)
-4. Create migration plan for existing codebases
+1. ~~Resolve integration approach questions (Q6.1.x, Q6.2.x, Q6.3.x)~~ ✅ Complete
+2. ~~Define data model (08_data_model.md)~~ ✅ Complete + Implemented
+3. ~~Define GraphQL API contracts (09_api_specification.md)~~ ✅ Complete + Implemented
+4. ~~Create migration plan for existing codebases~~ ✅ 3D migrated, AI pending
+5. **Next**: Implement AI flows with Genkit
+6. **Next**: Implement billing with LemonSqueezy
 
 ---
 
-*Status: Complete - All decisions resolved 2026-01-11*
+*Status: Implementation Complete (except AI/Billing) - Updated 2026-01-18*

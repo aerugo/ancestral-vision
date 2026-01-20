@@ -155,6 +155,7 @@ model Person {
   primaryEvents        Event[]                   @relation("PrimaryPerson")
   notes                Note[]
   media                MediaPerson[]
+  aiSuggestions        AISuggestion[]
 
   @@index([constellationId])
   @@index([constellationId, deletedAt])
@@ -391,6 +392,42 @@ enum SourceType {
   FAMILY_BIBLE
   ORAL_HISTORY
   OTHER
+}
+
+// =============================================================================
+// AI SUGGESTIONS
+// =============================================================================
+
+model AISuggestion {
+  id              String              @id @default(uuid())
+  type            AISuggestionType
+  status          AISuggestionStatus  @default(PENDING)
+  person          Person              @relation(fields: [personId], references: [id], onDelete: Cascade)
+  personId        String
+  userId          String
+  payload         Json                // The suggested content (e.g., biography text)
+  metadata        Json?               // Additional data (confidence, sources, etc.)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  reviewedAt      DateTime?
+  reviewedBy      String?
+
+  @@index([personId, status])
+  @@index([userId, status])
+}
+
+enum AISuggestionType {
+  BIOGRAPHY
+  CORRECTION
+  EXTRACTION
+  DEDUPLICATION
+}
+
+enum AISuggestionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
 }
 
 // =============================================================================

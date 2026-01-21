@@ -21,7 +21,7 @@ import {
   type EventSource,
   type PersonDetails,
   type RelatedContext,
-} from '@/ai/schemas/biography-v2';
+} from '@/ai/schemas/biography';
 
 // Reusable include for person with content
 const personInclude = {

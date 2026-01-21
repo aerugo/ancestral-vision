@@ -43,13 +43,14 @@ vi.mock('@/ai/genkit', () => ({
   getAI: () => ({
     generate: mockGenerate,
   }),
-  getDefaultModel: () => 'gemini-1.5-flash',
+  getDefaultModel: () => 'googleai/gemini-3-pro-preview',
+  getModel: () => 'googleai/gemini-3-flash-preview',
   getRetryMiddleware: () => ({}), // Mock retry middleware as passthrough
 }));
 
 // Import after mock setup
 import { findRelatives, extractRelatedContext } from './context-mining';
-import type { PersonDetails, RelativeInfo } from '@/ai/schemas/biography-v2';
+import type { PersonDetails, RelativeInfo } from '@/ai/schemas/biography';
 
 describe('findRelatives', () => {
   const PERSON_ID = 'person-123';

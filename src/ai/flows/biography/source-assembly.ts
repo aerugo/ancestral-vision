@@ -16,7 +16,7 @@ import {
   PersonDetails,
   NoteSource,
   EventSource,
-} from '@/ai/schemas/biography-v2';
+} from '@/ai/schemas/biography';
 
 /**
  * Assemble all source material for a person's biography generation.

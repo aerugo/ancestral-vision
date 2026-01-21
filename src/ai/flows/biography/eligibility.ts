@@ -9,7 +9,7 @@
  * - INV-S002: Constellation Isolation
  */
 import { prisma } from '@/lib/prisma';
-import type { EligibilityResult } from '@/ai/schemas/biography-v2';
+import type { EligibilityResult } from '@/ai/schemas/biography';
 
 /**
  * Check if a person is eligible for biography generation.

@@ -29,7 +29,7 @@ vi.mock('@/lib/prisma', () => ({
 
 // Import after mock setup
 import { assembleSourceMaterial } from './source-assembly';
-import { SourceMaterialSchema } from '@/ai/schemas/biography-v2';
+import { SourceMaterialSchema } from '@/ai/schemas/biography';
 
 describe('assembleSourceMaterial', () => {
   const mockPerson = {

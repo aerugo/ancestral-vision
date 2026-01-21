@@ -102,24 +102,24 @@ describe('Genkit Initialization', () => {
   });
 
   describe('Default Model Selection', () => {
-    it('should default to gemini-1.5-flash model', async () => {
+    it('should default to gemini-3-pro-preview model with provider prefix', async () => {
       setEnv('NODE_ENV', 'development');
       setEnv('GOOGLE_AI_API_KEY', 'test-api-key');
 
       const { getDefaultModel } = await import('./genkit');
 
-      expect(getDefaultModel()).toBe('gemini-1.5-flash');
+      expect(getDefaultModel()).toBe('googleai/gemini-3-pro-preview');
     });
 
     it('should allow overriding default model via environment', async () => {
       setEnv('NODE_ENV', 'development');
       setEnv('GOOGLE_AI_API_KEY', 'test-api-key');
-      setEnv('GENKIT_DEFAULT_MODEL', 'gemini-1.5-pro');
+      setEnv('GENKIT_DEFAULT_MODEL', 'gemini-custom');
 
       vi.resetModules();
       const { getDefaultModel } = await import('./genkit');
 
-      expect(getDefaultModel()).toBe('gemini-1.5-pro');
+      expect(getDefaultModel()).toBe('gemini-custom');
     });
   });
 });

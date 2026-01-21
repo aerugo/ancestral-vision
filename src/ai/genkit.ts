@@ -103,8 +103,8 @@ export function getDefaultModel(): string {
 /**
  * Get a model by tier for different use cases.
  *
- * - 'fast': Gemini 3 Flash - faster, good for bulk operations like context mining
- * - 'quality': Gemini 3 Pro - slower but higher quality for final outputs
+ * - 'fast': Gemini 3 Flash Preview - faster, good for bulk operations like context mining
+ * - 'quality': Gemini 3 Pro Preview - slower but higher quality for final outputs
  *
  * @param tier - The model tier to use
  * @returns Model name string with provider prefix
@@ -116,6 +116,9 @@ export function getModel(tier: ModelTier): string {
 
   const isProduction = process.env.NODE_ENV === 'production';
   const modelName = tier === 'fast' ? 'gemini-3-flash-preview' : 'gemini-3-pro-preview';
+
+  // Log the model being used for debugging
+  console.log(`[Genkit] Using model: ${isProduction ? 'vertexai' : 'googleai'}/${modelName} (tier: ${tier})`);
 
   return isProduction ? `vertexai/${modelName}` : `googleai/${modelName}`;
 }

@@ -3,8 +3,10 @@
 import * as React from 'react';
 import { Loader2, Pencil, X, Check, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { useUpdatePerson } from '@/hooks/use-people';
-import { useGenerateBiography, useApplyBiographySuggestion } from '@/hooks/use-ai';
+import { useApplyBiographySuggestion } from '@/hooks/use-ai';
+import { useBiographyStream } from '@/hooks/use-biography-stream';
 import { biographyTransitionEvents } from '@/visualization/biography-transition-events';
 
 interface PersonBioTabProps {
@@ -37,8 +39,24 @@ export function PersonBioTab({
   const [error, setError] = React.useState<string | null>(null);
 
   const updatePerson = useUpdatePerson();
-  const generateBiography = useGenerateBiography();
   const applyBiographySuggestion = useApplyBiographySuggestion();
+
+  // Streaming biography generation with real-time progress
+  const bioStream = useBiographyStream({
+    onComplete: (result) => {
+      setGeneratedBiography(result.biography);
+      setSuggestionId(result.suggestionId);
+      setViewState('preview');
+    },
+    onError: (errorMsg) => {
+      setError(
+        errorMsg.includes('QUOTA_EXCEEDED')
+          ? 'AI quota exceeded. Please try again later.'
+          : errorMsg
+      );
+      setViewState('view');
+    },
+  });
 
   // Sync edited biography when prop changes (e.g., after successful save)
   React.useEffect(() => {
@@ -88,27 +106,15 @@ export function PersonBioTab({
     }
   };
 
-  const handleGenerate = async () => {
-    try {
-      setError(null);
-      setViewState('generating');
+  const handleGenerate = () => {
+    setError(null);
+    setViewState('generating');
+    bioStream.startGeneration(personId, 500);
+  };
 
-      const result = await generateBiography.mutateAsync({
-        personId,
-        maxLength: 500,
-      });
-
-      setGeneratedBiography(result.biography);
-      setSuggestionId(result.suggestionId);
-      setViewState('preview');
-    } catch (err) {
-      setError(
-        err instanceof Error && err.message.includes('QUOTA_EXCEEDED')
-          ? 'AI quota exceeded. Please try again later.'
-          : 'Failed to generate biography'
-      );
-      setViewState('view');
-    }
+  const handleCancelGeneration = () => {
+    bioStream.cancelGeneration();
+    setViewState('view');
   };
 
   const handleAcceptGenerated = async () => {
@@ -143,20 +149,43 @@ export function PersonBioTab({
     setError(null);
   };
 
-  // Generating mode - show loading animation
+  // Generating mode - show loading animation with real-time progress
   if (viewState === 'generating') {
+    const progress = bioStream.progress;
+
     return (
-      <div className="flex flex-col items-center justify-center py-12">
+      <div className="flex flex-col items-center justify-center py-8 space-y-4">
         <div className="relative">
           <Sparkles className="h-12 w-12 text-primary animate-pulse" />
           <Loader2 className="h-6 w-6 text-primary animate-spin absolute -bottom-1 -right-1" />
         </div>
-        <p className="text-sm text-muted-foreground mt-4">
-          Generating biography...
+
+        {/* Progress bar */}
+        <Progress value={progress?.progress ?? 0} className="w-48" />
+
+        {/* Current step message */}
+        <p className="text-sm text-muted-foreground text-center">
+          {progress?.message ?? 'Starting generation...'}
         </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          This may take a moment
-        </p>
+
+        {/* Relative detail during context mining */}
+        {progress?.step === 'context-mining' && progress.details?.currentRelative && (
+          <p className="text-xs text-muted-foreground text-center">
+            Processing {progress.details.currentRelative.relationship}:{' '}
+            <span className="font-medium">{progress.details.currentRelative.name}</span>
+            {' '}({progress.details.currentRelative.index}/{progress.details.currentRelative.total})
+          </p>
+        )}
+
+        {/* Cancel button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleCancelGeneration}
+          className="text-muted-foreground"
+        >
+          Cancel
+        </Button>
       </div>
     );
   }

@@ -5,12 +5,17 @@ import { Loader2, Pencil, X, Check, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useUpdatePerson } from '@/hooks/use-people';
-import { useApplyBiographySuggestion } from '@/hooks/use-ai';
+import { useApplyBiographySuggestion, useRejectBiographySuggestion } from '@/hooks/use-ai';
 import { useBiographyStream } from '@/hooks/use-biography-stream';
 import { biographyTransitionEvents } from '@/visualization/biography-transition-events';
+import { segmentBiography } from '@/lib/citation-parser';
+import { CitationLink } from '@/components/citation-link';
+import { SourceContentModal } from '@/components/source-content-modal';
+import type { ParsedCitation } from '@/types/citation';
 
 interface PersonBioTabProps {
   personId: string;
+  personName: string;
   biography: string | null | undefined;
 }
 
@@ -30,6 +35,7 @@ type ViewState = 'view' | 'edit' | 'generating' | 'preview';
  */
 export function PersonBioTab({
   personId,
+  personName,
   biography,
 }: PersonBioTabProps): React.ReactElement {
   const [viewState, setViewState] = React.useState<ViewState>('view');
@@ -37,12 +43,23 @@ export function PersonBioTab({
   const [generatedBiography, setGeneratedBiography] = React.useState<string | null>(null);
   const [suggestionId, setSuggestionId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [activeCitation, setActiveCitation] = React.useState<ParsedCitation | null>(null);
+
+  // Sequential display state for relatives during context-mining
+  // Relatives are accumulated in bioStream.seenRelatives (from context)
+  const [displayIndex, setDisplayIndex] = React.useState(0);
+  const [hasShownAllRelatives, setHasShownAllRelatives] = React.useState(false);
+  // Display phase: 'source-stats' shows initial message for 5 seconds, then 'relatives'
+  const [displayPhase, setDisplayPhase] = React.useState<'source-stats' | 'relatives'>('source-stats');
 
   const updatePerson = useUpdatePerson();
   const applyBiographySuggestion = useApplyBiographySuggestion();
+  const rejectBiographySuggestion = useRejectBiographySuggestion();
 
   // Streaming biography generation with real-time progress
+  // Generation persists in background when user navigates away
   const bioStream = useBiographyStream({
+    personId,
     onComplete: (result) => {
       setGeneratedBiography(result.biography);
       setSuggestionId(result.suggestionId);
@@ -58,12 +75,69 @@ export function PersonBioTab({
     },
   });
 
+  // Sync viewState with bioStream state when component mounts or personId changes
+  // This ensures we show progress if generation was running in background
+  React.useEffect(() => {
+    if (bioStream.isGenerating) {
+      setViewState('generating');
+    } else if (bioStream.result && !generatedBiography) {
+      // Generation completed while we were away - show preview
+      setGeneratedBiography(bioStream.result.biography);
+      setSuggestionId(bioStream.result.suggestionId);
+      setViewState('preview');
+    }
+  }, [bioStream.isGenerating, bioStream.result, generatedBiography]);
+
   // Sync edited biography when prop changes (e.g., after successful save)
   React.useEffect(() => {
     if (viewState === 'view') {
       setEditedBiography(biography || '');
     }
   }, [biography, viewState]);
+
+  // Reset display state when generation starts
+  React.useEffect(() => {
+    if (viewState === 'generating') {
+      setDisplayIndex(0);
+      setHasShownAllRelatives(false);
+      setDisplayPhase('source-stats');
+    }
+  }, [viewState]);
+
+  // Transition from source-stats to relatives phase after 5 seconds
+  const sourceStats = bioStream.sourceStats;
+  React.useEffect(() => {
+    if (viewState !== 'generating' || displayPhase !== 'source-stats') return;
+    // Only transition once we have source stats
+    if (!sourceStats) return;
+
+    const timer = setTimeout(() => {
+      setDisplayPhase('relatives');
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [viewState, displayPhase, sourceStats]);
+
+  // Cycle through displayed relatives every 8 seconds
+  // Uses seenRelatives from bioStream (accumulated in context, not affected by React batching)
+  // Only starts cycling once we've transitioned to 'relatives' phase
+  const seenRelatives = bioStream.seenRelatives;
+  React.useEffect(() => {
+    if (viewState !== 'generating' || displayPhase !== 'relatives' || seenRelatives.length === 0) return;
+
+    const interval = setInterval(() => {
+      setDisplayIndex((prev) => {
+        if (prev < seenRelatives.length - 1) {
+          return prev + 1;
+        }
+        // We've finished showing all relatives in the queue
+        setHasShownAllRelatives(true);
+        return prev;
+      });
+    }, 8000);
+
+    return () => clearInterval(interval);
+  }, [viewState, displayPhase, seenRelatives.length]);
 
   const handleEdit = () => {
     setEditedBiography(biography || '');
@@ -109,11 +183,12 @@ export function PersonBioTab({
   const handleGenerate = () => {
     setError(null);
     setViewState('generating');
-    bioStream.startGeneration(personId, 500);
+    bioStream.startGeneration(500);
   };
 
   const handleCancelGeneration = () => {
     bioStream.cancelGeneration();
+    bioStream.clearState();
     setViewState('view');
   };
 
@@ -136,15 +211,26 @@ export function PersonBioTab({
 
       setGeneratedBiography(null);
       setSuggestionId(null);
+      bioStream.clearState();
       setViewState('view');
     } catch {
       setError('Failed to apply biography');
     }
   };
 
-  const handleRejectGenerated = () => {
+  const handleRejectGenerated = async () => {
+    // Mark suggestion as rejected in DB (if we have a suggestionId)
+    if (suggestionId) {
+      try {
+        await rejectBiographySuggestion.mutateAsync({ suggestionId });
+      } catch {
+        // Ignore errors - we still want to clear local state
+        console.error('[PersonBioTab] Failed to reject suggestion in DB');
+      }
+    }
     setGeneratedBiography(null);
     setSuggestionId(null);
+    bioStream.clearState();
     setViewState('view');
     setError(null);
   };
@@ -153,27 +239,74 @@ export function PersonBioTab({
   if (viewState === 'generating') {
     const progress = bioStream.progress;
 
+    // Check if we're in source-stats phase (showing initial message)
+    const showSourceStats = displayPhase === 'source-stats' && sourceStats;
+
+    // Determine what to display for relatives phase
+    // Keep showing relatives until all have been displayed, even if backend moved to generation step
+    const currentRelative = seenRelatives[displayIndex];
+    const hasRelativesToShow = displayPhase === 'relatives' && seenRelatives.length > 0 && !hasShownAllRelatives;
+    const showRelativeMessage = hasRelativesToShow && currentRelative;
+    const showCombiningMessage = displayPhase === 'relatives' && !hasRelativesToShow && progress?.step === 'context-mining';
+
+    // Calculate display progress
+    let displayProgress = progress?.progress ?? 0;
+    if (showSourceStats) {
+      // During source-stats phase, show 10-15% progress
+      displayProgress = 12;
+    } else if (hasRelativesToShow && currentRelative) {
+      // Base progress: 20% at start, each relative adds progress up to 80%
+      const relativeProgress = (displayIndex + 1) / currentRelative.total;
+      displayProgress = 20 + relativeProgress * 60; // 20% to 80%
+    } else if (displayPhase === 'relatives' && !hasShownAllRelatives && seenRelatives.length === 0) {
+      // No relatives yet but in relatives phase, use server progress
+      displayProgress = progress?.progress ?? 0;
+    } else if (progress?.step === 'context-mining') {
+      // All relatives displayed but still in context-mining step
+      displayProgress = 80;
+    }
+    // Otherwise use actual server progress (for generation step after relatives shown)
+
+    // Determine the step message
+    let stepMessage = progress?.message ?? 'Starting generation...';
+    if (showSourceStats) {
+      stepMessage = 'Gathering sources...';
+    } else if (showRelativeMessage || showCombiningMessage) {
+      stepMessage = 'Mining context from relatives...';
+    }
+
     return (
       <div className="flex flex-col items-center justify-center py-8 space-y-4">
-        <div className="relative">
-          <Sparkles className="h-12 w-12 text-primary animate-pulse" />
-          <Loader2 className="h-6 w-6 text-primary animate-spin absolute -bottom-1 -right-1" />
-        </div>
+        <Sparkles className="h-12 w-12 text-primary animate-pulse" />
 
         {/* Progress bar */}
-        <Progress value={progress?.progress ?? 0} className="w-48" />
+        <Progress value={displayProgress} className="w-48" />
 
         {/* Current step message */}
         <p className="text-sm text-muted-foreground text-center">
-          {progress?.message ?? 'Starting generation...'}
+          {stepMessage}
         </p>
 
-        {/* Relative detail during context mining */}
-        {progress?.step === 'context-mining' && progress.details?.currentRelative && (
+        {/* Source stats message - shown for 5 seconds at start */}
+        {showSourceStats && (
           <p className="text-xs text-muted-foreground text-center">
-            Processing {progress.details.currentRelative.relationship}:{' '}
-            <span className="font-medium">{progress.details.currentRelative.name}</span>
-            {' '}({progress.details.currentRelative.index}/{progress.details.currentRelative.total})
+            Combining {sourceStats.eventCount} events and {sourceStats.noteCount} notes
+            about the life of <span className="font-medium">{personName}</span>
+          </p>
+        )}
+
+        {/* Sequential relative display - show while cycling through relatives or combining */}
+        {(showRelativeMessage || showCombiningMessage) && (
+          <p className="text-xs text-muted-foreground text-center">
+            {showCombiningMessage ? (
+              'Combining contexts...'
+            ) : currentRelative ? (
+              <>
+                Processing {currentRelative.relationship}:{' '}
+                <span className="font-medium">{currentRelative.name}</span>
+                {' '}({currentRelative.index}/{currentRelative.total})
+              </>
+            ) : null}
           </p>
         )}
 
@@ -204,10 +337,20 @@ export function PersonBioTab({
         </div>
 
         <div className="flex-1 rounded-md border border-primary/30 bg-primary/5 p-3 mb-3">
-          <p className="text-sm text-foreground whitespace-pre-wrap">
-            {generatedBiography}
-          </p>
+          <BiographyText
+            text={generatedBiography}
+            onCitationClick={(citation) => setActiveCitation(citation)}
+          />
         </div>
+
+        {/* Source content modal for preview */}
+        {activeCitation && (
+          <SourceContentModal
+            type={activeCitation.type}
+            id={activeCitation.id}
+            onClose={() => setActiveCitation(null)}
+          />
+        )}
 
         {error && (
           <p className="text-sm text-destructive mb-2">{error}</p>
@@ -318,14 +461,20 @@ export function PersonBioTab({
     );
   }
 
+  // Handler for citation clicks
+  const handleCitationClick = (citation: ParsedCitation) => {
+    setActiveCitation(citation);
+  };
+
   // View mode
   return (
     <div className="prose prose-sm prose-invert max-w-none">
       {biography ? (
         <>
-          <p className="text-sm text-foreground whitespace-pre-wrap mb-4">
-            {biography}
-          </p>
+          <BiographyText
+            text={biography}
+            onCitationClick={handleCitationClick}
+          />
           <div className="flex gap-2 mt-2">
             <Button
               variant="outline"
@@ -373,6 +522,45 @@ export function PersonBioTab({
       {error && (
         <p className="text-sm text-destructive mt-4 text-center">{error}</p>
       )}
+
+      {/* Source content modal */}
+      {activeCitation && (
+        <SourceContentModal
+          type={activeCitation.type}
+          id={activeCitation.id}
+          onClose={() => setActiveCitation(null)}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * BiographyText - Renders biography with clickable citations
+ */
+function BiographyText({
+  text,
+  onCitationClick,
+}: {
+  text: string;
+  onCitationClick: (citation: ParsedCitation) => void;
+}): React.ReactElement {
+  const segments = React.useMemo(() => segmentBiography(text), [text]);
+
+  return (
+    <p className="text-sm text-foreground whitespace-pre-wrap mb-4">
+      {segments.map((segment, index) => {
+        if (segment.type === 'citation' && segment.citation) {
+          return (
+            <CitationLink
+              key={index}
+              citation={segment.citation}
+              onClick={onCitationClick}
+            />
+          );
+        }
+        return <span key={index}>{segment.content}</span>;
+      })}
+    </p>
   );
 }

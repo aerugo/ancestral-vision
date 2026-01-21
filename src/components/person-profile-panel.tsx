@@ -320,6 +320,7 @@ export function PersonProfilePanel(): ReactElement | null {
             {activeTab === 'bio' && selectedPersonId && (
               <PersonBioTab
                 personId={selectedPersonId}
+                personName={displayName}
                 biography={person.biography}
               />
             )}

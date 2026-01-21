@@ -23,6 +23,8 @@ import type {
 // Import production functions for true E2E testing
 import { extractRelatedContext } from '../src/ai/flows/biography/context-mining';
 import { generateBiographyFromSources } from '../src/ai/flows/biography/generation';
+import { parseCitations, segmentBiography } from '../src/lib/citation-parser';
+import type { ParsedCitation } from '../src/types/citation';
 
 // Types for the JSON data
 interface JsonPerson {
@@ -191,11 +193,97 @@ async function main() {
     console.log(`Generated biography: ${result.wordCount} words, confidence: ${result.confidence}`);
   }
 
+  // Test citation parsing on the generated biography
+  console.log('\n=== Testing Citation Parsing ===\n');
+  testCitationParsing(biography, notes, events, relatedContext);
+
   // Write output
   const outputPath = path.join(__dirname, '../data/generated_bio.md');
   const markdown = formatBiographyMarkdown(personDetails, notes, events, relatedContext, biography);
   fs.writeFileSync(outputPath, markdown);
   console.log(`\nBiography written to ${outputPath}`);
+}
+
+/**
+ * Test citation parsing on the generated biography
+ */
+function testCitationParsing(
+  biography: string,
+  notes: NoteSource[],
+  events: EventSource[],
+  relatedContext: RelatedContext[]
+): void {
+  console.log('1. Finding all bracket patterns in biography...');
+  const allBrackets = biography.match(/\[[^\]]+\]/g) || [];
+  console.log(`   Found ${allBrackets.length} bracketed items`);
+
+  if (allBrackets.length > 0) {
+    console.log('   Sample brackets:');
+    allBrackets.slice(0, 10).forEach((b, i) => {
+      console.log(`     ${i + 1}. ${b.substring(0, 80)}${b.length > 80 ? '...' : ''}`);
+    });
+  }
+
+  console.log('\n2. Finding all parenthetical patterns...');
+  const allParens = biography.match(/\([^)]+\)/g) || [];
+  console.log(`   Found ${allParens.length} parenthetical items`);
+
+  if (allParens.length > 0) {
+    console.log('   Sample parentheticals:');
+    allParens.slice(0, 10).forEach((p, i) => {
+      console.log(`     ${i + 1}. ${p.substring(0, 80)}${p.length > 80 ? '...' : ''}`);
+    });
+  }
+
+  console.log('\n3. Parsing citations using parseCitations()...');
+  const parseResult = parseCitations(biography);
+  console.log(`   Found ${parseResult.citations.length} valid citations`);
+
+  if (parseResult.citations.length > 0) {
+    console.log('   Parsed citations:');
+    parseResult.citations.forEach((c: ParsedCitation, i: number) => {
+      console.log(`     ${i + 1}. [${c.type}:${c.id}:${c.label}]`);
+      console.log(`        ID valid? Checking...`);
+
+      let isValid = false;
+      if (c.type === 'Note') {
+        isValid = notes.some(n => n.noteId === c.id);
+      } else if (c.type === 'Event') {
+        isValid = events.some(e => e.eventId === c.id);
+      } else if (c.type === 'Biography') {
+        isValid = relatedContext.some(ctx => ctx.personId === c.id);
+      }
+      console.log(`        ID exists in source material: ${isValid ? '✓ YES' : '✗ NO'}`);
+    });
+  }
+
+  console.log('\n4. Segmenting biography for rendering...');
+  const segments = segmentBiography(biography);
+  const textSegments = segments.filter(s => s.type === 'text');
+  const citationSegments = segments.filter(s => s.type === 'citation');
+  console.log(`   Total segments: ${segments.length}`);
+  console.log(`   Text segments: ${textSegments.length}`);
+  console.log(`   Citation segments (clickable): ${citationSegments.length}`);
+
+  console.log('\n5. Showing valid source IDs for reference...');
+  console.log(`   Note IDs (${notes.length}):`, notes.slice(0, 3).map(n => n.noteId));
+  console.log(`   Event IDs (${events.length}):`, events.slice(0, 3).map(e => e.eventId));
+  console.log(`   Person IDs from context (${relatedContext.length}):`, relatedContext.slice(0, 3).map(c => c.personId));
+
+  // Summary
+  console.log('\n=== Citation Test Summary ===');
+  console.log(`   Brackets remaining (should be valid citations): ${allBrackets.length}`);
+  console.log(`   Parentheticals (converted invalid citations): ${allParens.length}`);
+  console.log(`   Parsed valid citations: ${parseResult.citations.length}`);
+  console.log(`   Clickable citation segments: ${citationSegments.length}`);
+
+  if (allBrackets.length > 0 && parseResult.citations.length === 0) {
+    console.log('\n   ⚠️  WARNING: Brackets found but no valid citations parsed!');
+    console.log('   This means the AI is not following the citation format.');
+    console.log('   Expected format: [Type:ID:Label]');
+    console.log('   Actual format examples:');
+    allBrackets.slice(0, 5).forEach(b => console.log(`     - ${b}`));
+  }
 }
 
 function parseFuzzyDate(dateStr: string): { type: 'exact'; year: number; month?: number; day?: number } {

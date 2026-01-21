@@ -105,6 +105,8 @@ import {
   setTransitionStarted,
   setTransitionCompleted,
 } from '@/visualization/biography-transition-events';
+import { biographyPulseEvents } from '@/visualization/pending-biography-events';
+import { PendingBiographyAnimator } from '@/visualization/pending-biography-animator';
 import {
   BiographyTransitionAnimator,
   createMetamorphosisParticles,
@@ -272,6 +274,8 @@ export function ConstellationCanvas(): React.ReactElement {
   const postProcessingRef = useRef<PostProcessingPipelineResult | null>(null);
   // Pulse animation for selection transitions
   const pulseAnimatorRef = useRef<PathPulseAnimator | null>(null);
+  // Pending biography pulse animator (attention-drawing for generated but not accepted biographies)
+  const pendingBioAnimatorRef = useRef<PendingBiographyAnimator | null>(null);
   const graphRef = useRef<FamilyGraph | null>(null);
   // Biography transition animation for ghost-to-biography metamorphosis
   const biographyTransitionRef = useRef<BiographyTransitionAnimator | null>(null);
@@ -492,6 +496,22 @@ export function ConstellationCanvas(): React.ReactElement {
       easing: 'easeInOutCubic',
       pulseWidth: 0.35,
       breathingDuration: 1.8,
+    });
+
+    // Create pending biography animator for attention-drawing pulse on nodes
+    // - Generating: subtle, slow pulse to indicate activity
+    // - Pending acceptance: intense, faster pulse to draw attention
+    pendingBioAnimatorRef.current = new PendingBiographyAnimator({
+      generating: {
+        pulseDuration: 3.0,
+        minIntensity: 0.05,
+        maxIntensity: 0.35,
+      },
+      pending: {
+        pulseDuration: 1.2,
+        minIntensity: 0.2,
+        maxIntensity: 0.85,
+      },
     });
 
     // Create biography transition animator for ghost-to-biography metamorphosis
@@ -890,6 +910,13 @@ export function ConstellationCanvas(): React.ReactElement {
 
     window.addEventListener('keydown', handleKeyDown);
 
+    // Subscribe to biography pulse events for attention-drawing pulse animation
+    // - Generating: subtle pulse during biography generation
+    // - Pending: intense pulse when waiting for user acceptance
+    const unsubscribeBiographyPulse = biographyPulseEvents.subscribe((snapshot) => {
+      pendingBioAnimatorRef.current?.setStates(snapshot);
+    });
+
     // Subscribe to biography transition events for metamorphosis animations
     const unsubscribeBiographyTransition = biographyTransitionEvents.subscribe((personId, direction) => {
       if (direction === 'add') {
@@ -1039,6 +1066,26 @@ export function ConstellationCanvas(): React.ReactElement {
         updatePulseIntensities();
       }
 
+      // Update pending biography pulse animation (attention-drawing for generated biographies)
+      // This runs independently of selection pulse and adds its intensities on top
+      if (pendingBioAnimatorRef.current?.isAnimating()) {
+        pendingBioAnimatorRef.current.update(deltaTime);
+        const pendingIntensities = pendingBioAnimatorRef.current.getIntensities();
+
+        // If selection pulse is also animating, merge intensities (take max)
+        // Otherwise just apply pending intensities directly
+        if (pulseAnimatorRef.current?.isAnimating()) {
+          const nodeIntensities = pulseAnimatorRef.current.getAllNodeIntensities();
+          for (const [nodeId, intensity] of pendingIntensities) {
+            const existing = nodeIntensities.get(nodeId) ?? 0;
+            nodeIntensities.set(nodeId, Math.max(existing, intensity));
+          }
+          constellationManagerRef.current?.updatePulseIntensity(nodeIntensities);
+        } else {
+          constellationManagerRef.current?.updatePulseIntensity(pendingIntensities);
+        }
+      }
+
       // Update biography transition animation for ghost-to-biography metamorphosis
       // or reverse (biography-to-ghost) depending on transition direction
       if (biographyTransitionRef.current?.isAnimating()) {
@@ -1167,6 +1214,7 @@ export function ConstellationCanvas(): React.ReactElement {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('keydown', handleKeyDown);
       canvas.removeEventListener('click', handleClick);
+      unsubscribeBiographyPulse();
       unsubscribeBiographyTransition();
       renderer.setAnimationLoop(null);
       controls.dispose();

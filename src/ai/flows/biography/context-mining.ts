@@ -12,8 +12,11 @@ import pLimit from 'p-limit';
 import { prisma } from '@/lib/prisma';
 import { getAI, getModel, getRetryMiddleware } from '@/ai/genkit';
 
-/** Maximum concurrent AI calls for context extraction */
-const MAX_CONCURRENT_AI_CALLS = 5;
+/** Maximum concurrent AI calls for context extraction
+ * Vertex AI has no fixed RPM limit - uses dynamic shared quota based on spend tier.
+ * Higher concurrency significantly speeds up processing for people with many relatives.
+ */
+const MAX_CONCURRENT_AI_CALLS = 15;
 import {
   RelatedContextSchema,
   type RelativeInfo,

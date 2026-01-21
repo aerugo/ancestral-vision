@@ -19,6 +19,15 @@ import type {
   PersonDetails,
 } from '@/ai/schemas/biography';
 
+/**
+ * Valid source IDs for citation validation
+ */
+interface ValidSourceIds {
+  noteIds: Set<string>;
+  eventIds: Set<string>;
+  personIds: Set<string>;
+}
+
 /** Default maximum word count for biographies */
 const DEFAULT_MAX_LENGTH = 500;
 
@@ -119,13 +128,43 @@ export async function generateBiographyFromSources(
     }
   }
 
-  const biography = response.text.trim();
+  const rawBiography = response.text.trim();
 
-  if (!biography) {
+  if (!rawBiography) {
     throw new Error(
       'AI returned an empty biography. This may be due to a temporary issue with the AI service.'
     );
   }
+
+  // Debug: Show first 500 chars of raw biography
+  console.log('[Biography] Raw AI output (first 500 chars):', rawBiography.substring(0, 500));
+
+  // Post-process citations: validate and convert invalid ones to parenthetical references
+  const validIds = buildValidSourceIds(notes, events, relatedContext);
+  console.log('[Biography] Valid source IDs:', {
+    noteIds: Array.from(validIds.noteIds).slice(0, 3),
+    eventIds: Array.from(validIds.eventIds).slice(0, 3),
+    personIds: Array.from(validIds.personIds).slice(0, 3),
+    totalNotes: validIds.noteIds.size,
+    totalEvents: validIds.eventIds.size,
+    totalPersons: validIds.personIds.size,
+  });
+
+  // Debug: Show raw citations before processing
+  const rawCitations = rawBiography.match(/\[[^\]]+\]/g) || [];
+  console.log('[Biography] Raw citations found:', rawCitations.length);
+  console.log('[Biography] Sample raw citations:', rawCitations.slice(0, 5));
+
+  const biography = postProcessCitations(rawBiography, validIds);
+
+  // Debug: Show citations after processing
+  const processedCitations = biography.match(/\[[^\]]+\]/g) || [];
+  const parentheticalRefs = biography.match(/\([^)]+\)/g) || [];
+  console.log('[Biography] Remaining bracket citations:', processedCitations.length);
+  console.log('[Biography] Parenthetical references:', parentheticalRefs.length);
+  console.log('[Biography] Sample processed citations:', processedCitations.slice(0, 5));
+
+  console.log('[Biography] Post-processed citations complete');
 
   const wordCount = biography.split(/\s+/).length;
   const sourcesUsed = determineSources(notes, events, relatedContext);
@@ -152,30 +191,30 @@ function buildGenerationPrompt(
   relatedContext: RelatedContext[],
   maxLength: number
 ): string {
-  // Format notes section
+  // Format notes section with IDs for citation tracking
   const notesSection = notes.length > 0
     ? notes
         .slice(0, 15) // Limit to 15 most relevant notes
-        .map((n) => `- [Note: ${n.title ?? 'Untitled'}] ${n.content}`)
+        .map((n) => `- [Note:${n.noteId}:${n.title ?? 'Untitled'}] ${n.content}`)
         .join('\n')
     : 'No notes available';
 
-  // Format events section
+  // Format events section with IDs for citation tracking
   const eventsSection = events.length > 0
     ? events
         .slice(0, 15) // Limit to 15 most relevant events
-        .map((e) => `- [Event: ${e.title}] ${e.description ?? 'No description'}${formatEventDate(e)}`)
+        .map((e) => `- [Event:${e.eventId}:${e.title}] ${e.description ?? 'No description'}${formatEventDate(e)}`)
         .join('\n')
     : 'No events available';
 
-  // Format related context section
+  // Format related context section with person IDs for citation tracking
   const relatedContextSection = relatedContext.length > 0
     ? relatedContext
         .map((ctx) => {
           const facts = ctx.relevantFacts
-            .map((f) => `  - ${f.fact} (from ${f.source}${f.sourceId ? `: ${f.sourceId}` : ''})`)
+            .map((f) => `  - [Biography:${ctx.personId}:${ctx.relationshipType}:${f.fact}]`)
             .join('\n');
-          return `From ${ctx.relationshipType} ${ctx.personName}:\n${facts}`;
+          return `From ${ctx.relationshipType} ${ctx.personName} (ID: ${ctx.personId}):\n${facts}`;
         })
         .join('\n\n')
     : 'No context from relatives available';
@@ -200,7 +239,18 @@ ${relatedContextSection}
 INSTRUCTIONS:
 1. Write a warm, engaging biographical narrative (${Math.floor(maxLength * 0.6)}-${maxLength} words)
 2. Only include facts that are directly supported by the source material above
-3. Include citations in brackets like [Note: title], [Event: title], or [From parent: fact]
+3. CRITICAL - CITATION FORMAT: When citing a source, you MUST copy the COMPLETE citation tag verbatim from the source material above. Do NOT abbreviate or simplify citations.
+
+   CORRECT examples (copy the whole tag including the ID):
+   - [Note:5a50cfbe-cf4b-4705-8729-7c77efbcff3c:Biography]
+   - [Event:abc12345-6789-def0-1234-567890abcdef:Marriage]
+   - [Biography:person-id-here:parent:occupation detail]
+
+   WRONG examples (do NOT do this):
+   - [Biography] ← missing ID, WRONG
+   - [Birth] ← missing type and ID, WRONG
+   - [Note:Biography] ← missing ID, WRONG
+
 4. Do NOT invent or speculate about details not in the sources
 5. Focus on the person's life story, relationships, and experiences
 6. Write in third person, past tense
@@ -299,4 +349,83 @@ function calculateConfidence(
   score += Math.min(totalFacts * 0.03, 0.13); // Up to 0.13 from related context
 
   return Math.min(score, 1.0);
+}
+
+/**
+ * Build a set of valid source IDs from the source material.
+ */
+function buildValidSourceIds(
+  notes: NoteSource[],
+  events: EventSource[],
+  relatedContext: RelatedContext[]
+): ValidSourceIds {
+  return {
+    noteIds: new Set(notes.map((n) => n.noteId)),
+    eventIds: new Set(events.map((e) => e.eventId)),
+    personIds: new Set(relatedContext.map((ctx) => ctx.personId)),
+  };
+}
+
+/**
+ * Post-process the generated biography to validate citations.
+ *
+ * - Valid citations (correct format with existing ID) are kept as-is
+ * - Invalid citations are converted to parenthetical references
+ *
+ * This handles cases where the AI doesn't follow the citation format instructions.
+ */
+function postProcessCitations(
+  biography: string,
+  validIds: ValidSourceIds
+): string {
+  // Pattern to match any bracketed content that looks like it might be a citation
+  // This catches both valid [Type:ID:Label] and invalid [Label] formats
+  const bracketPattern = /\[([^\]]+)\]/g;
+
+  return biography.replace(bracketPattern, (match, content: string) => {
+    // Check if it's a valid citation format [Type:ID:Label] or [Biography:ID:Rel:Label]
+    const validCitationPattern = /^(Note|Event|Biography):([^:]+):(.+)$/;
+    const citationMatch = content.match(validCitationPattern);
+
+    if (citationMatch) {
+      const type = citationMatch[1]!;
+      const id = citationMatch[2]!;
+      const rest = citationMatch[3]!;
+
+      // Check if the ID exists in our source material
+      let isValidId = false;
+      if (type === 'Note') {
+        isValidId = validIds.noteIds.has(id);
+      } else if (type === 'Event') {
+        isValidId = validIds.eventIds.has(id);
+      } else if (type === 'Biography') {
+        isValidId = validIds.personIds.has(id);
+      }
+
+      if (isValidId) {
+        // Valid citation - keep it as-is
+        return match;
+      }
+
+      // Invalid ID - convert to parenthetical reference
+      // For Biography type, rest is "relationship:label", extract the label part
+      const label = type === 'Biography' && rest.includes(':')
+        ? rest.split(':').slice(1).join(':')
+        : rest;
+      return `(${type}: ${label})`;
+    }
+
+    // Not a valid citation format - check if it looks like an abbreviated citation
+    // Common patterns: [Biography], [Birth], [Marriage], [Note title], etc.
+    const looksLikeCitation = /^(Note|Event|Biography|Birth|Death|Marriage|Residence|Occupation|Education|Military|Immigration|Census|Baptism|Burial|Will|Probate)$/i.test(content) ||
+      content.length < 50; // Short bracketed text is likely an attempted citation
+
+    if (looksLikeCitation) {
+      // Convert to parenthetical reference
+      return `(${content})`;
+    }
+
+    // Long bracketed text might be intentional (like a quote) - keep as-is
+    return match;
+  });
 }

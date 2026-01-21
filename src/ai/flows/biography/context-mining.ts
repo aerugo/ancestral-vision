@@ -22,6 +22,15 @@ import {
   type PersonDetails,
   type RelatedContext,
 } from '@/ai/schemas/biography';
+import type { RelativeProgressInfo } from '@/types/biography-progress';
+
+/**
+ * Options for extractRelatedContext.
+ */
+export interface ExtractContextOptions {
+  /** Callback fired when starting to process each relative */
+  onRelativeProgress?: (info: RelativeProgressInfo) => void;
+}
 
 // Reusable include for person with content
 const personInclude = {
@@ -251,14 +260,17 @@ function mapEvents(
  *
  * @param personDetails - Details of the person whose biography is being generated
  * @param relatives - Array of relatives with their content
+ * @param options - Optional configuration including progress callback
  * @returns Array of RelatedContext with relevant facts and source attribution
  *
  * @invariant INV-AI005 - Output validated with Zod schema
  */
 export async function extractRelatedContext(
   personDetails: PersonDetails,
-  relatives: RelativeInfo[]
+  relatives: RelativeInfo[],
+  options: ExtractContextOptions = {}
 ): Promise<RelatedContext[]> {
+  const { onRelativeProgress } = options;
   const ai = getAI();
   const model = getModel('fast'); // Use Flash for bulk context extraction
   const limit = pLimit(MAX_CONCURRENT_AI_CALLS);
@@ -272,9 +284,21 @@ export async function extractRelatedContext(
       relative.events.length > 0
   );
 
+  // Track completion count for progress
+  let completedCount = 0;
+  const total = relativesWithContent.length;
+
   // Process relatives in parallel with concurrency limit
-  const contextPromises = relativesWithContent.map((relative) =>
+  const contextPromises = relativesWithContent.map((relative, index) =>
     limit(async () => {
+      // Report progress before starting this relative
+      onRelativeProgress?.({
+        name: relative.personName,
+        relationship: relative.relationshipType,
+        index: index + 1,
+        total,
+      });
+
       const prompt = buildContextMiningPrompt(personDetails, relative);
 
       try {
@@ -291,12 +315,15 @@ export async function extractRelatedContext(
           const parsed = JSON.parse(jsonMatch[0]);
           const validated = RelatedContextSchema.parse(parsed);
 
+          completedCount++;
+
           // Only include if there are relevant facts
           if (validated.relevantFacts.length > 0) {
             return validated;
           }
         }
       } catch {
+        completedCount++;
         // Skip this relative if response can't be parsed/validated
       }
       return null;

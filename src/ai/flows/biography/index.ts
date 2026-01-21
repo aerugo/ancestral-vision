@@ -31,6 +31,10 @@ import { checkBiographyEligibility } from './eligibility';
 import { assembleSourceMaterial } from './source-assembly';
 import { findRelatives, extractRelatedContext } from './context-mining';
 import { generateBiographyFromSources, type GeneratedBiography } from './generation';
+import type { ProgressCallback, BiographyProgressEvent } from '@/types/biography-progress';
+
+// Re-export progress types for convenience
+export type { ProgressCallback, BiographyProgressEvent } from '@/types/biography-progress';
 
 /**
  * Options for biography generation.
@@ -40,6 +44,8 @@ export interface GenerateBiographyOptions {
   maxLength?: number;
   /** Skip context mining from relatives (faster but less rich) */
   skipContextMining?: boolean;
+  /** Callback for progress updates during generation */
+  onProgress?: ProgressCallback;
 }
 
 /**
@@ -82,11 +88,17 @@ export async function generateBiography(
   userId: string,
   options: GenerateBiographyOptions = {}
 ): Promise<BiographyGenerationResult> {
-  const { maxLength = 500, skipContextMining = false } = options;
+  const { maxLength = 500, skipContextMining = false, onProgress } = options;
 
   console.log('[Biography Orchestrator] Starting for personId:', personId);
 
   // Step 1: Check eligibility (INV-AI007)
+  onProgress?.({
+    step: 'eligibility',
+    progress: 5,
+    message: 'Checking eligibility...',
+  });
+
   const eligibility = await checkBiographyEligibility(personId, userId);
 
   if (!eligibility.eligible) {
@@ -99,11 +111,27 @@ export async function generateBiography(
   });
 
   // Step 2: Assemble source material
+  onProgress?.({
+    step: 'source-assembly',
+    progress: 10,
+    message: 'Gathering notes and events...',
+  });
+
   const sourceMaterial = await assembleSourceMaterial(personId, userId);
 
   console.log('[Biography Orchestrator] Source material assembled:', {
     notes: sourceMaterial.notes.length,
     events: sourceMaterial.events.length,
+  });
+
+  onProgress?.({
+    step: 'source-assembly',
+    progress: 15,
+    message: `Found ${sourceMaterial.notes.length} notes and ${sourceMaterial.events.length} events`,
+    details: {
+      noteCount: sourceMaterial.notes.length,
+      eventCount: sourceMaterial.events.length,
+    },
   });
 
   // Step 3: Mine context from relatives (optional)
@@ -122,9 +150,33 @@ export async function generateBiography(
       console.log('[Biography Orchestrator] Found relatives:', relatives.length);
 
       if (relatives.length > 0) {
+        onProgress?.({
+          step: 'context-mining',
+          progress: 20,
+          message: `Mining context from ${relatives.length} relatives...`,
+          details: {
+            relativeCount: relatives.length,
+          },
+        });
+
         relatedContext = await extractRelatedContext(
           sourceMaterial.personDetails,
-          relatives
+          relatives,
+          {
+            onRelativeProgress: (info) => {
+              // Calculate progress between 20% and 80% based on relative processing
+              const relativeProgress = 20 + Math.floor((info.index / info.total) * 60);
+              onProgress?.({
+                step: 'context-mining',
+                progress: relativeProgress,
+                message: `Mining context from ${info.relationship}: ${info.name}`,
+                details: {
+                  currentRelative: info,
+                  relativeCount: info.total,
+                },
+              });
+            },
+          }
         );
         relativesUsed = relatedContext.length;
         console.log('[Biography Orchestrator] Extracted context from relatives:', relativesUsed);
@@ -133,6 +185,12 @@ export async function generateBiography(
   }
 
   // Step 4: Generate biography
+  onProgress?.({
+    step: 'generation',
+    progress: 85,
+    message: 'Writing biography...',
+  });
+
   const generated = await generateBiographyFromSources(
     sourceMaterial,
     relatedContext,

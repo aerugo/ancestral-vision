@@ -1,15 +1,19 @@
 /**
- * Biography Schema
+ * Biography Schemas
  *
- * Zod schemas for validating biography generation inputs and outputs.
+ * Comprehensive Zod schemas for the agentic biography generation flow.
+ * These schemas enforce source material requirements and provide type safety
+ * for the multi-step biography generation process.
  *
  * Invariants:
- * - INV-AI005: AI Outputs Use Zod Validation - All AI outputs validated with Zod schemas
+ * - INV-AI005: AI Outputs Use Zod Validation
+ * - INV-AI007: Biography Requires Source Material
  */
 import { z } from 'zod';
 
 /**
- * FuzzyDate schema matching the Prisma JSON structure
+ * FuzzyDate schema matching the Prisma JSON structure.
+ * Supports various date precision levels and uncertainty types.
  */
 export const FuzzyDateSchema = z.object({
   type: z.enum(['exact', 'approximate', 'range', 'before', 'after', 'unknown']),
@@ -21,8 +25,11 @@ export const FuzzyDateSchema = z.object({
   endDay: z.number().min(1).max(31).optional(),
 });
 
+export type FuzzyDate = z.infer<typeof FuzzyDateSchema>;
+
 /**
- * Place schema matching the Prisma JSON structure
+ * Place schema matching the Prisma JSON structure.
+ * Supports hierarchical location information.
  */
 export const PlaceSchema = z.object({
   name: z.string(),
@@ -33,10 +40,13 @@ export const PlaceSchema = z.object({
   city: z.string().optional(),
 });
 
+export type Place = z.infer<typeof PlaceSchema>;
+
 /**
- * Input schema for biography generation
+ * Person details for biography generation.
+ * Contains basic biographical information that serves as context.
  */
-export const BiographyInputSchema = z.object({
+export const PersonDetailsSchema = z.object({
   personId: z.string().min(1),
   givenName: z.string().min(1),
   surname: z.string().optional(),
@@ -47,19 +57,142 @@ export const BiographyInputSchema = z.object({
   birthPlace: PlaceSchema.optional(),
   deathPlace: PlaceSchema.optional(),
   occupation: z.string().optional(),
-  maxLength: z.number().positive().optional(),
+  biography: z.string().optional(), // Existing biography if any
 });
 
-export type BiographyInput = z.infer<typeof BiographyInputSchema>;
+export type PersonDetails = z.infer<typeof PersonDetailsSchema>;
 
 /**
- * Output schema for generated biography
+ * Note as source material with citation information.
+ * Notes are primary sources for biography generation.
  */
-export const BiographyOutputSchema = z.object({
-  biography: z.string().min(1),
-  wordCount: z.number().int().nonnegative(),
-  confidence: z.number().min(0).max(1),
-  sourcesUsed: z.array(z.string()),
+export const NoteSourceSchema = z.object({
+  noteId: z.string().min(1),
+  title: z.string().optional(),
+  content: z.string().min(1),
+  createdAt: z.string(), // ISO date string
 });
 
-export type BiographyOutput = z.infer<typeof BiographyOutputSchema>;
+export type NoteSource = z.infer<typeof NoteSourceSchema>;
+
+/**
+ * Event participant information for context.
+ */
+export const EventParticipantSchema = z.object({
+  personId: z.string(),
+  displayName: z.string(),
+});
+
+/**
+ * Event as source material with citation information.
+ * Events are primary sources for biography generation.
+ */
+export const EventSourceSchema = z.object({
+  eventId: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().optional(),
+  date: FuzzyDateSchema.optional(),
+  location: PlaceSchema.optional(),
+  participants: z.array(EventParticipantSchema).optional(),
+});
+
+export type EventSource = z.infer<typeof EventSourceSchema>;
+
+/**
+ * Complete source material bundle for biography generation.
+ *
+ * Enforces INV-AI007: At least one note OR one event is required.
+ * Biography generation cannot proceed with only person details.
+ */
+export const SourceMaterialSchema = z
+  .object({
+    personDetails: PersonDetailsSchema,
+    notes: z.array(NoteSourceSchema),
+    events: z.array(EventSourceSchema),
+  })
+  .refine((data) => data.notes.length > 0 || data.events.length > 0, {
+    message:
+      'Biography generation requires at least one note or event (INV-AI007)',
+    path: ['notes', 'events'],
+  });
+
+export type SourceMaterial = z.infer<typeof SourceMaterialSchema>;
+
+/**
+ * Eligibility check result.
+ * Returned by checkBiographyEligibility to indicate if generation can proceed.
+ */
+export const EligibilityResultSchema = z.object({
+  eligible: z.boolean(),
+  personId: z.string(),
+  noteCount: z.number().int().nonnegative(),
+  eventCount: z.number().int().nonnegative(),
+  reason: z.string().optional(),
+  guidance: z.string().optional(),
+});
+
+export type EligibilityResult = z.infer<typeof EligibilityResultSchema>;
+
+/**
+ * Relationship types for related context mining.
+ */
+export const RelationshipTypeSchema = z.enum([
+  'parent',
+  'child',
+  'sibling',
+  'spouse',
+  'coparent',
+]);
+
+export type RelationshipType = z.infer<typeof RelationshipTypeSchema>;
+
+/**
+ * A relevant fact extracted from a relative's information.
+ * Includes source attribution for traceability.
+ */
+export const RelevantFactSchema = z.object({
+  fact: z.string().min(1),
+  source: z.enum(['biography', 'note', 'event']),
+  // AI may return null for optional fields - convert to undefined
+  sourceId: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => val ?? undefined),
+  relevanceReason: z.string().min(1),
+});
+
+export type RelevantFact = z.infer<typeof RelevantFactSchema>;
+
+/**
+ * Context mined from a related person.
+ * Contains facts relevant to the target person with source attribution.
+ */
+export const RelatedContextSchema = z.object({
+  relationshipType: RelationshipTypeSchema,
+  personId: z.string().min(1),
+  personName: z.string().min(1),
+  relevantFacts: z.array(RelevantFactSchema),
+});
+
+export type RelatedContext = z.infer<typeof RelatedContextSchema>;
+
+/**
+ * Array of related context from multiple relatives.
+ */
+export const RelatedContextArraySchema = z.array(RelatedContextSchema);
+
+/**
+ * Information about a relative for context mining.
+ * Includes their content (biography, notes, events) for extraction.
+ */
+export const RelativeInfoSchema = z.object({
+  relationshipType: RelationshipTypeSchema,
+  personId: z.string().min(1),
+  personName: z.string().min(1),
+  biography: z.string().optional(),
+  notes: z.array(NoteSourceSchema),
+  events: z.array(EventSourceSchema),
+});
+
+export type RelativeInfo = z.infer<typeof RelativeInfoSchema>;

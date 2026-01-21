@@ -53,7 +53,57 @@ export const typeDefs = /* GraphQL */ `
 
     """Get AI usage statistics for current user (INV-AI002)"""
     aiUsage: AIUsageStats
+
+    """Get pending biography suggestions for current user (for restoring state after reload)"""
+    pendingBiographySuggestions: [PendingBiographySuggestion!]!
+
+    """Get source content for citation modal (note, event, or biography)"""
+    sourceContent(type: SourceType!, id: ID!): SourceContent
   }
+
+  """Type of source for citation lookup"""
+  enum SourceType {
+    Note
+    Event
+    Biography
+  }
+
+  """Note content for citation modal display"""
+  type NoteContent {
+    id: ID!
+    title: String!
+    content: String!
+    privacy: PrivacyLevel!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+  }
+
+  """Event participant for citation modal"""
+  type SourceEventParticipant {
+    id: ID!
+    displayName: String!
+  }
+
+  """Event content for citation modal display"""
+  type EventContent {
+    id: ID!
+    title: String!
+    description: String
+    date: JSON
+    location: JSON
+    participants: [SourceEventParticipant!]!
+    createdAt: DateTime!
+  }
+
+  """Biography content for citation modal display"""
+  type BiographyContent {
+    id: ID!
+    personName: String!
+    biography: String
+  }
+
+  """Union type for source content in citation modals"""
+  union SourceContent = NoteContent | EventContent | BiographyContent
 
   type Mutation {
     """Create constellation for authenticated user"""
@@ -170,6 +220,9 @@ export const typeDefs = /* GraphQL */ `
     """Apply an AI suggestion to update the person's biography"""
     applyBiographySuggestion(suggestionId: ID!): Person!
 
+    """Reject/discard an AI-generated biography suggestion"""
+    rejectBiographySuggestion(suggestionId: ID!): Boolean!
+
     """Check and consume AI quota (test endpoint for quota enforcement)"""
     checkAIQuota: AIQuotaCheckResult!
   }
@@ -186,6 +239,24 @@ export const typeDefs = /* GraphQL */ `
     confidence: Float!
     """Data sources used to generate the biography"""
     sourcesUsed: [String!]!
+  }
+
+  """A pending biography suggestion waiting for user approval"""
+  type PendingBiographySuggestion {
+    """ID of the AI suggestion record"""
+    suggestionId: ID!
+    """ID of the person this biography is for"""
+    personId: ID!
+    """The generated biography text"""
+    biography: String!
+    """Word count of the generated biography"""
+    wordCount: Int!
+    """AI confidence score (0-1)"""
+    confidence: Float!
+    """Data sources used to generate the biography"""
+    sourcesUsed: [String!]!
+    """When the suggestion was created"""
+    createdAt: DateTime!
   }
 
   """AI usage statistics for the current user (INV-AI002)"""

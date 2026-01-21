@@ -9,11 +9,13 @@
  * - INV-AI002: AI Operations Must Track Usage
  * - INV-AI003: AI Suggestions Require User Approval
  */
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { gql } from '@/lib/graphql-client';
 import { personQueryKey, peopleQueryKey, type Person } from './use-people';
 import { constellationGraphQueryKey } from './use-constellation-graph';
 import { scheduleInvalidation } from '@/visualization/biography-transition-events';
+import { useBiographyGenerationContext } from '@/contexts/biography-generation-context';
 
 /**
  * Result of AI biography generation
@@ -60,6 +62,39 @@ const APPLY_BIOGRAPHY_SUGGESTION_MUTATION = `
     }
   }
 `;
+
+const REJECT_BIOGRAPHY_SUGGESTION_MUTATION = `
+  mutation RejectBiographySuggestion($suggestionId: ID!) {
+    rejectBiographySuggestion(suggestionId: $suggestionId)
+  }
+`;
+
+const PENDING_BIOGRAPHY_SUGGESTIONS_QUERY = `
+  query PendingBiographySuggestions {
+    pendingBiographySuggestions {
+      suggestionId
+      personId
+      biography
+      wordCount
+      confidence
+      sourcesUsed
+      createdAt
+    }
+  }
+`;
+
+/**
+ * Pending biography suggestion from the database
+ */
+export interface PendingBiographySuggestion {
+  suggestionId: string;
+  personId: string;
+  biography: string;
+  wordCount: number;
+  confidence: number;
+  sourcesUsed: string[];
+  createdAt: string;
+}
 
 /**
  * Hook to generate a biography for a person using AI
@@ -156,6 +191,58 @@ export function useApplyBiographySuggestion() {
       scheduleInvalidation(() => {
         queryClient.invalidateQueries({ queryKey: constellationGraphQueryKey });
       });
+    },
+  });
+}
+
+/**
+ * Query key for pending biography suggestions
+ */
+export const pendingBiographySuggestionsQueryKey = ['pendingBiographySuggestions'];
+
+/**
+ * Hook to fetch pending biography suggestions from the database
+ *
+ * Used to restore pending suggestions after page reload.
+ * Only returns the latest suggestion per person.
+ *
+ * @returns TanStack Query result with pending suggestions
+ */
+export function usePendingBiographySuggestions() {
+  return useQuery({
+    queryKey: pendingBiographySuggestionsQueryKey,
+    queryFn: async () => {
+      const data = await gql<{
+        pendingBiographySuggestions: PendingBiographySuggestion[];
+      }>(PENDING_BIOGRAPHY_SUGGESTIONS_QUERY);
+      return data.pendingBiographySuggestions;
+    },
+    staleTime: 0, // Always fetch fresh on mount
+    refetchOnWindowFocus: false, // Don't refetch on focus since we manage state locally
+  });
+}
+
+/**
+ * Hook to reject/discard an AI-generated biography suggestion
+ *
+ * Marks the suggestion as rejected so it won't be shown again.
+ *
+ * @returns TanStack Query mutation result
+ */
+export function useRejectBiographySuggestion() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ suggestionId }: { suggestionId: string }) => {
+      const data = await gql<{ rejectBiographySuggestion: boolean }>(
+        REJECT_BIOGRAPHY_SUGGESTION_MUTATION,
+        { suggestionId }
+      );
+      return data.rejectBiographySuggestion;
+    },
+    onSuccess: () => {
+      // Invalidate pending suggestions query
+      queryClient.invalidateQueries({ queryKey: pendingBiographySuggestionsQueryKey });
     },
   });
 }

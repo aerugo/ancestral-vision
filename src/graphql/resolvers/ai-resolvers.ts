@@ -42,6 +42,19 @@ interface BiographyGenerationResult {
 }
 
 /**
+ * Pending biography suggestion result
+ */
+interface PendingBiographySuggestion {
+  suggestionId: string;
+  personId: string;
+  biography: string;
+  wordCount: number;
+  confidence: number;
+  sourcesUsed: string[];
+  createdAt: Date;
+}
+
+/**
  * AI query resolvers
  */
 export const aiQueries = {
@@ -58,6 +71,56 @@ export const aiQueries = {
     }
 
     return getUsageStats(context.user.id);
+  },
+
+  /**
+   * Get all pending biography suggestions for the authenticated user.
+   * Used to restore pending suggestions after page reload.
+   *
+   * If multiple suggestions exist for the same person, only the latest is returned.
+   */
+  pendingBiographySuggestions: async (
+    _parent: unknown,
+    _args: unknown,
+    context: GraphQLContext
+  ): Promise<PendingBiographySuggestion[]> => {
+    const authUser = requireAuth(context);
+
+    const suggestions = await prisma.aISuggestion.findMany({
+      where: {
+        userId: authUser.id,
+        type: 'BIOGRAPHY',
+        status: 'PENDING',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Group by personId and only keep the latest (first in descending order)
+    const latestByPerson = new Map<string, (typeof suggestions)[0]>();
+    for (const s of suggestions) {
+      if (!latestByPerson.has(s.personId)) {
+        latestByPerson.set(s.personId, s);
+      }
+    }
+
+    return Array.from(latestByPerson.values()).map((s) => {
+      const payload = s.payload as { biography?: string };
+      const metadata = s.metadata as {
+        wordCount?: number;
+        confidence?: number;
+        sourcesUsed?: string[];
+      } | null;
+
+      return {
+        suggestionId: s.id,
+        personId: s.personId,
+        biography: payload.biography ?? '',
+        wordCount: metadata?.wordCount ?? 0,
+        confidence: metadata?.confidence ?? 0,
+        sourcesUsed: metadata?.sourcesUsed ?? [],
+        createdAt: s.createdAt,
+      };
+    });
   },
 };
 
@@ -264,5 +327,58 @@ export const aiMutations = {
     ]);
 
     return updatedPerson;
+  },
+
+  /**
+   * Reject/discard an AI-generated biography suggestion.
+   *
+   * Marks the suggestion as rejected so it won't be shown again.
+   *
+   * @throws Error if suggestion not found or not owned by user
+   * @throws Error if suggestion is not pending or not a biography type
+   */
+  rejectBiographySuggestion: async (
+    _parent: unknown,
+    args: { suggestionId: string },
+    context: GraphQLContext
+  ): Promise<boolean> => {
+    const authUser = requireAuth(context);
+
+    // Get the suggestion and verify ownership
+    const suggestion = await prisma.aISuggestion.findFirst({
+      where: {
+        id: args.suggestionId,
+        userId: authUser.id,
+      },
+    });
+
+    if (!suggestion) {
+      throw new GraphQLError('Suggestion not found or access denied', {
+        extensions: { code: 'NOT_FOUND' },
+      });
+    }
+
+    if (suggestion.status !== 'PENDING') {
+      throw new GraphQLError('Suggestion has already been processed', {
+        extensions: { code: 'BAD_REQUEST' },
+      });
+    }
+
+    if (suggestion.type !== 'BIOGRAPHY') {
+      throw new GraphQLError('Suggestion is not a biography suggestion', {
+        extensions: { code: 'BAD_REQUEST' },
+      });
+    }
+
+    // Mark suggestion as rejected
+    await prisma.aISuggestion.update({
+      where: { id: suggestion.id },
+      data: {
+        status: 'REJECTED',
+        reviewedAt: new Date(),
+      },
+    });
+
+    return true;
   },
 };

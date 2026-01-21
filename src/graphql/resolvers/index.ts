@@ -37,6 +37,7 @@ import { searchQueries } from './search-resolvers';
 import { onboardingQueries, onboardingMutations } from './onboarding-resolvers';
 import { settingsQueries, settingsMutations } from './settings-resolvers';
 import { aiQueries, aiMutations } from './ai-resolvers';
+import { sourceContentQueries } from './source-content-resolvers';
 
 /**
  * Composed GraphQL resolvers
@@ -54,6 +55,7 @@ export const resolvers = {
     ...onboardingQueries,
     ...settingsQueries,
     ...aiQueries,
+    ...sourceContentQueries,
   },
 
   Mutation: {
@@ -77,6 +79,11 @@ export const resolvers = {
   EventParticipant: eventParticipantFieldResolvers,
   Media: mediaFieldResolvers,
 
-  // Union type resolver
+  // Union type resolvers
   Relationship: relationshipTypeResolver,
+  SourceContent: {
+    __resolveType(obj: { __typename: string }) {
+      return obj.__typename;
+    },
+  },
 };

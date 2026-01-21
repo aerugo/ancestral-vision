@@ -50,6 +50,9 @@ export const typeDefs = /* GraphQL */ `
 
     """Get current user settings"""
     userSettings: UserSettings
+
+    """Get AI usage statistics for current user (INV-AI002)"""
+    aiUsage: AIUsageStats
   }
 
   type Mutation {
@@ -160,6 +163,51 @@ export const typeDefs = /* GraphQL */ `
 
     """Cancel a pending account deletion request"""
     cancelAccountDeletion: AccountDeletionResult!
+
+    """Generate a biography for a person using AI (INV-AI001, INV-AI002, INV-AI003)"""
+    generateBiography(personId: ID!, maxLength: Int): BiographyGenerationResult!
+
+    """Apply an AI suggestion to update the person's biography"""
+    applyBiographySuggestion(suggestionId: ID!): Person!
+
+    """Check and consume AI quota (test endpoint for quota enforcement)"""
+    checkAIQuota: AIQuotaCheckResult!
+  }
+
+  """Result of AI biography generation"""
+  type BiographyGenerationResult {
+    """ID of the AI suggestion record for approval workflow"""
+    suggestionId: ID!
+    """The generated biography text"""
+    biography: String!
+    """Word count of the generated biography"""
+    wordCount: Int!
+    """AI confidence score (0-1)"""
+    confidence: Float!
+    """Data sources used to generate the biography"""
+    sourcesUsed: [String!]!
+  }
+
+  """AI usage statistics for the current user (INV-AI002)"""
+  type AIUsageStats {
+    """Number of AI operations used in current period"""
+    used: Int!
+    """Maximum operations allowed per period"""
+    limit: Int!
+    """Remaining operations in current period"""
+    remaining: Int!
+    """Start of the current billing/usage period"""
+    periodStart: DateTime!
+    """End of the current billing/usage period"""
+    periodEnd: DateTime!
+  }
+
+  """Result of AI quota check"""
+  type AIQuotaCheckResult {
+    """Whether the user has available quota"""
+    hasQuota: Boolean!
+    """Number of operations remaining"""
+    remaining: Int!
   }
 
   type User {

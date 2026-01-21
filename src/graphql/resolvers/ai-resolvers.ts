@@ -19,7 +19,6 @@ import {
   type UsageStats,
 } from '@/ai/quota';
 import { generateBiography } from '@/ai/flows/biography';
-import type { BiographyInput } from '@/ai/schemas/biography';
 import { prisma } from '@/lib/prisma';
 import { GraphQLError } from 'graphql';
 
@@ -110,10 +109,16 @@ export const aiMutations = {
   /**
    * Generate a biography for a person using AI.
    *
+   * Uses the multi-step agentic flow:
+   * 1. Eligibility check - Verify source material exists
+   * 2. Source assembly - Gather person details, notes, events
+   * 3. Context mining - Find relatives and extract relevant facts
+   * 4. Generation - Synthesize into biographical narrative
+   *
    * Creates an AISuggestion record instead of directly modifying the person.
    * User must approve the suggestion to apply the biography (INV-AI003).
    *
-   * @throws Error if person not found or not in user's constellation
+   * @throws Error if person not found, not eligible, or not in user's constellation
    * @throws QuotaExceededError if no quota remaining
    */
   generateBiography: async (
@@ -123,24 +128,8 @@ export const aiMutations = {
   ): Promise<BiographyGenerationResult> => {
     const authUser = requireAuth(context);
 
-    // Get the person and verify access
-    const person = await prisma.person.findFirst({
-      where: {
-        id: args.personId,
-        constellation: {
-          ownerId: authUser.id,
-        },
-        deletedAt: null,
-      },
-    });
-
-    if (!person) {
-      throw new GraphQLError('Person not found or access denied', {
-        extensions: { code: 'NOT_FOUND' },
-      });
-    }
-
-    // Check and consume quota (INV-AI001, INV-AI002)
+    // Check and consume quota first (INV-AI001, INV-AI002)
+    // We check quota before eligibility to avoid unnecessary DB queries if over quota
     try {
       await checkAndConsumeQuota(authUser.id);
     } catch (error) {
@@ -152,36 +141,49 @@ export const aiMutations = {
       throw error;
     }
 
-    // Build input for biography generation
-    // Convert null values to undefined for Zod schema compatibility
-    const input: BiographyInput = {
-      personId: person.id,
-      givenName: person.givenName,
-      surname: person.surname ?? undefined,
-      displayName: person.displayName,
-      gender: person.gender ?? undefined,
-      birthDate: (person.birthDate as BiographyInput['birthDate']) ?? undefined,
-      deathDate: (person.deathDate as BiographyInput['deathDate']) ?? undefined,
-      birthPlace: (person.birthPlace as BiographyInput['birthPlace']) ?? undefined,
-      deathPlace: (person.deathPlace as BiographyInput['deathPlace']) ?? undefined,
-      maxLength: args.maxLength,
-    };
+    // Generate biography (handles eligibility, source assembly, context mining)
+    let result;
+    try {
+      result = await generateBiography(args.personId, authUser.id, {
+        maxLength: args.maxLength,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
 
-    // Generate biography
-    const result = await generateBiography(input);
+      // Check for eligibility-related errors
+      if (message.includes('not eligible') || message.includes('at least one note or event')) {
+        throw new GraphQLError(
+          'Biography generation requires at least one note or event for this person. Add some notes or events first.',
+          { extensions: { code: 'NOT_ELIGIBLE' } }
+        );
+      }
+
+      // Check for access denied errors
+      if (message.includes('not found') || message.includes('access denied')) {
+        throw new GraphQLError('Person not found or access denied', {
+          extensions: { code: 'NOT_FOUND' },
+        });
+      }
+
+      throw new GraphQLError(`Biography generation failed: ${message}`, {
+        extensions: { code: 'AI_GENERATION_FAILED' },
+      });
+    }
 
     // Create AI suggestion instead of directly modifying person (INV-AI003)
     const suggestion = await prisma.aISuggestion.create({
       data: {
         type: 'BIOGRAPHY',
         status: 'PENDING',
-        personId: person.id,
+        personId: result.personId,
         userId: authUser.id,
         payload: { biography: result.biography },
         metadata: {
           wordCount: result.wordCount,
           confidence: result.confidence,
           sourcesUsed: result.sourcesUsed,
+          usedContextMining: result.usedContextMining,
+          relativesUsed: result.relativesUsed,
         },
       },
     });
@@ -193,5 +195,74 @@ export const aiMutations = {
       confidence: result.confidence,
       sourcesUsed: result.sourcesUsed,
     };
+  },
+
+  /**
+   * Apply an AI-generated biography suggestion to a person.
+   *
+   * Updates the person's biography and marks the suggestion as accepted.
+   *
+   * @throws Error if suggestion not found or not owned by user
+   * @throws Error if suggestion is not pending or not a biography type
+   */
+  applyBiographySuggestion: async (
+    _parent: unknown,
+    args: { suggestionId: string },
+    context: GraphQLContext
+  ) => {
+    const authUser = requireAuth(context);
+
+    // Get the suggestion and verify ownership
+    const suggestion = await prisma.aISuggestion.findFirst({
+      where: {
+        id: args.suggestionId,
+        userId: authUser.id,
+      },
+      include: {
+        person: true,
+      },
+    });
+
+    if (!suggestion) {
+      throw new GraphQLError('Suggestion not found or access denied', {
+        extensions: { code: 'NOT_FOUND' },
+      });
+    }
+
+    if (suggestion.status !== 'PENDING') {
+      throw new GraphQLError('Suggestion has already been processed', {
+        extensions: { code: 'BAD_REQUEST' },
+      });
+    }
+
+    if (suggestion.type !== 'BIOGRAPHY') {
+      throw new GraphQLError('Suggestion is not a biography suggestion', {
+        extensions: { code: 'BAD_REQUEST' },
+      });
+    }
+
+    const payload = suggestion.payload as { biography?: string };
+    if (!payload.biography) {
+      throw new GraphQLError('Suggestion has no biography content', {
+        extensions: { code: 'BAD_REQUEST' },
+      });
+    }
+
+    // Update person and mark suggestion as accepted in a transaction
+    const [updatedPerson] = await prisma.$transaction([
+      prisma.person.update({
+        where: { id: suggestion.personId },
+        data: { biography: payload.biography },
+      }),
+      prisma.aISuggestion.update({
+        where: { id: suggestion.id },
+        data: {
+          status: 'ACCEPTED',
+          reviewedAt: new Date(),
+        },
+      }),
+    ]);
+
+    return updatedPerson;
   },
 };

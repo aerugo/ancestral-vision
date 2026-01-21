@@ -12,16 +12,17 @@ import * as dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 import * as fs from 'fs';
 import * as path from 'path';
-import { getAI, getModel, getRetryMiddleware } from '../src/ai/genkit';
 import type {
   PersonDetails,
   NoteSource,
   EventSource,
   RelativeInfo,
   RelatedContext,
-} from '../src/ai/schemas/biography-v2';
-// Import production extractRelatedContext for true E2E testing
+  SourceMaterial,
+} from '../src/ai/schemas/biography';
+// Import production functions for true E2E testing
 import { extractRelatedContext } from '../src/ai/flows/biography/context-mining';
+import { generateBiographyFromSources } from '../src/ai/flows/biography/generation';
 
 // Types for the JSON data
 interface JsonPerson {
@@ -176,14 +177,18 @@ async function main() {
     console.log(`Extracted context from ${relatedContext.length} relatives\n`);
   }
 
-  // Generate biography using AI
+  // Generate biography using production code path
   console.log('=== Generating Biography (AI) ===\n');
   let biography: string;
   if (DRY_RUN) {
     console.log('  [DRY-RUN] Skipping AI biography generation');
     biography = '[DRY-RUN: Biography would be generated here using the source material below]';
   } else {
-    biography = await generateBiography(personDetails, notes, events, relatedContext);
+    // Use production generateBiographyFromSources for true E2E testing
+    const sourceMaterial = { personDetails, notes, events };
+    const result = await generateBiographyFromSources(sourceMaterial, relatedContext);
+    biography = result.biography;
+    console.log(`Generated biography: ${result.wordCount} words, confidence: ${result.confidence}`);
   }
 
   // Write output
@@ -284,99 +289,7 @@ function findRelatives(data: GenealogyData, personId: string): RelativeInfo[] {
   return relatives;
 }
 
-async function generateBiography(
-  personDetails: PersonDetails,
-  notes: NoteSource[],
-  events: EventSource[],
-  relatedContext: RelatedContext[]
-): Promise<string> {
-  const ai = getAI();
-  const model = getModel('quality'); // Use Pro for high-quality biography output
-  const retryMiddleware = getRetryMiddleware();
-
-  // Build context section from related people
-  const relatedContextSection = relatedContext
-    .map((ctx) => {
-      const facts = ctx.relevantFacts.map((f) => `- ${f.fact} (from ${f.source})`).join('\n');
-      return `From ${ctx.relationshipType} ${ctx.personName}:\n${facts}`;
-    })
-    .join('\n\n');
-
-  // Build notes section
-  const notesSection = notes
-    .slice(0, 10)
-    .map((n) => `- ${n.content}`)
-    .join('\n');
-
-  // Build events section
-  const eventsSection = events
-    .slice(0, 10)
-    .map((e) => `- ${e.title}: ${e.description ?? 'No description'}`)
-    .join('\n');
-
-  const prompt = `
-Generate a biographical narrative for the following person based ONLY on the provided source material.
-
-PERSON: ${personDetails.displayName}
-Gender: ${personDetails.gender}
-Birth: ${formatDate(personDetails.birthDate)} at ${personDetails.birthPlace?.name ?? 'Unknown'}
-Death: ${formatDate(personDetails.deathDate)} at ${personDetails.deathPlace?.name ?? 'Unknown'}
-
-NOTES ABOUT THIS PERSON:
-${notesSection}
-
-EVENTS IN THIS PERSON'S LIFE:
-${eventsSection}
-
-CONTEXT FROM RELATIVES:
-${relatedContextSection}
-
-INSTRUCTIONS:
-1. Write a warm, engaging biographical narrative (300-500 words)
-2. Only include facts that are directly supported by the source material above
-3. Include citations in brackets like [Note: content] or [Event: title] or [From parent: fact]
-4. Do NOT invent or speculate about details not in the sources
-5. Focus on the person's life story, relationships, and experiences
-6. Write in third person, past tense
-
-Generate the biography:
-`.trim();
-
-  console.log('Generating biography with citations...');
-
-  const response = await ai.generate({
-    model,
-    prompt,
-    config: { temperature: 0.7, maxOutputTokens: 10000 },
-    use: [retryMiddleware],
-  });
-
-  const text = response.text.trim();
-  if (!text) {
-    console.log('  Warning: Empty response from AI');
-    console.log('  Response object:', JSON.stringify(response, null, 2).substring(0, 500));
-  }
-
-  return text;
-}
-
-function formatDate(
-  date?: { type: string; year: number; month?: number; day?: number }
-): string {
-  if (!date) return 'Unknown';
-
-  const months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
-  ];
-
-  if (date.month && date.day) {
-    return `${months[date.month - 1]} ${date.day}, ${date.year}`;
-  } else if (date.month) {
-    return `${months[date.month - 1]} ${date.year}`;
-  }
-  return String(date.year);
-}
+// Local generateBiography removed - now uses production generateBiographyFromSources
 
 function formatBiographyMarkdown(
   personDetails: PersonDetails,
